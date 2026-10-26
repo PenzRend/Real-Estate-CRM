@@ -90,7 +90,7 @@ export type ClientDetail = ClientListItem & {
     other: string | null;
   };
   aiSummary: { text: string; generatedAt: string } | null;
-  interactions: (ActivityItem & { notes: string | null; outcome: string | null; property: Ref | null })[];
+  interactions: (ActivityItem & { notes: string | null; outcome: string | null; property: Ref | null; source?: string })[];
   tasks: TaskItem[];
   relatedProperties: (PropertyListItem & { relation: string })[];
 };

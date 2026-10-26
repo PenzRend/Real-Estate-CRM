@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Plus, X } from "lucide-react";
+import { Menu, Mic, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
@@ -46,6 +46,19 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/** The main action: record what just happened. Always one tap away. */
+function CaptureButton({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Link
+      href="/interactions/new"
+      onClick={onNavigate}
+      className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+    >
+      <Mic className="size-4" /> Rögzítés
+    </Link>
+  );
+}
+
 function QuickAdd({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="rounded-2xl border border-border p-3">
@@ -77,7 +90,10 @@ export function Sidebar({ account }: { account: ReactNode }) {
       <div className="px-2">
         <Logo />
       </div>
-      <NavLinks />
+      <div className="flex flex-col gap-4">
+        <CaptureButton />
+        <NavLinks />
+      </div>
       <div className="mt-auto flex flex-col gap-3">
         <QuickAdd />
         {account}
@@ -100,15 +116,23 @@ export function MobileNav({ account }: { account: ReactNode }) {
     <div className="lg:hidden">
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
         <Logo />
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="grid size-9 place-items-center rounded-full border border-border text-ink"
-          aria-label="Menü megnyitása"
-          aria-expanded={open}
-        >
-          <Menu className="size-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/interactions/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-medium text-white"
+          >
+            <Mic className="size-4" /> Rögzítés
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="grid size-9 place-items-center rounded-full border border-border text-ink"
+            aria-label="Menü megnyitása"
+            aria-expanded={open}
+          >
+            <Menu className="size-4" />
+          </button>
+        </div>
       </div>
       {open && (
         <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menü">
@@ -130,7 +154,10 @@ export function MobileNav({ account }: { account: ReactNode }) {
                 <X className="size-4" />
               </button>
             </div>
-            <NavLinks onNavigate={() => setOpen(false)} />
+            <div className="flex flex-col gap-4">
+              <CaptureButton onNavigate={() => setOpen(false)} />
+              <NavLinks onNavigate={() => setOpen(false)} />
+            </div>
             <div className="mt-auto flex flex-col gap-3">
               <QuickAdd onNavigate={() => setOpen(false)} />
               {account}

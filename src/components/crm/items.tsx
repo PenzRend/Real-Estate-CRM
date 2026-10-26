@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { formatArea, formatDateTime, formatPriceShort } from "@/lib/i18n/format";
 import { interactionTypeLabels, propertyTypeLabels, type InteractionType } from "@/lib/i18n/labels";
 import type { ActivityItem, PropertyListItem, TaskItem } from "@/lib/types/view-models";
+import { TaskToggle } from "./task-toggle";
 
 export const interactionIcons: Record<InteractionType, typeof Phone> = {
   call: Phone,
@@ -15,18 +16,33 @@ export const interactionIcons: Record<InteractionType, typeof Phone> = {
   other: MessageSquareText,
 };
 
-export function TaskRow({ task, overdue = false }: { task: TaskItem; overdue?: boolean }) {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FOLLOW_UP_PREFIX = "follow-up-";
+
+export function TaskRow({ task, overdue = false, done = false }: { task: TaskItem; overdue?: boolean; done?: boolean }) {
+  // Client follow-up dates appear among tasks; they are closed by recording the contact.
+  const followUpClientId = task.id.startsWith(FOLLOW_UP_PREFIX) ? task.id.slice(FOLLOW_UP_PREFIX.length) : null;
   return (
     <li className="flex items-start gap-3 px-5 py-3.5">
-      <span
-        aria-hidden
-        className="mt-0.5 size-[18px] shrink-0 rounded-full border-[1.5px] border-border-strong"
-      />
+      {UUID.test(task.id) ? (
+        <TaskToggle id={task.id} done={done} title={task.title} />
+      ) : followUpClientId ? (
+        <Link
+          href={`/interactions/new?client=${followUpClientId}`}
+          className="mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full bg-primary text-white"
+          aria-label={`${task.client?.name ?? "Ügyfél"} – hívás rögzítése`}
+          title="Hívás rögzítése"
+        >
+          <Phone className="size-2.5" strokeWidth={2.5} />
+        </Link>
+      ) : (
+        <span aria-hidden className="mt-0.5 size-[18px] shrink-0 rounded-full border-[1.5px] border-border-strong" />
+      )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-ink">{task.title}</p>
+        <p className={cn("text-sm font-medium", done ? "text-muted line-through" : "text-ink")}>{task.title}</p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           {task.dueAt && (
-            <span className={cn("inline-flex items-center gap-1", overdue && "text-danger")}>
+            <span className={cn("inline-flex items-center gap-1", overdue && !done && "text-danger")}>
               <CalendarClock className="size-3.5" />
               {formatDateTime(task.dueAt)}
             </span>
@@ -43,7 +59,7 @@ export function TaskRow({ task, overdue = false }: { task: TaskItem; overdue?: b
           )}
         </p>
       </div>
-      {task.priority !== "normal" && <PriorityBadge priority={task.priority} />}
+      {task.priority !== "normal" && !done && <PriorityBadge priority={task.priority} />}
     </li>
   );
 }

@@ -23,11 +23,14 @@ export function ClientDetailView({
   client,
   actions,
   archivedAt,
+  notice,
 }: {
   client: ClientDetail;
   /** Extra header actions, e.g. archive / restore. */
   actions?: ReactNode;
   archivedAt?: string | null;
+  /** One-off confirmation shown after a save, e.g. from quick capture. */
+  notice?: string | null;
 }) {
   const r = client.requirements;
   const budget =
@@ -38,6 +41,11 @@ export function ClientDetailView({
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-5">
+        {notice && (
+          <p role="status" className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
+            <Sparkles className="size-4" /> {notice}
+          </p>
+        )}
         {archivedAt && (
           <p className="flex items-center gap-2 rounded-2xl bg-surface-strong px-4 py-3 text-sm text-text">
             <Archive className="size-4 text-muted" />
@@ -134,6 +142,11 @@ export function ClientDetailView({
                       <div className="min-w-0 flex-1">
                         <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
                           <span className="font-medium text-ink">{interactionTypeLabels[i.type]}</span>
+                          {i.source === "ai_assisted" && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-px text-[10px] font-medium text-accent">
+                              <Sparkles className="size-2.5" /> AI
+                            </span>
+                          )}
                           <span className="text-xs text-muted">{formatDateTime(i.occurredAt)}</span>
                           {i.property && (
                             <Link href={`/properties/${i.property.id}`} className="text-xs text-accent hover:underline">
@@ -143,10 +156,15 @@ export function ClientDetailView({
                         </p>
                         <p className="mt-1 text-sm text-text">{i.summary}</p>
                         {i.outcome && (
-                          <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-xs text-muted">
-                            <span className="font-medium text-text">Eredmény: </span>
+                          <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-xs whitespace-pre-line text-muted">
                             {i.outcome}
                           </p>
+                        )}
+                        {i.notes && i.notes !== i.summary && (
+                          <details className="mt-2 text-xs text-muted">
+                            <summary className="cursor-pointer hover:text-ink">Teljes jegyzet</summary>
+                            <p className="mt-1.5 whitespace-pre-line">{i.notes}</p>
+                          </details>
                         )}
                       </div>
                     </li>

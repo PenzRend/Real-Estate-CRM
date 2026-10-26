@@ -58,6 +58,51 @@ Deferred until the feature that needs them: `property_client_matches` (matching 
 
 Enumerations are `text` + `check` constraints (easy to extend later without enum migrations).
 
+## 5a. Automation priority (product owner, 2026-10-26)
+
+The main goal is that agents type as little as possible. Information should
+flow in from where it already is: portals, email and phone calls. Every source
+lands in the same place, the client timeline, and AI turns it into structured
+data that the agent confirms rather than types.
+
+| Source | Approach | Why this way |
+|---|---|---|
+| Call notes, step 1 | Voice memo in the app after a call (phone browser), transcribed and summarized by AI, with fields to confirm | Works on any phone today, no recording consent problem, no telephony change |
+| Calls, step 2 | Cloud telephony (virtual number / app) that hands over recordings by webhook → transcript → summary on the client | Only reliable way to capture calls automatically; iOS does not allow call recording and Android restricts it |
+| Email, step 1 | A personal forwarding address per workspace; agents forward or auto-forward mail | No Google/Microsoft security review; covers portal inquiry emails too |
+| Email, step 2 | Direct Gmail / Microsoft 365 connection (OAuth, read-only) | Gmail read access is a restricted scope: Google verification plus a yearly paid CASA security assessment before public launch |
+| Portal leads | Parse the inquiry emails ingatlan.com and others send ("érdeklődés a hirdetésére") into a new lead + interaction | Works without any portal partnership |
+| Listings | Official ingatlan.com "Automata betöltés" interface or an export the agent controls | The official listing API is currently not sold to new customers; contact the account manager. No scraping (terms of service, legal risk) |
+
+Calls on a normal SIM card (no number change), researched 2026-10-26:
+- Android (Samsung, Xiaomi and others with a built-in recorder): the phone records
+  every call itself; our companion app reads the call log and the recordings
+  folder (the user grants folder access once) and uploads them automatically.
+  Proven pattern (Sell.do, TeleCRM, HelloLeads, Salestrail). Not possible with
+  the Google Pixel dialer.
+- iPhone: iOS records calls natively with an automatic announcement, but saves
+  them to Notes; sending to the CRM is one tap through the share sheet, not
+  automatic.
+- Cloud switchboard (e.g. One "virtuális alközpont", includes recording):
+  fully automatic for any phone, but calls must go through it; whether a mobile
+  number can be ported to it needs confirming with the provider.
+
+ingatlan.com listings, researched 2026-10-26:
+- Official "Automata betöltés" REST/JSON API (docs at api.ingatlan.com/v1/doc):
+  works per agency with their own subscription; not sold to new customers now,
+  so ask agencies that already have it and the ingatlan.com account manager
+  (a CRM serving many agencies may get a partner deal).
+- Without the API: a browser extension that pre-fills ingatlan.com's upload
+  form in the agent's own logged-in browser; the agent reviews and publishes.
+  Check their terms first; never auto-submit or scrape.
+- Importing an agent's own existing listings: AI reads pasted listing text or
+  the agent's own listing page via the extension.
+
+Legal: recording calls needs the other party informed (GDPR and the Hungarian
+Civil Code's rules on voice recordings); the telephony setup must play or say a
+notice. Email and call content is personal data: retention and processor
+agreements must be settled before real customers use these features.
+
 ## 5. Implementation plan
 
 **Phase 1 – CRM without AI**

@@ -13,8 +13,8 @@ import { archiveClientAction, restoreClientAction } from "../actions";
 
 export const metadata: Metadata = { title: "Ügyfél" };
 
-async function ClientContent({ params }: Pick<PageProps<"/clients/[id]">, "params">) {
-  const { id } = await params;
+async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
   const [detail, owned] = await Promise.all([getClientDetail(user, id), listOwnedProperties(user, id)]);
   if (!detail) notFound();
@@ -48,13 +48,14 @@ async function ClientContent({ params }: Pick<PageProps<"/clients/[id]">, "param
     />
   );
 
-  return <ClientDetailView client={client} actions={actions} archivedAt={client.archivedAt} />;
+  const notice = query.saved === "1" ? "Elmentve. Az ügyfél adatai, a beszélgetés és a teendők frissültek." : null;
+  return <ClientDetailView client={client} actions={actions} archivedAt={client.archivedAt} notice={notice} />;
 }
 
-export default function ClientPage({ params }: PageProps<"/clients/[id]">) {
+export default function ClientPage({ params, searchParams }: PageProps<"/clients/[id]">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <ClientContent params={params} />
+      <ClientContent params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

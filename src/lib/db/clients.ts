@@ -174,7 +174,7 @@ export async function getClientDetail(
   const [interactions, tasks, links] = await Promise.all([
     supabase
       .from("interactions")
-      .select("id, interaction_type, occurred_at, summary, notes, outcome, property_id")
+      .select("id, interaction_type, occurred_at, summary, notes, outcome, property_id, source")
       .eq("client_id", id)
       .order("occurred_at", { ascending: false })
       .limit(50),
@@ -254,6 +254,7 @@ export async function getClientDetail(
       occurredAt: i.occurred_at,
       summary: i.summary ?? "",
       notes: i.notes,
+      source: i.source,
       outcome: i.outcome,
       client: null,
       property: propertyRef(i.property_id),

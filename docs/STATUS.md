@@ -13,6 +13,17 @@ Branch `feat/mvp-foundation`.
   status, price, rooms, size, balcony/garden/parking, archived), detail with
   price per m², owner link, edit, archive/restore; client pages list owned
   properties. Tested end to end in Chrome.
+- Capture (uncommitted, awaiting review): "Rögzítés" page with AI quick
+  capture (type or dictate → AI extraction → review screen that never
+  overwrites saved data without an explicit tick → one-click save of client
+  updates, interaction, follow-up and tasks), manual interaction entry, client
+  timeline with AI badge and full note, tasks (create, complete, today /
+  overdue / upcoming / done views, dashboard). Tested end to end in Chrome with
+  Groq (openai/gpt-oss-120b): extraction, conflict handling, one-click save,
+  DB verified. Groq whisper-large-v3 transcription verified with a synthetic
+  English clip; Hungarian dictation and the in-browser recorder still need a
+  real person to try. Prompt gives the model a 14-day calendar because it got
+  weekdays wrong when computing them itself.
 - Migrations `20261025000000_initial_schema`, `20261026000000_client_search` and
   `20261026120126_property_search` are applied and recorded in
   `supabase_migrations.schema_migrations`.
@@ -27,5 +38,5 @@ Branch `feat/mvp-foundation`.
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).
 - Unused index `properties_title_trgm_idx` (superseded) can be dropped.
-- Next: interactions (call notes) and tasks.
+- Next: set an AI key and test capture end to end; then email inbox sync, Android call capture app, matching.
 - Dev tip: don't run `next build` while `next dev` is running; it crashed the dev server once.
