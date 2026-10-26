@@ -1,11 +1,11 @@
-import { CalendarClock, ChevronLeft, Mail, Pencil, Phone, Plus, RefreshCw, Sparkles } from "lucide-react";
+import { Archive, CalendarClock, ChevronLeft, Mail, Pencil, Phone, Plus, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, ClientStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
-import { formatArea, formatDate, formatDateTime, formatPrice } from "@/lib/i18n/format";
+import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
 import { clientTypeLabels, interactionTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 import type { ClientDetail } from "@/lib/types/view-models";
 import { interactionIcons, PropertyRow, TaskRow } from "./items";
@@ -19,7 +19,16 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function ClientDetailView({ client }: { client: ClientDetail }) {
+export function ClientDetailView({
+  client,
+  actions,
+  archivedAt,
+}: {
+  client: ClientDetail;
+  /** Extra header actions, e.g. archive / restore. */
+  actions?: ReactNode;
+  archivedAt?: string | null;
+}) {
   const r = client.requirements;
   const budget =
     client.budgetMin != null || client.budgetMax != null
@@ -29,6 +38,12 @@ export function ClientDetailView({ client }: { client: ClientDetail }) {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-5">
+        {archivedAt && (
+          <p className="flex items-center gap-2 rounded-2xl bg-surface-strong px-4 py-3 text-sm text-text">
+            <Archive className="size-4 text-muted" />
+            Archivált ügyfél ({formatDate(archivedAt)}). Nem jelenik meg a listákban és az utánkövetésekben.
+          </p>
+        )}
         <Link href="/clients" className="inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-ink">
           <ChevronLeft className="size-4" /> Ügyfelek
         </Link>
@@ -40,7 +55,8 @@ export function ClientDetailView({ client }: { client: ClientDetail }) {
             </div>
             <h1 className="mt-3 text-[34px] leading-tight">{client.fullName}</h1>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {actions}
             <ButtonLink href={`/clients/${client.id}/edit`} variant="secondary">
               <Pencil /> Szerkesztés
             </ButtonLink>
@@ -152,7 +168,8 @@ export function ClientDetailView({ client }: { client: ClientDetail }) {
               <Detail label="Típus">
                 {r.propertyTypes.map((t) => propertyTypeLabels[t as keyof typeof propertyTypeLabels] ?? t).join(", ") || null}
               </Detail>
-              <Detail label="Szobák">{r.minRooms != null ? `min. ${r.minRooms}` : null}</Detail>
+              <Detail label="Szobák">{r.minRooms != null ? `min. ${formatNumber(r.minRooms)}` : null}</Detail>
+              <Detail label="Hálószobák">{r.minBedrooms != null ? `min. ${formatNumber(r.minBedrooms)}` : null}</Detail>
               <Detail label="Alapterület">
                 {r.minAreaSqm != null || r.maxAreaSqm != null
                   ? [r.minAreaSqm, r.maxAreaSqm].map((v) => (v == null ? "…" : formatArea(v))).join(" – ")

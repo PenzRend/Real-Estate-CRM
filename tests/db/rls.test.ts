@@ -7,6 +7,7 @@
 
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { unaccent } from "@electric-sql/pglite/contrib/unaccent";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -41,7 +42,7 @@ async function rowsAs(userId: string, sql: string) {
 }
 
 beforeAll(async () => {
-  db = new PGlite({ extensions: { pg_trgm } });
+  db = new PGlite({ extensions: { pg_trgm, unaccent } });
   await db.exec(`
     create role anon; create role authenticated; create role service_role;
     create schema extensions; create schema auth;
@@ -168,6 +169,19 @@ describe("workflow", () => {
     );
     expect(await rowsAs(USER_A, `delete from clients where id = '${clientId}' returning id`)).toHaveLength(1);
     expect(await rowsAs(USER_A, `select id from interactions where client_id = '${clientId}'`)).toEqual([]);
+  });
+
+  it("search columns match without accents and by phone digits", async () => {
+    await rowsAs(
+      USER_A,
+      `insert into clients (organization_id, full_name, phone, preferred_locations)
+       values ('${orgA}', 'Kereső Péter', '+36 30 123 4567', '{"Budapest XI.", "Budaörs"}')`,
+    );
+    expect(await rowsAs(USER_A, `select full_name from clients where search_text like '%kereso peter%'`)).toEqual([
+      { full_name: "Kereső Péter" },
+    ]);
+    expect(await rowsAs(USER_A, `select full_name from clients where phone_digits like '%301234567%'`)).toHaveLength(1);
+    expect(await rowsAs(USER_A, `select full_name from clients where locations_text like '%budaors%'`)).toHaveLength(1);
   });
 
   it("rejects an inverted budget range", async () => {

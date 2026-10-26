@@ -3,17 +3,16 @@
 import { Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { navItems } from "./nav-items";
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
+function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
   return (
     <nav aria-label="Fő navigáció" className="flex flex-col gap-0.5">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+        const active = pathname != null && (pathname === href || pathname.startsWith(`${href}/`));
         return (
           <Link
             key={href}
@@ -31,6 +30,19 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         );
       })}
     </nav>
+  );
+}
+
+function ActiveNavList({ onNavigate }: { onNavigate?: () => void }) {
+  return <NavList pathname={usePathname()} onNavigate={onNavigate} />;
+}
+
+/** The URL is request data, so the highlight streams in; the links render immediately. */
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Suspense fallback={<NavList pathname={null} onNavigate={onNavigate} />}>
+      <ActiveNavList onNavigate={onNavigate} />
+    </Suspense>
   );
 }
 
@@ -76,7 +88,6 @@ export function Sidebar({ account }: { account: ReactNode }) {
 
 export function MobileNav({ account }: { account: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -100,7 +111,7 @@ export function MobileNav({ account }: { account: ReactNode }) {
         </button>
       </div>
       {open && (
-        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menü" key={pathname}>
+        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menü">
           <button
             type="button"
             className="absolute inset-0 bg-ink/20"

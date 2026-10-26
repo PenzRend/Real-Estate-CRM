@@ -1,4 +1,4 @@
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, Users } from "lucide-react";
 import Link from "next/link";
 import { ClientStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -10,7 +10,16 @@ import { formatDate, formatPriceShort } from "@/lib/i18n/format";
 import { clientStatusLabels, clientTypeLabels } from "@/lib/i18n/labels";
 import type { ClientListItem } from "@/lib/types/view-models";
 
-export type ClientFilters = { q?: string; status?: string; type?: string };
+/** Raw filter values from the URL, as typed. */
+export type ClientFilters = {
+  q?: string;
+  status?: string;
+  type?: string;
+  followUp?: string;
+  budget?: string;
+  location?: string;
+  archived?: string;
+};
 
 function budget(c: ClientListItem) {
   if (c.budgetMin == null && c.budgetMax == null) return "—";
@@ -21,40 +30,79 @@ function budget(c: ClientListItem) {
 
 /** GET form so filters live in the URL and survive reloads and sharing. */
 export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
+  const advanced = Boolean(filters.followUp || filters.budget || filters.location || filters.archived);
+  const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
-    <form className="flex flex-col gap-2 sm:flex-row" role="search">
-      <div className="relative flex-1">
-        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
-        <Input
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Név, e-mail vagy telefonszám"
-          aria-label="Keresés"
-          className="pl-10"
-        />
+    <form className="flex flex-col gap-2" role="search">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
+          <Input
+            name="q"
+            defaultValue={filters.q}
+            placeholder="Név, e-mail vagy telefonszám"
+            aria-label="Keresés"
+            className="pl-10"
+          />
+        </div>
+        <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
+          <option value="">Minden státusz</option>
+          {Object.entries(clientStatusLabels)
+            .filter(([v]) => v !== "archived")
+            .map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+        </Select>
+        <Select name="type" defaultValue={filters.type ?? ""} aria-label="Ügyféltípus" className="sm:w-40">
+          <option value="">Minden típus</option>
+          {Object.entries(clientTypeLabels).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </Select>
+        <button
+          type="submit"
+          className="h-11 rounded-xl bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover"
+        >
+          Szűrés
+        </button>
       </div>
-      <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
-        <option value="">Minden státusz</option>
-        {Object.entries(clientStatusLabels).map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </Select>
-      <Select name="type" defaultValue={filters.type ?? ""} aria-label="Ügyféltípus" className="sm:w-40">
-        <option value="">Minden típus</option>
-        {Object.entries(clientTypeLabels).map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </Select>
-      <button
-        type="submit"
-        className="h-11 rounded-xl border border-border-strong px-4 text-sm font-medium text-ink hover:bg-surface"
-      >
-        Szűrés
-      </button>
+
+      <details open={advanced} className="group">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 py-1 text-sm text-muted hover:text-ink">
+          <SlidersHorizontal className="size-3.5" />
+          További szűrők
+          {any && (
+            <Link href="/clients" className="ml-3 text-ink underline-offset-4 hover:underline">
+              Szűrők törlése
+            </Link>
+          )}
+        </summary>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Select name="followUp" defaultValue={filters.followUp ?? ""} aria-label="Utánkövetés">
+            <option value="">Utánkövetés: mind</option>
+            <option value="overdue">Lejárt utánkövetés</option>
+            <option value="today">Ma esedékes</option>
+            <option value="week">A következő 7 napban</option>
+            <option value="none">Nincs beállítva</option>
+          </Select>
+          <Input
+            name="budget"
+            defaultValue={filters.budget}
+            inputMode="decimal"
+            placeholder="Költségkeret (M Ft), pl. 80"
+            aria-label="Költségkeret millió forintban"
+          />
+          <Input name="location" defaultValue={filters.location} placeholder="Helyszín, pl. XI. kerület" aria-label="Preferált helyszín" />
+          <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
+            <input type="checkbox" name="archived" value="1" defaultChecked={filters.archived === "1"} className="size-4 accent-[var(--primary)]" />
+            Csak archiváltak
+          </label>
+        </div>
+      </details>
     </form>
   );
 }
@@ -63,16 +111,30 @@ export function ClientsTable({
   clients,
   filtered,
   now,
+  archivedCount = 0,
 }: {
   clients: ClientListItem[];
   filtered: boolean;
   now: Date;
+  /** Shown when the active list is empty but archived clients exist. */
+  archivedCount?: number;
 }) {
   if (!clients.length) {
     return (
       <Card>
         {filtered ? (
           <EmptyState icon={Search} title="Nincs találat" description="Próbálj más keresőszót vagy kevesebb szűrőt." />
+        ) : archivedCount > 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Nincs aktív ügyfél"
+            description={`${archivedCount} archivált ügyfeled van. Archiválás után bármikor visszaállíthatod őket.`}
+            action={
+              <ButtonLink href="/clients?archived=1" variant="secondary">
+                Archiváltak megtekintése
+              </ButtonLink>
+            }
+          />
         ) : (
           <EmptyState
             icon={Users}

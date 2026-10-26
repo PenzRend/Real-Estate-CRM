@@ -1,21 +1,52 @@
 import { Plus } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ClientFilterBar, ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
-import { Suspense } from "react";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { getCurrentUser } from "@/lib/auth";
+import { countArchivedClients, LIST_LIMIT, listClients, type ClientListFilters } from "@/lib/db/clients";
+import { parseHungarianNumber } from "@/lib/validation/client";
 
 export const metadata: Metadata = { title: "Ügyfelek" };
 
-async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "searchParams">) {
-  const params = await searchParams;
-  const filters: ClientFilters = {
-    q: typeof params.q === "string" ? params.q : undefined,
-    status: typeof params.status === "string" ? params.status : undefined,
-    type: typeof params.type === "string" ? params.type : undefined,
+const FOLLOW_UPS = ["overdue", "today", "week", "none"] as const;
+
+function readFilters(params: Record<string, string | string[] | undefined>): ClientFilters {
+  const one = (k: string) => (typeof params[k] === "string" && params[k] ? (params[k] as string).slice(0, 100) : undefined);
+  return {
+    q: one("q"),
+    status: one("status"),
+    type: one("type"),
+    followUp: one("followUp"),
+    budget: one("budget"),
+    location: one("location"),
+    archived: one("archived"),
   };
-  const filtered = Boolean(filters.q || filters.status || filters.type);
+}
+
+/** Turns raw URL values into a safe query; unknown values are ignored. */
+function toQuery(f: ClientFilters): ClientListFilters {
+  const budget = parseHungarianNumber(f.budget ?? "");
+  return {
+    q: f.q,
+    status: f.status,
+    type: f.type,
+    followUp: FOLLOW_UPS.find((v) => v === f.followUp),
+    budgetM: typeof budget === "number" && !Number.isNaN(budget) ? budget : undefined,
+    location: f.location,
+    archived: f.archived === "1",
+  };
+}
+
+async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "searchParams">) {
+  const filters = readFilters(await searchParams);
+  const user = await getCurrentUser();
+  const now = new Date();
+  const { clients, total } = await listClients(user, toQuery(filters), now);
+  const filtered = Object.values(filters).some(Boolean);
+  const archivedCount = total === 0 && !filtered ? await countArchivedClients(user) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,12 +60,16 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
         }
       />
       <ClientFilterBar filters={filters} />
-      <ClientsTable clients={[]} filtered={filtered} now={new Date()} />
+      {total > 0 && (
+        <p className="-mb-3 text-sm text-muted" aria-live="polite">
+          {total > LIST_LIMIT ? `${total} ügyfélből az első ${LIST_LIMIT} látható. Szűkítsd a keresést.` : `${total} ügyfél`}
+        </p>
+      )}
+      <ClientsTable clients={clients} filtered={filtered} now={now} archivedCount={archivedCount} />
     </div>
   );
 }
 
-// Request-time content streams in behind Suspense so navigation stays instant.
 export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
   return (
     <Suspense fallback={<PageSkeleton />}>

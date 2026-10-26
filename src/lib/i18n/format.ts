@@ -31,6 +31,12 @@ export function formatPriceShort(value: number | null | undefined) {
   return formatPrice(value);
 }
 
+/** 2.5 → "2,5" */
+export function formatNumber(value: number | null | undefined) {
+  if (value == null) return "—";
+  return new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 2 }).format(value);
+}
+
 export function formatArea(value: number | null | undefined) {
   if (value == null) return "—";
   return `${new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 1 }).format(value)} m²`;
