@@ -50,7 +50,11 @@ export type AnalyzeResult =
 
 const MAX_NOTE_CHARS = 20_000;
 
-export async function analyzeCaptureAction(input: { text: string; clientId?: string | null }): Promise<AnalyzeResult> {
+export async function analyzeCaptureAction(input: {
+  text: string;
+  clientId?: string | null;
+  hint?: "email" | "portal" | null;
+}): Promise<AnalyzeResult> {
   const user = await getCurrentUser();
   const text = typeof input?.text === "string" ? input.text.trim() : "";
   if (!text) return { ok: false, error: "Írj vagy mondj be egy jegyzetet." };
@@ -64,7 +68,8 @@ export async function analyzeCaptureAction(input: { text: string; clientId?: str
   const pinnedName = pinned ? (await findClientCandidates(user, { full_name: null, phone: null, email: null }, pinned))[0] : null;
 
   try {
-    const result = await extractCapture(text, new Date(), pinnedName?.full_name);
+    const hint = input.hint === "email" || input.hint === "portal" ? input.hint : null;
+    const result = await extractCapture(text, new Date(), pinnedName?.full_name, hint);
     await logAiUsage(user, {
       status: "success",
       model: result.model,

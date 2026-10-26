@@ -127,6 +127,8 @@ export const captureSaveSchema = z.object({
   tasks: z
     .array(z.object({ title: z.string().trim().min(1).max(300), due_at: z.iso.datetime().nullable() }))
     .max(10),
+  /** The imported email this capture came from, marked processed on save. */
+  email_id: z.string().regex(UUID).nullable().optional(),
 });
 
 export type CaptureSave = z.infer<typeof captureSaveSchema>;

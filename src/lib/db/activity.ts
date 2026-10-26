@@ -23,7 +23,7 @@ const FAILED = "A mentés nem sikerült. Próbáld újra; ha a hiba megmarad, sz
 // Pickers
 // ---------------------------------------------------------------------------
 
-export type Option = { id: string; name: string; detail?: string | null };
+export type Option = { id: string; name: string; detail?: string | null; reference?: string | null };
 
 export async function listClientOptions(user: CurrentUser): Promise<Option[]> {
   const supabase = await createClient();
@@ -42,13 +42,18 @@ export async function listPropertyOptions(user: CurrentUser): Promise<Option[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("properties")
-    .select("id, title, city, district")
+    .select("id, title, city, district, reference_number")
     .eq("organization_id", user.organization.id)
     .is("archived_at", null)
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw new Error(`Failed to list properties: ${error.message}`);
-  return (data ?? []).map((p) => ({ id: p.id, name: p.title, detail: [p.city, p.district].filter(Boolean).join(", ") || null }));
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.title,
+    detail: [p.city, p.district].filter(Boolean).join(", ") || null,
+    reference: p.reference_number,
+  }));
 }
 
 /** The client's current values, shown next to what the AI extracted. */
@@ -298,6 +303,15 @@ export async function saveCapture(user: CurrentUser, c: CaptureSave) {
     source: "ai_assisted",
   });
   await touchClient(user, clientId, c.occurred_at, c.next_follow_up_at ?? undefined);
+  if (c.email_id) {
+    // RLS limits this to the user's own imported emails.
+    const { error } = await supabase
+      .from("emails")
+      .update({ status: "processed", interaction_id: interactionId, client_id: clientId })
+      .eq("id", c.email_id)
+      .eq("user_id", user.id);
+    if (error) console.error("email status update failed", error.code);
+  }
   await insertTasks(
     user,
     c.tasks.map((t) => ({

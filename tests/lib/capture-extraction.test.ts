@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { captureUserPrompt } from "@/lib/ai/capture-prompt";
+import { captureUserPrompt, relativeDayTable } from "@/lib/ai/capture-prompt";
 import { captureExtractionSchema, cleanExtraction, type CaptureExtraction } from "@/lib/ai/capture-schema";
 
 function extraction(overrides: Partial<CaptureExtraction> = {}): CaptureExtraction {
@@ -89,5 +89,31 @@ describe("captureUserPrompt", () => {
     expect(prompt).toContain("Current date: 2026-10-26 (hétfő)");
     expect(prompt).toContain('client "Teszt Péter"');
     expect(prompt).toContain("<note>\nHívjam vissza pénteken.\n</note>");
+  });
+});
+
+describe("relativeDayTable", () => {
+  const line = (table: string, key: string) => table.split("\n").find((l) => l.startsWith(key));
+
+  it("on a Monday, 'kedden' is tomorrow and 'jövő kedden' is next week's Tuesday", () => {
+    const t = relativeDayTable(new Date("2026-10-26T10:00:00Z")); // Monday
+    expect(line(t, "kedden")).toBe("kedden = 2026-10-27; jövő kedden = 2026-11-03");
+    expect(line(t, "pénteken")).toBe("pénteken = 2026-10-30; jövő pénteken = 2026-11-06");
+    expect(line(t, "hétfőn")).toBe("hétfőn = 2026-11-02; jövő hétfőn = 2026-11-02");
+    expect(line(t, "holnapután")).toBe("holnapután = 2026-10-28");
+    expect(line(t, "jövő héten")).toContain("2026-11-02 – 2026-11-08");
+  });
+
+  it("on a Thursday, 'kedden' and 'jövő kedden' are both next week's Tuesday", () => {
+    const t = relativeDayTable(new Date("2026-10-29T10:00:00Z")); // Thursday
+    expect(line(t, "kedden")).toBe("kedden = 2026-11-03; jövő kedden = 2026-11-03");
+    expect(line(t, "pénteken")).toBe("pénteken = 2026-10-30; jövő pénteken = 2026-11-06");
+    expect(line(t, "hétvégén")).toBe("hétvégén = 2026-10-31");
+  });
+
+  it("uses the Budapest date, not UTC, late in the evening", () => {
+    // 23:30 UTC on Sunday 25 Oct is already Monday 26 Oct in Budapest.
+    const t = relativeDayTable(new Date("2026-10-25T23:30:00Z"));
+    expect(line(t, "ma =")).toBe("ma = 2026-10-26");
   });
 });

@@ -208,6 +208,32 @@ describe("workflow", () => {
     ).toBe(false);
   });
 
+  it("mailboxes and emails are visible only to the user who connected them", async () => {
+    const [mb] = await rowsAs(
+      USER_A,
+      `insert into mailboxes (organization_id, provider, email_address, refresh_token_enc)
+       values ('${orgA}', 'gmail', 'anna@example.test', 'ciphertext') returning id`,
+    );
+    const [mail] = await rowsAs(
+      USER_A,
+      `insert into emails (organization_id, mailbox_id, provider_message_id, direction, received_at, subject)
+       values ('${orgA}', '${mb.id}', 'm1', 'incoming', now(), 'Érdeklődés') returning id`,
+    );
+    expect(await rowsAs(USER_B, `select id from mailboxes`)).toEqual([]);
+    expect(await rowsAs(USER_B, `select id from emails where id = '${mail.id}'`)).toEqual([]);
+    expect(await rowsAs(USER_B, `update emails set status = 'ignored' where id = '${mail.id}' returning id`)).toEqual([]);
+    // Another user cannot attach their email to A's mailbox.
+    const [mbB] = await rowsAs(
+      USER_B,
+      `insert into mailboxes (organization_id, provider, email_address, refresh_token_enc)
+       values ('${orgB}', 'gmail', 'bela@example.test', 'ciphertext') returning id`,
+    );
+    expect(
+      (await asUser(USER_B, `insert into emails (organization_id, mailbox_id, provider_message_id, direction, received_at) values ('${orgB}', '${mb.id}', 'x', 'incoming', now())`)).ok,
+    ).toBe(false);
+    expect(mbB.id).toBeDefined();
+  });
+
   it("rejects an inverted budget range", async () => {
     const r = await asUser(
       USER_A,

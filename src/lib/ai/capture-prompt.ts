@@ -14,7 +14,7 @@ Rules:
 - locations: places exactly as an agent would file them, e.g. "Budapest XI. kerület", "Budaörs". Convert "tizenegyedik kerület" and "XI. ker" to "Budapest XI. kerület" when Budapest is meant.
 - requirements.other: wishes and must-haves that have no own field, as short Hungarian phrases separated by "; ", e.g. "Erkély fontos; Parkoló kérdéses; Nem földszint; Lift kell". Include features (erkély, terasz, kert, parkoló, garázs, lift, emelet, fűtés, állapot, kilátás) whenever they are mentioned as wanted, required, or excluded.
 - property_types: apartment (lakás), house (ház, családi ház, ikerház, sorház), plot (telek), commercial (üzlethelyiség, iroda), other.
-- Dates: resolve relative dates ("pénteken", "jövő héten kedden", "holnap", "három hónapon belül") using the calendar given in the request, in the Europe/Budapest time zone. Never calculate a weekday yourself: look the day up in the calendar. A weekday name means its next occurrence after today ("pénteken" on a Monday is the Friday of the same week; "jövő pénteken" is the Friday after that). Output dates as YYYY-MM-DD and times as HH:MM (24-hour); "délelőtt 10" is 10:00, "délután 3" is 15:00. "Within three months" is a desired_move_date three months from today. Leave the time null unless a time is stated.
+- Dates: resolve relative dates ("pénteken", "jövő héten kedden", "holnap", "három hónapon belül") using the "Day expressions" table and the calendar given in the request, in the Europe/Budapest time zone. Never calculate a weekday yourself: copy the date from the table ("kedden", "jövő kedden", "holnapután", "jövő héten" are all listed there). Output dates as YYYY-MM-DD and times as HH:MM (24-hour); "délelőtt 10" is 10:00, "délután 3" is 15:00. "Within three months" is a desired_move_date three months from today. Leave the time null unless a time is stated.
 - tasks: concrete actions the agent committed to or must do ("küldjek megfelelő ingatlanokat", "hívjam vissza pénteken"). One task per action, with due_date when the text gives or implies one.
 - follow_up_date / follow_up_time: the next time the agent should contact this client, if stated or clearly implied.
 - promised_actions: what either side promised. decisions: what was agreed. open_questions: what is still unclear or must be clarified.
@@ -30,22 +30,64 @@ const dateFormatter = new Intl.DateTimeFormat("en-CA", {
 const weekdayFormatter = new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", weekday: "long" });
 const timeFormatter = new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit" });
 
+const DAY_MS = 86_400_000;
+const WEEKDAYS = ["hétfőn", "kedden", "szerdán", "csütörtökön", "pénteken", "szombaton", "vasárnap"];
+
+/** Today's Budapest calendar date as a UTC-noon Date, safe to add whole days to across DST changes. */
+function budapestDay(now: Date) {
+  const [y, m, d] = dateFormatter.format(now).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12));
+}
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const plus = (d: Date, days: number) => new Date(d.getTime() + days * DAY_MS);
+
 /** The next 14 days with Hungarian weekday names, so the model looks dates up instead of computing them. */
 function calendar(now: Date) {
+  const today = budapestDay(now);
   const days = [];
   for (let i = 0; i < 14; i++) {
-    const d = new Date(now.getTime() + i * 86_400_000);
+    const d = plus(today, i);
     const label = i === 0 ? " (ma)" : i === 1 ? " (holnap)" : "";
-    days.push(`${dateFormatter.format(d)} ${weekdayFormatter.format(d)}${label}`);
+    days.push(`${iso(d)} ${weekdayFormatter.format(d)}${label}`);
   }
   return days.join("\n");
 }
 
-export function captureUserPrompt(text: string, now: Date, knownClientName?: string | null) {
+/**
+ * Hungarian day expressions resolved in code, so the model never has to
+ * interpret them: "kedden" is the next Tuesday after today, "jövő kedden"
+ * the Tuesday of next calendar week.
+ */
+export function relativeDayTable(now: Date) {
+  const today = budapestDay(now);
+  const dow = (today.getUTCDay() + 6) % 7; // 0 = Monday
+  const nextMonday = plus(today, 7 - dow);
+  const lines = [`ma = ${iso(today)}`, `holnap = ${iso(plus(today, 1))}`, `holnapután = ${iso(plus(today, 2))}`];
+  WEEKDAYS.forEach((name, w) => {
+    const ahead = ((w - dow + 7) % 7) || 7;
+    lines.push(`${name} = ${iso(plus(today, ahead))}; jövő ${name} = ${iso(plus(nextMonday, w))}`);
+  });
+  lines.push(`ezen a héten = ${iso(today)} – ${iso(plus(nextMonday, -1))}`);
+  lines.push(`jövő héten = ${iso(nextMonday)} – ${iso(plus(nextMonday, 6))} (if no day is given, use ${iso(nextMonday)})`);
+  lines.push(`hétvégén = ${iso(plus(today, ((5 - dow + 7) % 7) || 7))}`);
+  return lines.join("\n");
+}
+
+export type CaptureHint = "email" | "portal";
+
+const HINTS: Record<CaptureHint, string> = {
+  email: "The note is an email. The client is the other party of the email (the sender of an incoming email, the recipient of an outgoing one), not the agent. Use interaction_type email.",
+  portal:
+    "The note is an inquiry email forwarded by a property portal. The client is the person who made the inquiry: take their name, phone and email from the message body, never the portal's own address or name. Use interaction_type email. Mention the listing they asked about in the summary. The listing's own attributes (its location, type, size, rooms, price) are not the inquirer's requirements: fill requirements only from what the inquirer writes they want or can afford.",
+};
+
+export function captureUserPrompt(text: string, now: Date, knownClientName?: string | null, hint?: CaptureHint | null) {
   const context = [
     `Current date: ${dateFormatter.format(now)} (${weekdayFormatter.format(now)}), time ${timeFormatter.format(now)}, Europe/Budapest.`,
-    `Calendar (use it to resolve weekdays and relative dates):\n${calendar(now)}`,
+    `Calendar:\n${calendar(now)}`,
+    `Day expressions, already resolved (use these dates exactly, do not reinterpret):\n${relativeDayTable(now)}`,
     knownClientName ? `The agent recorded this from the page of client "${knownClientName}".` : null,
+    hint ? HINTS[hint] : null,
   ]
     .filter(Boolean)
     .join("\n");

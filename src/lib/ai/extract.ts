@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { CAPTURE_SYSTEM_PROMPT, captureUserPrompt } from "./capture-prompt";
+import { CAPTURE_SYSTEM_PROMPT, captureUserPrompt, type CaptureHint } from "./capture-prompt";
 import { captureExtractionSchema, cleanExtraction, type CaptureExtraction } from "./capture-schema";
 import { llmConfig, type LlmConfig } from "./config";
 
@@ -129,9 +129,14 @@ ${JSON.stringify(schema)}`,
 }
 
 /** Turns free text into structured, validated CRM data. Nothing is saved here. */
-export async function extractCapture(text: string, now: Date, knownClientName?: string | null): Promise<ExtractionResult> {
+export async function extractCapture(
+  text: string,
+  now: Date,
+  knownClientName?: string | null,
+  hint?: CaptureHint | null,
+): Promise<ExtractionResult> {
   const config = llmConfig();
   if (!config) throw new AiError("No AI provider configured", "Az AI-szolgáltatás még nincs beállítva.");
-  const prompt = captureUserPrompt(text, now, knownClientName);
+  const prompt = captureUserPrompt(text, now, knownClientName, hint);
   return config.provider === "anthropic" ? extractWithClaude(config, prompt) : extractWithOpenAiCompatible(config, prompt);
 }

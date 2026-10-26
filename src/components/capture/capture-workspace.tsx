@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, PenLine, PlugZap, Sparkles } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { analyzeCaptureAction, type AnalyzeResult } from "@/app/(app)/interactions/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/form";
@@ -20,27 +20,42 @@ export function CaptureWorkspace({
   defaults,
   aiEnabled,
   transcriptionEnabled,
+  email,
 }: {
   clients: Option[];
   properties: Option[];
   defaults: { clientId?: string; propertyId?: string; type?: string };
   aiEnabled: boolean;
   transcriptionEnabled: boolean;
+  /** Processing an imported email: text is prefilled and analyzed right away. */
+  email?: { id: string; text: string; receivedAt: string; hint: "email" | "portal" } | null;
 }) {
   const [mode, setMode] = useState<"ai" | "manual">(aiEnabled ? "ai" : "manual");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(email?.text ?? "");
   const [result, setResult] = useState<Extract<AnalyzeResult, { ok: true }> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analyzing, startAnalyzing] = useTransition();
 
-  function analyze() {
-    setError(null);
+  function runAnalysis() {
     startAnalyzing(async () => {
-      const r = await analyzeCaptureAction({ text, clientId: defaults.clientId ?? null });
+      const r = await analyzeCaptureAction({ text, clientId: defaults.clientId ?? null, hint: email?.hint ?? null });
       if (r.ok) setResult(r);
       else setError(r.error);
     });
   }
+
+  function analyze() {
+    setError(null);
+    runAnalysis();
+  }
+
+  // An email arrives with its text ready: analyze it without an extra click.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!email || !aiEnabled || autoStarted.current) return;
+    autoStarted.current = true;
+    runAnalysis();
+  });
 
   if (result) {
     return (
@@ -52,6 +67,13 @@ export function CaptureWorkspace({
         initialPropertyId={defaults.propertyId}
         pinnedClientId={defaults.clientId}
         onBack={() => setResult(null)}
+        emailId={email?.id}
+        occurredAt={email?.receivedAt}
+        doubtfulKeys={
+          email?.hint === "portal"
+            ? ["preferred_locations", "preferred_property_types", "min_rooms", "min_bedrooms", "min_area_sqm", "max_area_sqm"]
+            : []
+        }
       />
     );
   }

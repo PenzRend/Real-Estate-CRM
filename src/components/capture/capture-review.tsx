@@ -26,6 +26,9 @@ export function CaptureReview({
   initialPropertyId,
   pinnedClientId,
   onBack,
+  emailId,
+  occurredAt,
+  doubtfulKeys = [],
 }: {
   transcript: string;
   extraction: CaptureExtraction;
@@ -34,6 +37,12 @@ export function CaptureReview({
   initialPropertyId?: string | null;
   pinnedClientId?: string | null;
   onBack: () => void;
+  /** Set when processing an imported email: marks it processed on save. */
+  emailId?: string | null;
+  /** When the conversation happened (e.g. the email's date); defaults to now. */
+  occurredAt?: string | null;
+  /** Fields that may describe the listing rather than the client's wishes: shown, but not ticked by default. */
+  doubtfulKeys?: UpdateKey[];
 }) {
   const [clientChoice, setClientChoice] = useState<string>(
     candidates.find((c) => c.id === pinnedClientId)?.id ?? candidates[0]?.id ?? "new",
@@ -41,7 +50,7 @@ export function CaptureReview({
   const [newName, setNewName] = useState(x.client.full_name ?? "");
   const [newType, setNewType] = useState<string>(x.client.client_type ?? "buyer");
   const [interactionType, setInteractionType] = useState<string>(x.interaction_type);
-  const [occurredLocal, setOccurredLocal] = useState(() => utcToZonedLocal(new Date().toISOString()));
+  const [occurredLocal, setOccurredLocal] = useState(() => utcToZonedLocal(occurredAt ?? new Date().toISOString()));
   const [summary, setSummary] = useState(x.summary);
   const [outcome, setOutcome] = useState(() => outcomeText(x));
   const [propertyId, setPropertyId] = useState(initialPropertyId ?? "");
@@ -56,7 +65,7 @@ export function CaptureReview({
   const selected = candidates.find((c) => c.id === clientChoice) ?? null;
   const fields = useMemo(() => proposedFields(x, selected), [x, selected]);
   const stateOf = (f: ProposedField): FieldState =>
-    overrides[clientChoice]?.[f.key] ?? { checked: !f.conflict, value: f.proposed };
+    overrides[clientChoice]?.[f.key] ?? { checked: !f.conflict && !doubtfulKeys.includes(f.key), value: f.proposed };
   const setField = (key: UpdateKey, next: FieldState) =>
     setOverrides((o) => ({ ...o, [clientChoice]: { ...o[clientChoice], [key]: next } }));
 
@@ -102,6 +111,7 @@ export function CaptureReview({
       updates: updates as ClientUpdates,
       next_follow_up_at: nextFollowUp,
       tasks: taskPayload,
+      email_id: emailId ?? null,
     };
     startSaving(async () => {
       // Redirects to the client page on success.
@@ -193,6 +203,7 @@ export function CaptureReview({
                         <p className="font-medium text-ink">{f.label}</p>
                         <p className={cn("text-xs", f.conflict ? "text-warning" : "text-muted")}>
                           {f.current ? `Most: ${f.current}` : "Most: üres"}
+                          {!f.conflict && doubtfulKeys.includes(f.key) && " · a hirdetésből? – ellenőrizd"}
                           {f.conflict && " · eltér, csak jelölve írjuk felül"}
                         </p>
                       </div>
