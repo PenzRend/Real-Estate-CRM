@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Visual direction: clean white surfaces, Onest with tight
+ * tracking on headings, near-black pill buttons, hairline borders, soft gray
+ * panels and a single blue accent used sparingly.
+ */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --surface: #f6f7f7;
+  --surface-strong: #eef0f0;
+  --border: #ebebeb;
+  --border-strong: #dadada;
+  --ink: #0b1619;
+  --text: #2a2a2a;
+  --muted: #676767;
+  --subtle: #a3a3a3;
+  --primary: #1b1b1b;
+  --primary-hover: #333333;
+  --accent: #3d6ff2;
+  --accent-soft: #eaf0fe;
+  --success: #1f7a4d;
+  --success-soft: #e7f5ed;
+  --warning: #9a5b00;
+  --warning-soft: #fdf3e1;
+  --danger: #c0352b;
+  --danger-soft: #fcebea;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--ink);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-onest);
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.12);
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+}
+
+h1,
+h2,
+h3 {
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
