@@ -9,8 +9,15 @@ Branch `feat/mvp-foundation`.
   phone digits) and filters (status, type, follow-up, budget, location,
   archived), detail, edit, archive/restore; dashboard from real data.
   Tested end to end in Chrome against the dev Supabase project.
-- Migrations `20261025000000_initial_schema` and `20261026000000_client_search`
-  are applied and recorded in `supabase_migrations.schema_migrations`.
+- Property management: create, list with search and filters (type, sale/rent,
+  status, price, rooms, size, balcony/garden/parking, archived), detail with
+  price per m², owner link, edit, archive/restore; client pages list owned
+  properties. Tested end to end in Chrome.
+- Migrations `20261025000000_initial_schema`, `20261026000000_client_search` and
+  `20261026120126_property_search` are applied and recorded in
+  `supabase_migrations.schema_migrations`.
+- Supabase MCP `apply_migration` auto-declines migrations with DROP statements
+  here; keep migrations additive (drop old indexes later, with the user).
 
 ## Known gaps / next
 
@@ -19,5 +26,6 @@ Branch `feat/mvp-foundation`.
 - Supabase advisor: enable leaked password protection (dashboard setting);
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).
-- Next: properties CRUD, then interactions and tasks.
+- Unused index `properties_title_trgm_idx` (superseded) can be dropped.
+- Next: interactions (call notes) and tasks.
 - Dev tip: don't run `next build` while `next dev` is running; it crashed the dev server once.

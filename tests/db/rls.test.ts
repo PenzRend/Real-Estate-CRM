@@ -184,6 +184,18 @@ describe("workflow", () => {
     expect(await rowsAs(USER_A, `select full_name from clients where locations_text like '%budaors%'`)).toHaveLength(1);
   });
 
+  it("property search matches title, address and reference without accents", async () => {
+    await rowsAs(
+      USER_A,
+      `insert into properties (organization_id, title, reference_number, city, district, address)
+       values ('${orgA}', 'Napfényes lakás', 'BP11-024', 'Budapest', 'XI. kerület', 'Örs vezér tere 5.')`,
+    );
+    for (const term of ["napfenyes", "ors vezer", "bp11-024", "xi. kerulet"]) {
+      expect(await rowsAs(USER_A, `select title from properties where search_text like '%${term}%'`)).toHaveLength(1);
+    }
+    expect(await rowsAs(USER_B, `select title from properties where search_text like '%napfenyes%'`)).toEqual([]);
+  });
+
   it("rejects an inverted budget range", async () => {
     const r = await asUser(
       USER_A,

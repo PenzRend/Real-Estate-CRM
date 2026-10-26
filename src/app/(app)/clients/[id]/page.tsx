@@ -8,6 +8,7 @@ import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { getClientDetail } from "@/lib/db/clients";
+import { listOwnedProperties } from "@/lib/db/properties";
 import { archiveClientAction, restoreClientAction } from "../actions";
 
 export const metadata: Metadata = { title: "Ügyfél" };
@@ -15,8 +16,17 @@ export const metadata: Metadata = { title: "Ügyfél" };
 async function ClientContent({ params }: Pick<PageProps<"/clients/[id]">, "params">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const client = await getClientDetail(user, id);
-  if (!client) notFound();
+  const [detail, owned] = await Promise.all([getClientDetail(user, id), listOwnedProperties(user, id)]);
+  if (!detail) notFound();
+  // Owned listings first, then properties linked through interest/viewings.
+  const linkedIds = new Set(detail.relatedProperties.map((p) => p.id));
+  const client = {
+    ...detail,
+    relatedProperties: [
+      ...owned.filter((p) => !linkedIds.has(p.id)).map((p) => ({ ...p, relation: "owner" })),
+      ...detail.relatedProperties,
+    ],
+  };
 
   const actions = client.archivedAt ? (
     <form action={restoreClientAction.bind(null, client.id)}>

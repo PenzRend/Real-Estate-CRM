@@ -39,6 +39,16 @@ export const propertyStatusLabels = {
   inactive: "Inaktív",
 } as const;
 
+export const listingTypeLabels = {
+  sale: "Eladó",
+  rent: "Kiadó",
+} as const;
+
+export const currencyLabels = {
+  HUF: "Ft",
+  EUR: "EUR",
+} as const;
+
 export const interactionTypeLabels = {
   call: "Telefonhívás",
   email: "E-mail",
