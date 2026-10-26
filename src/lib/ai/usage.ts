@@ -27,7 +27,8 @@ export async function logAiUsage(
     model?: string | null;
     inputTokens?: number | null;
     outputTokens?: number | null;
-    operation?: "extract_interaction" | "assistant";
+    /** Reply drafts are logged as "next_actions" (the schema's existing operation type). */
+    operation?: "extract_interaction" | "assistant" | "next_actions";
   },
 ) {
   const supabase = await createClient();

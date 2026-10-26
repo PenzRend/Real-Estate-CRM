@@ -56,6 +56,35 @@ Branch `feat/mvp-foundation`.
   match question (parking flagged as missing), send-email refusal, no-data
   answer. Groq's free tier can hit its per-minute token limit on multi-step
   questions.
+- "Mi történt, amíg távol voltál" on the dashboard (`src/lib/away/*`,
+  `src/components/dashboard/away-panel.tsx`): unprocessed incoming emails
+  since the previous session (30-minute gap = new session; first visit = last
+  24 h), a one-line headline, tasks that came due. Mail syncs on open if the
+  last sync is older than 5 minutes. The first 3 emails get an AI summary,
+  next step and reply draft automatically (others on click), grounded in the
+  email plus client data, best matches and the mentioned listing; unknowns
+  become [placeholders]. Drafts are stored on the email row (owner-only),
+  editable, with Copy and "Megnyitás Gmailben" (prefilled compose, nothing is
+  sent). Recipient: Reply-To (now stored by sync), client email, human sender,
+  or the one address in a portal email. Tested in Chrome with two seeded test
+  emails (`teszt-away-1`, `teszt-away-2`). Migration `20261026182449_away_summary`.
+  Drafts are logged as AI operation `next_actions`.
+- Sending replies from the CRM (`src/lib/mail/send.ts`, `compose.ts`):
+  separate `gmail.send` permission requested only via "Küldés engedélyezése"
+  (`/api/mail/google/connect?send=1`), stored as `mailboxes.can_send`. Send
+  requires an explicit confirm; blocked while [placeholders] remain or the
+  recipient is invalid; 100/day limit. Replies go in the original Gmail thread
+  (In-Reply-To/References + threadId), are stored as outgoing emails, logged as
+  an interaction on the client (or on the mentioned listing for a new
+  inquirer), optionally with a 2-day follow-up task; a client's email is then
+  marked processed, a new inquirer's stays in Levelek to be saved as a client.
+  Migration `20261026190255_mail_send`. Tested end to end with the owner's
+  Gmail: send permission granted, one test reply (to the owner's own address)
+  sent, logged on Teszt Kata's timeline with a 2-day follow-up task. Threading
+  into a real Gmail conversation is not yet tested (the test email was seeded,
+  so the reply started a new conversation).
+- The away panel lists new arrivals first, then emails still waiting for a
+  reply from before ("korábbi"), so drafts and Send stay reachable.
 - Public landing page at `/` (`src/app/page.tsx`, static): hero, product
   illustrations labelled "Példa", features, how it works, security, roadmap
   ("Hamarosan"), FAQ, CTA to `/signup`. No invented reviews, customer counts

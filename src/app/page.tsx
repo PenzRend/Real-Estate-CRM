@@ -147,7 +147,7 @@ const faqs = [
   },
   {
     q: "Olvassa vagy küldi a leveleimet?",
-    a: "Csak olvassa, és csak a releváns leveleket tárolja: az ügyfeleidtől érkezőket és a portálos megkereséseket. Levelet nem küld, a postafiók bármikor leválasztható.",
+    a: "Olvassa, és csak a releváns leveleket tárolja: az ügyfeleidtől érkezőket és a portálos megkereséseket. Küldeni csak akkor tud, ha ezt külön engedélyezed, és akkor is csak a te kattintásodra – magától soha. Törölni vagy módosítani nem tud, a postafiók bármikor leválasztható.",
   },
   {
     q: "Kitalálhat valamit az AI-asszisztens?",
@@ -376,7 +376,7 @@ export default function LandingPage() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {[
                 [Lock, "Zárt munkaterület", "Minden adatsor munkaterülethez kötött, az adatbázis szintjén kikényszerítve."],
-                [ShieldCheck, "Titkosított postafiók-kapcsolat", "A levelezéshez csak olvasási jogot kérünk, a hozzáférési kulcsot titkosítva tároljuk."],
+                [ShieldCheck, "Titkosított postafiók-kapcsolat", "Alapból csak olvasási jogot kérünk; küldési jogot csak külön engedéllyel. A hozzáférési kulcsot titkosítva tároljuk."],
                 [UserRoundCheck, "Ember a döntésben", "Az AI javaslatai csak a jóváhagyásod után kerülnek be."],
                 [Sparkles, "Szűkszavú napló", "Az AI-használatról csak technikai adatot naplózunk (mikor, mennyit), a tartalmat nem."],
               ].map(([Icon, title, text]) => {

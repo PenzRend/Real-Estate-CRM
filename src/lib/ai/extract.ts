@@ -60,7 +60,7 @@ async function extractWithClaude(config: Extract<LlmConfig, { provider: "anthrop
   };
 }
 
-async function callChatCompletions(
+export async function callChatCompletions(
   config: Extract<LlmConfig, { provider: "openai-compatible" }>,
   messages: { role: "system" | "user"; content: string }[],
   responseFormat: object,

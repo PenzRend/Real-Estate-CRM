@@ -12,6 +12,8 @@ export type Mailbox = {
   status: "active" | "revoked" | "error";
   last_error: string | null;
   last_synced_at: string | null;
+  /** Google granted the separate send permission. */
+  can_send: boolean;
 };
 
 type MailboxSecrets = Mailbox & {
@@ -29,7 +31,7 @@ export async function getMailbox(user: CurrentUser): Promise<Mailbox | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("mailboxes")
-    .select("id, email_address, status, last_error, last_synced_at")
+    .select("id, email_address, status, last_error, last_synced_at, can_send")
     .eq("user_id", user.id)
     .eq("organization_id", user.organization.id)
     .order("created_at", { ascending: false })
@@ -43,7 +45,7 @@ async function loadSecrets(user: CurrentUser): Promise<MailboxSecrets | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("mailboxes")
-    .select("id, organization_id, email_address, status, last_error, last_synced_at, refresh_token_enc, access_token_enc, access_token_expires_at")
+    .select("id, organization_id, email_address, status, last_error, last_synced_at, can_send, refresh_token_enc, access_token_enc, access_token_expires_at")
     .eq("user_id", user.id)
     .eq("organization_id", user.organization.id)
     .order("created_at", { ascending: false })
@@ -70,6 +72,20 @@ async function accessToken(m: MailboxSecrets): Promise<string> {
     access_token_expires_at: new Date(Date.now() + (fresh.expires_in - 60) * 1000).toISOString(),
   });
   return fresh.access_token;
+}
+
+/** The user's mailbox with a usable access token, for sending. Throws MailAccessRevoked when Google access ended. */
+export async function mailboxWithToken(user: CurrentUser) {
+  const mailbox = await loadSecrets(user);
+  if (!mailbox || mailbox.status === "revoked") return null;
+  try {
+    return { mailbox, token: await accessToken(mailbox) };
+  } catch (error) {
+    if (error instanceof MailAccessRevoked) {
+      await markMailbox(mailbox.id, { status: "revoked", last_error: "A Google-hozzáférést visszavonták vagy lejárt." });
+    }
+    throw error;
+  }
 }
 
 export type SyncResult =
@@ -130,7 +146,7 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
       const batch = fresh.slice(i, i + 10);
       const metas = await Promise.all(
         batch.map((id) =>
-          gmail<GmailMessage>(`messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject`, token),
+          gmail<GmailMessage>(`messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Reply-To`, token),
         ),
       );
       for (const meta of metas) {
@@ -138,6 +154,7 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
         const from = parseAddress(header(payload, "From"));
         const to = [...parseAddressList(header(payload, "To")), ...parseAddressList(header(payload, "Cc"))].map((a) => a.email);
         const subject = header(payload, "Subject") ?? null;
+        const replyTo = parseAddress(header(payload, "Reply-To"));
         const verdict = classifyEmail({ from: from?.email ?? null, to, subject }, clientEmails, mailbox.email_address);
         if (!verdict.keep) continue;
 
@@ -153,6 +170,7 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
           direction: outgoing ? "outgoing" : "incoming",
           from_email: from?.email ?? null,
           from_name: from?.name ?? null,
+          reply_to_email: replyTo && replyTo.email !== from?.email ? replyTo.email.slice(0, 320) : null,
           to_emails: to.slice(0, 50),
           subject: subject?.slice(0, 1000) ?? null,
           snippet: (full.snippet ?? meta.snippet ?? "").slice(0, 1000),

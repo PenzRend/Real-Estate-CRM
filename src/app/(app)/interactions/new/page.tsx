@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { llmConfig, transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
+import { findMentionedProperty } from "@/lib/away/logic";
 import { listClientOptions, listPropertyOptions } from "@/lib/db/activity";
 import { emailAsNote, getEmail } from "@/lib/db/mail";
 import { interactionTypeLabels } from "@/lib/i18n/labels";
@@ -27,10 +28,7 @@ async function CaptureContent({ searchParams }: Pick<PageProps<"/interactions/ne
       : null;
   const pinnedClientId = clientId ?? (email ? emailRow?.client?.id : undefined);
   // An email that names one of our listings (by reference number or exact title) links to it.
-  const emailText = email?.text.toLowerCase() ?? "";
-  const mentionedProperty = email
-    ? properties.find((p) => (p.reference && emailText.includes(p.reference.toLowerCase())) || emailText.includes(p.name.toLowerCase()))
-    : undefined;
+  const mentionedProperty = email ? findMentionedProperty(email.text, properties) : undefined;
   const client = clients.find((c) => c.id === pinnedClientId);
 
   return (

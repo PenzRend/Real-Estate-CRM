@@ -1,11 +1,19 @@
 import "server-only";
 
 // Google OAuth (authorization code + PKCE) and the few Gmail API calls we need.
-// Scope is read-only: the CRM can never send, delete or change mail.
+// Reading is the base grant. Sending is a separate grant the user gives only
+// when they first send a reply; the CRM never deletes or changes mail.
 
 export const GMAIL_SCOPES = ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly"];
+export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 
 export class MailAccessRevoked extends Error {}
+export class MailSendNotAllowed extends Error {}
+
+/** Where to land after consent: an app path only, never another site. */
+export function safeNext(value: string | null) {
+  return value && /^\/[a-z][a-z0-9/_-]*$/i.test(value) ? value : "/inbox";
+}
 
 export function googleConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -13,7 +21,7 @@ export function googleConfig() {
   return clientId && clientSecret ? { clientId, clientSecret } : null;
 }
 
-export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string }) {
+export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string; send?: boolean }) {
   const config = googleConfig();
   if (!config) throw new Error("Google OAuth is not configured");
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -21,7 +29,7 @@ export function googleAuthUrl(p: { redirectUri: string; state: string; codeChall
     client_id: config.clientId,
     redirect_uri: p.redirectUri,
     response_type: "code",
-    scope: GMAIL_SCOPES.join(" "),
+    scope: (p.send ? [...GMAIL_SCOPES, GMAIL_SEND_SCOPE] : GMAIL_SCOPES).join(" "),
     access_type: "offline", // returns a refresh token
     prompt: "consent", // always return the refresh token, also on reconnect
     include_granted_scopes: "true",
@@ -89,4 +97,18 @@ export async function gmail<T>(path: string, accessToken: string): Promise<T> {
   if (res.status === 401) throw new MailAccessRevoked("Gmail rejected the access token");
   if (!res.ok) throw new Error(`Gmail API returned ${res.status} for ${path.split("?")[0]}`);
   return (await res.json()) as T;
+}
+
+/** Sends a MIME message (base64url) as the signed-in Gmail user, optionally in an existing thread. */
+export async function gmailSend(accessToken: string, raw: string, threadId: string | null) {
+  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(threadId ? { raw, threadId } : { raw }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (res.status === 401) throw new MailAccessRevoked("Gmail rejected the access token");
+  if (res.status === 403) throw new MailSendNotAllowed("Gmail refused to send (missing send permission)");
+  if (!res.ok) throw new Error(`Gmail send returned ${res.status}`);
+  return (await res.json()) as { id: string; threadId: string };
 }

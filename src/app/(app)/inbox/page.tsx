@@ -103,7 +103,7 @@ function ConnectCard() {
         </p>
         <ul className="flex flex-col gap-2 text-sm text-text">
           {[
-            "Csak olvasási jog: a CRM nem tud levelet küldeni, törölni vagy módosítani.",
+            "Alapból csak olvasási jog. Válaszolni a CRM-ből akkor tudsz, ha a küldést külön engedélyezed – és akkor is csak a te kattintásodra megy el levél. Törölni vagy módosítani nem tud.",
             "Csak a releváns leveleket tároljuk: ügyfelekkel váltott, portálról érkező vagy ingatlanos érdeklődés. A többit nem mentjük el.",
             "A hozzáférési kulcsot titkosítva tároljuk, és bármikor leválaszthatod.",
           ].map((t) => (

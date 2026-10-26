@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { DashboardView } from "@/components/crm/dashboard-view";
+import { AwayPanel } from "@/components/dashboard/away-panel";
+import { llmConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
+import { getAwaySummary } from "@/lib/away/data";
 import { getDashboardData } from "@/lib/db/dashboard";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Suspense } from "react";
@@ -9,7 +12,14 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
-async function DashboardContent() {
+// Result of the "Küldés engedélyezése" Google consent round trip.
+async function notice(searchParams: PageProps<"/dashboard">["searchParams"]) {
+  const p = await searchParams;
+  if (p.send_enabled === "1") return "send_enabled";
+  return typeof p.mail_error === "string" ? p.mail_error : null;
+}
+
+async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, "searchParams">) {
   await connection();
   const now = new Date();
   if (!isSupabaseConfigured) {
@@ -22,14 +32,15 @@ async function DashboardContent() {
     );
   }
   const user = await getCurrentUser();
-  return <DashboardView now={now} data={await getDashboardData(user, now)} />;
+  const [data, away, shown] = await Promise.all([getDashboardData(user, now), getAwaySummary(user, now), notice(searchParams)]);
+  return <DashboardView now={now} data={data} away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />} />;
 }
 
 // Request-time content streams in behind Suspense so navigation stays instant.
-export default function DashboardPage() {
+export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <DashboardContent />
+      <DashboardContent searchParams={searchParams} />
     </Suspense>
   );
 }

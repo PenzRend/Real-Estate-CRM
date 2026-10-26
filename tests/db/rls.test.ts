@@ -234,6 +234,14 @@ describe("workflow", () => {
     expect(mbB.id).toBeDefined();
   });
 
+  it("visit times are private to their user and workspace", async () => {
+    expect((await asUser(USER_A, `insert into user_visits (organization_id) values ('${orgA}')`)).ok).toBe(true);
+    expect((await asUser(USER_B, `insert into user_visits (organization_id, user_id) values ('${orgB}', '${USER_A}')`)).ok).toBe(false);
+    expect((await asUser(USER_B, `insert into user_visits (organization_id) values ('${orgA}')`)).ok).toBe(false);
+    expect(await rowsAs(USER_B, `select user_id from user_visits`)).toEqual([]);
+    expect(await rowsAs(USER_B, `update user_visits set last_seen_at = now() where user_id = '${USER_A}' returning user_id`)).toEqual([]);
+  });
+
   it("rejects an inverted budget range", async () => {
     const r = await asUser(
       USER_A,

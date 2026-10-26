@@ -1,5 +1,6 @@
 import { AlarmClock, Building2, CalendarCheck, History, Lightbulb, Plus, UserRound, Users } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ClientStatusBadge, Eyebrow } from "@/components/ui/badge";
 import { ArrowLink, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader, StatRow } from "@/components/ui/card";
@@ -18,7 +19,7 @@ function greeting(now: Date) {
   return "Jó estét";
 }
 
-export function DashboardView({ data, now }: { data: DashboardData; now: Date }) {
+export function DashboardView({ data, now, away }: { data: DashboardData; now: Date; away?: ReactNode }) {
   const title = data.userFirstName ? `${greeting(now)}, ${data.userFirstName}` : "Áttekintés";
 
   return (
@@ -36,6 +37,8 @@ export function DashboardView({ data, now }: { data: DashboardData; now: Date })
           </>
         }
       />
+
+      {away}
 
       <StatRow
         stats={[

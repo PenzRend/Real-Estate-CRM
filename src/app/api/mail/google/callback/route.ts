@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { encryptToken } from "@/lib/mail/crypto";
-import { exchangeCode, gmail } from "@/lib/mail/google";
+import { exchangeCode, gmail, GMAIL_SEND_SCOPE, safeNext } from "@/lib/mail/google";
 import { createClient } from "@/lib/supabase/server";
 
 const OAUTH_COOKIE = "mail_oauth";
 
-function back(origin: string, query: string) {
-  const res = NextResponse.redirect(new URL(`/inbox?${query}`, origin));
+function back(origin: string, query: string, path = "/inbox") {
+  const res = NextResponse.redirect(new URL(`${path}?${query}`, origin));
   res.cookies.delete({ name: OAUTH_COOKIE, path: "/api/mail/google" });
   return res;
 }
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   if (searchParams.get("error")) return back(origin, "mail_error=denied");
 
-  let saved: { state?: string; verifier?: string } = {};
+  let saved: { state?: string; verifier?: string; send?: boolean; next?: string } = {};
   try {
     saved = JSON.parse(request.cookies.get(OAUTH_COOKIE)?.value ?? "{}");
   } catch {
@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeCode(code, saved.verifier, `${origin}/api/mail/google/callback`);
     if (!tokens.refresh_token) return back(origin, "mail_error=no_refresh");
     if (!tokens.scope?.includes("gmail.readonly")) return back(origin, "mail_error=scope");
+    // Google lets the user untick the send permission on the consent screen.
+    const canSend = tokens.scope.split(" ").includes(GMAIL_SEND_SCOPE);
+    if (saved.send && !canSend) return back(origin, "mail_error=send_scope", safeNext(saved.next ?? null));
     const profile = await gmail<{ emailAddress: string }>("profile", tokens.access_token);
 
     const supabase = await createClient();
@@ -48,6 +51,7 @@ export async function GET(request: NextRequest) {
         access_token_expires_at: new Date(Date.now() + (tokens.expires_in - 60) * 1000).toISOString(),
         status: "active",
         last_error: null,
+        can_send: canSend,
       },
       { onConflict: "user_id,provider,email_address" },
     );
@@ -59,5 +63,5 @@ export async function GET(request: NextRequest) {
     console.error("gmail connect failed", error instanceof Error ? error.message : error);
     return back(origin, "mail_error=exchange");
   }
-  return back(origin, "connected=1");
+  return saved.send ? back(origin, "send_enabled=1", safeNext(saved.next ?? null)) : back(origin, "connected=1");
 }

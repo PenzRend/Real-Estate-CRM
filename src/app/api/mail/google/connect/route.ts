@@ -2,11 +2,14 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
-import { googleAuthUrl, googleConfig } from "@/lib/mail/google";
+import { googleAuthUrl, googleConfig, safeNext } from "@/lib/mail/google";
 
 const OAUTH_COOKIE = "mail_oauth";
 
-/** Starts "Connect Gmail": PKCE + state in a short-lived, http-only cookie. */
+/**
+ * Starts "Connect Gmail": PKCE + state in a short-lived, http-only cookie.
+ * `?send=1` also asks for the send permission (granted on top of reading).
+ */
 export async function GET(request: NextRequest) {
   await getCurrentUser();
   const origin = request.nextUrl.origin;
@@ -18,10 +21,12 @@ export async function GET(request: NextRequest) {
   const verifier = randomBytes(48).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
 
+  const send = request.nextUrl.searchParams.get("send") === "1";
+  const next = safeNext(request.nextUrl.searchParams.get("next"));
   const response = NextResponse.redirect(
-    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge }),
+    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge, send }),
   );
-  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier }), {
+  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, send, next }), {
     httpOnly: true,
     secure: request.nextUrl.protocol === "https:",
     sameSite: "lax",
