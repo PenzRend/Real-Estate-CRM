@@ -2,7 +2,8 @@ import { z } from "zod";
 import { currencyLabels, listingTypeLabels, propertyStatusLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 import { fieldErrors, keys, optionalNumber, optionalText } from "./common";
 
-const checkbox = z.preprocess((v) => v === "on" || v === "true", z.boolean());
+// Yes / no / not stated. "Not stated" stays null so matching treats it as unknown, not as "no".
+const triState = z.preprocess((v) => (v === "on" || v === "true" ? true : v === "false" ? false : null), z.boolean().nullable());
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const propertyFormSchema = z.object({
@@ -33,11 +34,28 @@ export const propertyFormSchema = z.object({
   building_type: optionalText(100),
   condition: optionalText(100),
   energy_rating: optionalText(20),
-  has_balcony: checkbox,
-  has_garden: checkbox,
-  has_parking: checkbox,
+  has_balcony: triState,
+  has_garden: triState,
+  has_parking: triState,
   description: optionalText(10_000),
   internal_notes: optionalText(5000),
+  // Where an imported listing came from; set by the import, not typed by the user.
+  source_url: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
+    z.url({ protocol: /^https$/, error: "Érvénytelen hirdetési link." }).max(500).nullable(),
+  ),
+  // Video and virtual-tour links found by the import (JSON list); stored in features.
+  video_links: z.preprocess(
+    (v) => {
+      if (typeof v !== "string" || !v.trim()) return [];
+      try {
+        return JSON.parse(v);
+      } catch {
+        return null;
+      }
+    },
+    z.array(z.url({ protocol: /^https$/ }).max(500)).max(10, "Legfeljebb 10 videólink.").nullable(),
+  ),
 });
 
 export type PropertyInput = z.infer<typeof propertyFormSchema>;

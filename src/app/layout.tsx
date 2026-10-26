@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="hu" className={`${onest.variable} h-full antialiased`}>
+    // The import extension marks <html> (data-crm-extension) before React loads.
+    <html lang="hu" className={`${onest.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full font-sans text-[15px] leading-relaxed">{children}</body>
     </html>
   );

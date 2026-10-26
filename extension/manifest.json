@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Ingatlan CRM – Importálás",
+  "description": "Saját hirdetéseid átvétele az Ingatlan CRM-be egy kattintással – adatok, fotók, videólinkek –, ellenőrzés után.",
+  "version": "0.2.3",
+  "action": { "default_title": "Importálás a CRM-be", "default_popup": "popup.html" },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["https://*/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://ingatlan.com/*", "https://www.ingatlan.com/*"],
+      "js": ["collect.js", "handoff.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:3000/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

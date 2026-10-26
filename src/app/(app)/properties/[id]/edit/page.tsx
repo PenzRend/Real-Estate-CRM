@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Ingatlan szerkesztése" };
 
 const plain = new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 2 });
 const n = (v: number | null) => (v == null ? "" : plain.format(Number(v)));
-const flag = (b: boolean | null) => (b ? "on" : "");
+const flag = (b: boolean | null) => (b == null ? "" : String(b));
 
 function toFormValues(r: PropertyRow): PropertyFormValues {
   return {

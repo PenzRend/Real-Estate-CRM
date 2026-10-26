@@ -26,12 +26,16 @@ type Props = {
   cancelHref: string;
 };
 
-function Toggle({ name, label, checked }: { name: string; label: string; checked: boolean }) {
+/** Yes / no / not stated: an unknown feature must not be saved as "no". */
+function FeatureSelect({ name, label, value }: { name: string; label: string; value: string }) {
   return (
-    <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-border-strong px-3.5 text-sm text-ink has-[:checked]:border-ink has-[:checked]:bg-surface">
-      <input type="checkbox" name={name} defaultChecked={checked} className="size-4 accent-[var(--primary)]" />
-      {label}
-    </label>
+    <Field label={label} htmlFor={name}>
+      <Select id={name} name={name} defaultValue={value === "on" ? "true" : value}>
+        <option value="">Nincs adat</option>
+        <option value="true">Van</option>
+        <option value="false">Nincs</option>
+      </Select>
+    </Field>
   );
 }
 
@@ -40,7 +44,6 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
   const values = state.values ?? initialValues;
   const errors: PropertyFieldErrors = state.errors ?? {};
   const v = (name: string) => values[name] ?? "";
-  const on = (name: string) => values[name] === "on";
   const invalid = (name: keyof PropertyFieldErrors) => (errors[name] ? true : undefined);
 
   return (
@@ -49,9 +52,11 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
       {(state.formError || Object.keys(errors).length > 0) && (
         <p role="alert" className="mb-8 flex items-start gap-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
-          {state.formError ?? "Néhány mezőt javítani kell. A hibákat a mezők alatt látod."}
+          {state.formError ?? errors.source_url ?? "Néhány mezőt javítani kell. A hibákat a mezők alatt látod."}
         </p>
       )}
+      {v("source_url") && <input type="hidden" name="source_url" value={v("source_url")} />}
+      {v("video_links") && <input type="hidden" name="video_links" value={v("video_links")} />}
 
       <FormSection number="01" title="Azonosítás">
         <div className="sm:col-span-2">
@@ -146,9 +151,9 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
           <Input id="energy_rating" name="energy_rating" placeholder="Pl. BB" defaultValue={v("energy_rating")} />
         </Field>
         <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3">
-          <Toggle name="has_balcony" label="Erkély / terasz" checked={on("has_balcony")} />
-          <Toggle name="has_garden" label="Kert" checked={on("has_garden")} />
-          <Toggle name="has_parking" label="Parkolás" checked={on("has_parking")} />
+          <FeatureSelect name="has_balcony" label="Erkély / terasz" value={v("has_balcony")} />
+          <FeatureSelect name="has_garden" label="Kert" value={v("has_garden")} />
+          <FeatureSelect name="has_parking" label="Parkolás" value={v("has_parking")} />
         </div>
       </FormSection>
 

@@ -34,13 +34,16 @@ export type PropertyRow = {
   has_parking: boolean | null;
   description: string | null;
   internal_notes: string | null;
+  /** The portal listing it was imported from. */
+  source_url: string | null;
+  features: { video_links?: string[] } & Record<string, unknown>;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, title, reference_number, property_type, status, listing_type, listing_source, owner_client_id, country, city, district, address, postal_code, price, currency, area_sqm, room_count, bedroom_count, bathroom_count, floor, building_type, condition, energy_rating, has_balcony, has_garden, has_parking, description, internal_notes, created_at, updated_at, archived_at";
+  "id, title, reference_number, property_type, status, listing_type, listing_source, owner_client_id, country, city, district, address, postal_code, price, currency, area_sqm, room_count, bedroom_count, bathroom_count, floor, building_type, condition, energy_rating, has_balcony, has_garden, has_parking, description, internal_notes, source_url, features, created_at, updated_at, archived_at";
 const LIST_COLUMNS =
   "id, title, property_type, status, listing_type, city, district, price, currency, area_sqm, room_count, created_at";
 

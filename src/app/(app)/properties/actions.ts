@@ -23,7 +23,9 @@ function submittedValues(formData: FormData) {
 const SAVE_FAILED = "A mentés nem sikerült. Próbáld újra; ha a hiba megmarad, szólj nekünk.";
 
 /** Maps database errors that the user can fix to a field message. */
-function dbFieldError(code: string | undefined): PropertyFieldErrors | null {
+function dbFieldError(code: string | undefined, message = ""): PropertyFieldErrors | null {
+  // unique (organization_id, source_url): this listing was imported before
+  if (code === "23505" && message.includes("source_url")) return { source_url: "Ezt a hirdetést már importáltad." };
   // unique (organization_id, reference_number)
   if (code === "23505") return { reference_number: "Ez a belső azonosító már foglalt." };
   // composite FK: the owner must be a client in this workspace
@@ -36,15 +38,16 @@ export async function createPropertyAction(_: PropertyFormState, formData: FormD
   const parsed = parsePropertyForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: submittedValues(formData) };
 
+  const { video_links: videoLinks, ...fields } = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("properties")
     // organization_id comes from the session, never from the form; RLS checks it again.
-    .insert({ ...parsed.data, organization_id: user.organization.id })
+    .insert({ ...fields, organization_id: user.organization.id, features: videoLinks?.length ? { video_links: videoLinks } : {} })
     .select("id")
     .single();
   if (error || !data) {
-    const errors = dbFieldError(error?.code);
+    const errors = dbFieldError(error?.code, error?.message);
     if (errors) return { errors, values: submittedValues(formData) };
     console.error("createPropertyAction failed", error?.code);
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
@@ -62,10 +65,14 @@ export async function updatePropertyAction(
   const parsed = parsePropertyForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: submittedValues(formData) };
 
+  // The import source is set once, at import; the edit form doesn't carry it.
+  const changes: Partial<typeof parsed.data> = { ...parsed.data };
+  delete changes.source_url;
+  delete changes.video_links;
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("properties")
-    .update(parsed.data)
+    .update(changes)
     .eq("id", id)
     .eq("organization_id", user.organization.id)
     .select("id")

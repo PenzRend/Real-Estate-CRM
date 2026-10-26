@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ingatlan CRM – fotók</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font: 14px/1.5 system-ui, sans-serif;
+        color: #0b1619;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0 0 14px;
+        color: #676767;
+      }
+      code {
+        color: #0b1619;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        height: 36px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 999px;
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      #allow {
+        background: #1b1b1b;
+        color: #fff;
+      }
+      #deny {
+        background: #f6f7f7;
+        color: #0b1619;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Átvegyük a hirdetés fotóit is?</h1>
+    <p>A bővítmény a böngésződben letölti a fotókat innen: <code id="hosts"></code>, és átadja a CRM-nek. Ezt egyszer kell engedélyezni.</p>
+    <div class="row">
+      <button id="allow">Engedélyezés</button>
+      <button id="deny">Fotók nélkül</button>
+    </div>
+    <script src="permission.js"></script>
+  </body>
+</html>

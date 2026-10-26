@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { relativeDayTable } from "@/lib/ai/capture-prompt";
 import { llmConfig, type LlmConfig } from "@/lib/ai/config";
-import { AiError } from "@/lib/ai/extract";
+import { AiError, postWithRetry } from "@/lib/ai/extract";
 import type { CurrentUser } from "@/lib/auth";
 import { runTool, SourceRegistry, toolJsonSchemas, type Source } from "./tools";
 
@@ -98,20 +98,6 @@ type OpenAiMessage =
   | { role: "system" | "user"; content: string }
   | { role: "assistant"; content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] }
   | { role: "tool"; tool_call_id: string; content: string };
-
-/**
- * Free tiers limit tokens per minute, and a multi-step answer can hit that
- * mid-way. When the provider asks for a short wait, wait and retry instead of
- * throwing away the lookups already done.
- */
-async function postWithRetry(url: string, init: RequestInit) {
-  for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(90_000) });
-    const wait = Number(res.headers.get("retry-after"));
-    if (res.status !== 429 || attempt >= 2 || !(wait > 0 && wait <= 15)) return res;
-    await new Promise((r) => setTimeout(r, wait * 1000 + 250));
-  }
-}
 
 async function runWithOpenAiCompatible(
   config: Extract<LlmConfig, { provider: "openai-compatible" }>,

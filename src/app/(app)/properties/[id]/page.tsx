@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
+import { PropertyMedia } from "@/components/media/property-media";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { matchesForProperty } from "@/lib/db/matches";
+import { listMedia } from "@/lib/db/media";
 import { getPropertyDetail } from "@/lib/db/properties";
 import { ClientMatchesCard } from "@/components/crm/match-lists";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
@@ -17,7 +19,7 @@ export const metadata: Metadata = { title: "Ingatlan" };
 async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const [property, matches] = await Promise.all([getPropertyDetail(user, id), matchesForProperty(user, id)]);
+  const [property, matches, media] = await Promise.all([getPropertyDetail(user, id), matchesForProperty(user, id), listMedia(user, id)]);
   if (!property) notFound();
 
   const actions = property.archived_at ? (
@@ -45,6 +47,7 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
       property={property}
       actions={actions}
       matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} />}
+      media={<PropertyMedia propertyId={property.id} organizationId={user.organization.id} items={media} sourceUrl={property.source_url} />}
     />
   );
 }

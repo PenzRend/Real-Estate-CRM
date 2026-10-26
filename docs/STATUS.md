@@ -69,6 +69,62 @@ Branch `feat/mvp-foundation`.
   or the one address in a portal email. Tested in Chrome with two seeded test
   emails (`teszt-away-1`, `teszt-away-2`). Migration `20261026182449_away_summary`.
   Drafts are logged as AI operation `next_actions`.
+- Link-only listing import with media: the agent enters only the link. For
+  portals that serve pages to servers (checked: Otthontérkép, Ingatlanbazár,
+  Albérlet.hu, Ingatlannet) the CRM opens the page itself
+  (`src/lib/listings/fetch-page.ts`: portal hosts only, honest user agent,
+  robots.txt respected, redirects re-checked, bot checks never bypassed) and
+  finds text, structured data, photos (image-resizer addresses unwrapped to
+  originals) and video/virtual-tour links. ingatlan.com and Jófogás block
+  servers (Cloudflare / 429): with the extension installed the link opens the
+  listing in the browser and the extension sends it back; without it the
+  screen explains and offers paste as a fallback. Photos are chosen on the
+  review screen and uploaded on the saved listing's page through the normal
+  pipeline (resize, no EXIF); server-side ones via `/api/listing-image`
+  (signed-in, portal hosts, robots.txt, images ≤ 15 MB), extension ones from
+  the CRM tab's IndexedDB (written by `extension/bridge.js`). Video links are
+  stored in `properties.features.video_links` and shown on the listing.
+  Tested: link-only import from Ingatlannet (data + 3 photos), photo upload
+  after save, the blocked-portal message, and the real extension on an
+  ingatlan.com listing (all 30 gallery photos at 1920×1080 from the page's
+  gallery JSON, YouTube tour link, description copied exactly); after saving,
+  all 30 photos uploaded (6.7 MB with previews, cover set) and the browser's
+  temporary copies were cleared.
+- AI usage per import: the model returns facts plus the first/last words of
+  the description (the CRM copies the text between them), ~8 000 characters of
+  page text. Groq's free tier allows 8 000 tokens/minute (~2 imports a
+  minute); imports wait up to 60 s when Groq asks, chat up to 20 s. For real
+  use, a paid tier (Groq Dev tier or Claude Haiku) removes this limit.
+- Property photos and videos (`src/lib/media/*`, `src/lib/db/media.ts`,
+  `src/components/media/property-media.tsx`): private bucket `property-media`,
+  files under `<organization>/<property>/`, storage policies check workspace
+  membership of the first folder (`private.is_member_of_folder`). Browser
+  uploads straight to storage; photos are resized to max 2560 px with a
+  640 px preview and lose EXIF (GPS) on the way; videos keep their file and
+  get a still-frame preview. Limits: photo originals 40 MB, videos 50 MB
+  (Supabase Free per-file limit; raise with the plan), 60 files per listing.
+  Gallery: cover (first photo automatically), reorder, delete (files first),
+  full-screen viewer. Cover previews in the property list. Tested in Chrome:
+  upload, GPS removal, private links, anonymous access refused, delete
+  removes files. Not checked at phone width. Not yet: photos from the import
+  extension, HEIC (rejected with instructions), video compression.
+  Migration `20261026210835_property_media`.
+- Listing import (`/properties/import`, `src/lib/listings/*`): paste a listing's
+  link and page text, or use the Chrome extension (`extension/`, load
+  unpacked). The AI fills the property form from what the page states
+  (unknowns stay empty; street parking is not parking); the agent reviews
+  and saves; imports start as drafts. `properties.source_url` (canonical,
+  unique per workspace) blocks double imports before any AI call. Extension:
+  popup reads the active tab on click (listing page → review; profile page →
+  list in the CRM with "Már bent van" markers, each listing imported via
+  `#crm-import` hand-off). Data reaches the CRM in the address fragment only.
+  Balcony/garden/parking are now Van / Nincs / Nincs adat in all property
+  forms (unknown no longer saved as "no"). Tested: paste import, fragment
+  hand-off, duplicate block, profile list, page reader on stand-in pages.
+  Not yet tested: the installed extension on real ingatlan.com pages (the
+  portal's Cloudflare check blocks automated visits; the agent's own browser
+  passes it). Photos not imported (no photo storage yet). Migration
+  `20261026205021_listing_import`. Test listing saved: TESZT-IMP-01.
 - Sending replies from the CRM (`src/lib/mail/send.ts`, `compose.ts`):
   separate `gmail.send` permission requested only via "Küldés engedélyezése"
   (`/api/mail/google/connect?send=1`), stored as `mailboxes.can_send`. Send

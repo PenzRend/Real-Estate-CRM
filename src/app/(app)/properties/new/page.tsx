@@ -1,7 +1,9 @@
+import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PropertyForm } from "@/components/crm/property-form";
 import { Eyebrow } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
@@ -23,6 +25,11 @@ async function NewPropertyContent({ searchParams }: Pick<PageProps<"/properties/
         eyebrow={<Eyebrow>Ingatlanok</Eyebrow>}
         title="Új ingatlan"
         description="A párosításhoz a helyszín, az ár, az alapterület és a szobaszám a legfontosabb."
+        actions={
+          <ButtonLink href="/properties/import" variant="secondary">
+            <Download /> Importálás hirdetésből
+          </ButtonLink>
+        }
       />
       <PropertyForm
         action={createPropertyAction}

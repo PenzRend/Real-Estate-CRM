@@ -234,6 +234,38 @@ describe("workflow", () => {
     expect(mbB.id).toBeDefined();
   });
 
+  it("property photos stay in their workspace and folder", async () => {
+    const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Fotós lakás') returning id`);
+    const path = (org: string, file: string) => `${org}/${prop.id}/${file}`;
+    const add = (who: string, org: string, p: string, cover = false) =>
+      asUser(who, `insert into property_media (organization_id, property_id, kind, storage_path, mime_type, size_bytes, is_cover) values ('${org}', '${prop.id}', 'photo', '${p}', 'image/jpeg', 1000, ${cover})`);
+    expect((await add(USER_A, orgA, path(orgA, "a.jpg"), true)).ok).toBe(true);
+    // Only one cover per property.
+    expect((await add(USER_A, orgA, path(orgA, "b.jpg"), true)).ok).toBe(false);
+    // The file must be in this workspace's folder for this property.
+    expect((await add(USER_A, orgA, path(orgB, "c.jpg"))).ok).toBe(false);
+    expect((await add(USER_A, orgA, `${orgA}/other/d.jpg`)).ok).toBe(false);
+    // Another workspace can't see, attach to or delete A's media.
+    expect(await rowsAs(USER_B, `select id from property_media`)).toEqual([]);
+    expect((await add(USER_B, orgB, path(orgB, "e.jpg"))).ok).toBe(false);
+    expect(await rowsAs(USER_B, `delete from property_media returning id`)).toEqual([]);
+    // Folder check used by storage: members of the first folder's workspace only.
+    expect((await rowsAs(USER_A, `select private.is_member_of_folder('${path(orgA, "a.jpg")}') as ok`))[0].ok).toBe(true);
+    expect((await rowsAs(USER_B, `select private.is_member_of_folder('${path(orgA, "a.jpg")}') as ok`))[0].ok).toBe(false);
+    expect((await rowsAs(USER_A, `select private.is_member_of_folder('nem-uuid/x.jpg') as ok`))[0].ok).toBe(false);
+  });
+
+  it("a listing URL can be imported once per workspace", async () => {
+    const url = "https://ingatlan.com/34567890";
+    const insert = (who: string, org: string) => asUser(who, `insert into properties (organization_id, title, source_url) values ('${org}', 'Import', '${url}')`);
+    expect((await insert(USER_A, orgA)).ok).toBe(true);
+    expect((await insert(USER_A, orgA)).ok).toBe(false);
+    // Another workspace may import the same listing; it can't see A's copy.
+    expect((await insert(USER_B, orgB)).ok).toBe(true);
+    expect(await rowsAs(USER_B, `select id from properties where organization_id = '${orgA}'`)).toEqual([]);
+    expect((await asUser(USER_A, `insert into properties (organization_id, title, source_url) values ('${orgA}', 'x', 'javascript:alert(1)')`)).ok).toBe(false);
+  });
+
   it("visit times are private to their user and workspace", async () => {
     expect((await asUser(USER_A, `insert into user_visits (organization_id) values ('${orgA}')`)).ok).toBe(true);
     expect((await asUser(USER_B, `insert into user_visits (organization_id, user_id) values ('${orgB}', '${USER_A}')`)).ok).toBe(false);

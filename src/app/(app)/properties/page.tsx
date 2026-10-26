@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PropertiesTable, PropertyFilterBar, type PropertyFilters } from "@/components/crm/properties-list";
@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
+import { coverThumbs } from "@/lib/db/media";
 import { countArchivedProperties, LIST_LIMIT, listProperties, type PropertyListFilters } from "@/lib/db/properties";
 import { parseHungarianNumber } from "@/lib/validation/common";
 
@@ -54,7 +55,10 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
   const user = await getCurrentUser();
   const { properties, total } = await listProperties(user, toQuery(filters));
   const filtered = Object.values(filters).some(Boolean);
-  const archivedCount = total === 0 && !filtered ? await countArchivedProperties(user) : 0;
+  const [archivedCount, covers] = await Promise.all([
+    total === 0 && !filtered ? countArchivedProperties(user) : 0,
+    coverThumbs(user, properties.map((p) => p.id)),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,9 +66,14 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
         title="Ingatlanok"
         description="Aktív hirdetések, foglalt és lezárt ingatlanok."
         actions={
-          <ButtonLink href="/properties/new">
-            <Plus /> Új ingatlan
-          </ButtonLink>
+          <>
+            <ButtonLink href="/properties/import" variant="secondary">
+              <Download /> Importálás hirdetésből
+            </ButtonLink>
+            <ButtonLink href="/properties/new">
+              <Plus /> Új ingatlan
+            </ButtonLink>
+          </>
         }
       />
       <PropertyFilterBar filters={filters} />
@@ -73,7 +82,7 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
           {total > LIST_LIMIT ? `${total} ingatlanból az első ${LIST_LIMIT} látható. Szűkítsd a keresést.` : `${total} ingatlan`}
         </p>
       )}
-      <PropertiesTable properties={properties} filtered={filtered} archivedCount={archivedCount} />
+      <PropertiesTable properties={properties} filtered={filtered} archivedCount={archivedCount} covers={covers} />
     </div>
   );
 }

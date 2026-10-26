@@ -1,4 +1,4 @@
-import { Archive, Check, ChevronLeft, Eye, MapPin, Minus, Pencil, Sparkles, UserRound } from "lucide-react";
+import { Archive, Check, ChevronLeft, ExternalLink, Eye, MapPin, Minus, Pencil, PlayCircle, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, PropertyStatusBadge } from "@/components/ui/badge";
@@ -41,13 +41,17 @@ export function PropertyDetailView({
   property: p,
   actions,
   matches,
+  media,
 }: {
   property: PropertyDetail;
   actions?: ReactNode;
   /** Matching clients card. */
   matches?: ReactNode;
+  /** Photo and video gallery. */
+  media?: ReactNode;
 }) {
   const location = [p.postal_code, p.city, p.district].filter(Boolean).join(" ");
+  const videoLinks = Array.isArray(p.features?.video_links) ? p.features.video_links.filter((v) => typeof v === "string" && v.startsWith("https://")) : [];
   const pricePerSqm =
     p.price != null && p.area_sqm ? formatPrice(Math.round(p.price / p.area_sqm), p.currency) + " / m²" : null;
 
@@ -107,6 +111,8 @@ export function PropertyDetailView({
         </Panel>
       </header>
 
+      {media}
+
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           <Card className="border-accent/15 bg-gradient-to-b from-accent-soft/60 to-background">
@@ -128,6 +134,21 @@ export function PropertyDetailView({
               <p className="px-5 py-4 text-[15px] leading-relaxed whitespace-pre-line text-text">{p.description}</p>
             ) : (
               <p className="px-5 py-4 text-sm text-muted">Még nincs leírás.</p>
+            )}
+            {(p.source_url || videoLinks.length > 0) && (
+              <div className="flex flex-col gap-1.5 border-t border-border px-5 py-3 text-sm">
+                {videoLinks.map((v) => (
+                  <a key={v} href={v} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 font-medium text-ink hover:text-accent">
+                    <PlayCircle className="size-4 text-muted" /> {new URL(v).hostname.includes("matterport") || new URL(v).hostname.includes("kuula") ? "Virtuális séta" : "Videó"}: {new URL(v).hostname.replace(/^www\./, "")}
+                    <ExternalLink className="size-3.5 text-muted" />
+                  </a>
+                ))}
+                {p.source_url && (
+                  <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 text-muted hover:text-ink">
+                    Importálva innen: {p.source_url.replace(/^https:\/\//, "")} <ExternalLink className="size-3.5" />
+                  </a>
+                )}
+              </div>
             )}
           </Card>
 

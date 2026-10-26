@@ -60,17 +60,43 @@ async function extractWithClaude(config: Extract<LlmConfig, { provider: "anthrop
   };
 }
 
+/**
+ * Free tiers limit tokens per minute. When the provider asks for a wait
+ * (retry-after up to `maxWaitSeconds`), wait and retry instead of failing the
+ * user's action. Interactive chat keeps this short; background-ish work like
+ * an import can afford a minute.
+ */
+export async function postWithRetry(url: string, init: RequestInit, maxWaitSeconds = 20) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(90_000) });
+    const wait = Number(res.headers.get("retry-after"));
+    if (res.status !== 429 || attempt >= 2 || !(wait > 0 && wait <= maxWaitSeconds)) return res;
+    await new Promise((r) => setTimeout(r, wait * 1000 + 250));
+  }
+}
+
 export async function callChatCompletions(
   config: Extract<LlmConfig, { provider: "openai-compatible" }>,
   messages: { role: "system" | "user"; content: string }[],
   responseFormat: object,
+  opts: { maxTokens?: number; maxWaitSeconds?: number } = {},
 ) {
-  return fetch(`${config.baseUrl}/chat/completions`, {
+  return postWithRetry(
+    `${config.baseUrl}/chat/completions`,
+    {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-    body: JSON.stringify({ model: config.model, messages, response_format: responseFormat }),
-    signal: AbortSignal.timeout(90_000),
-  });
+    body: JSON.stringify({
+      model: config.model,
+      messages,
+      response_format: responseFormat,
+      ...(opts.maxTokens ? { max_completion_tokens: opts.maxTokens } : {}),
+      // Reasoning models spend part of the token budget thinking; field extraction needs little.
+      ...(/gpt-oss/i.test(config.model) ? { reasoning_effort: "low" } : {}),
+    }),
+    },
+    opts.maxWaitSeconds,
+  );
 }
 
 async function extractWithOpenAiCompatible(

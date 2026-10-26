@@ -101,11 +101,14 @@ export function PropertiesTable({
   properties,
   filtered,
   archivedCount = 0,
+  covers = {},
 }: {
   properties: PropertyListEntry[];
   filtered: boolean;
   /** Shown when the active list is empty but archived properties exist. */
   archivedCount?: number;
+  /** Cover preview links by property id. */
+  covers?: Record<string, string>;
 }) {
   if (!properties.length) {
     return (
@@ -147,10 +150,23 @@ export function PropertiesTable({
           {properties.map((p) => (
             <tr key={p.id} className="relative flex flex-col gap-1 px-5 py-4 hover:bg-surface md:table-row md:p-0">
               <td className="md:px-5 md:py-3.5">
-                <Link href={`/properties/${p.id}`} className="font-medium text-ink after:absolute after:inset-0">
-                  {p.title}
-                </Link>
-                <div className="text-xs text-muted">{[p.city, p.district].filter(Boolean).join(", ") || "Helyszín nincs megadva"}</div>
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-strong">
+                    {covers[p.id] ? (
+                      // Signed link to a small, already resized preview.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={covers[p.id]} alt="" loading="lazy" className="size-full object-cover" />
+                    ) : (
+                      <Building2 className="size-4 text-subtle" />
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <Link href={`/properties/${p.id}`} className="font-medium text-ink after:absolute after:inset-0">
+                      {p.title}
+                    </Link>
+                    <div className="text-xs text-muted">{[p.city, p.district].filter(Boolean).join(", ") || "Helyszín nincs megadva"}</div>
+                  </div>
+                </div>
               </td>
               <td className="text-muted md:px-3 md:py-3.5">
                 {propertyTypeLabels[p.propertyType]} · {listingTypeLabels[p.listingType].toLowerCase()}

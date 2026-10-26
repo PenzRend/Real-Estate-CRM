@@ -31,6 +31,7 @@ line scales with them.
 | | Third-party call-sync app (e.g. Salestrail) | ≈ $3.5–10.5 + recording add-on | $5–15 (≈ 1 800–5 300 Ft) |
 | | Cloud phone system (virtual number / switchboard) | from ≈ $18–30 / user + call minutes | $25–45 (≈ 9 000–16 000 Ft) |
 | Recording storage | 900 min ≈ 0.2–0.5 GB / month, grows with retention | ≈ $0.02 / GB | < $0.05 |
+| Listing photos and videos | ~30 listings × 25 photos (≈ 0.4 MB each after in-browser resizing) ≈ 0.3 GB, plus videos (up to 50 MB each; 1–2 per listing ≈ 1.5–3 GB) | ≈ $0.02 / GB stored + traffic when viewed | **≈ $0.05–0.10**; videos are most of it. Grows with listings kept, so delete media of sold/archived listings after a retention period |
 
 ## Fixed monthly costs (shared by all users)
 
