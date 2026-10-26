@@ -22,13 +22,19 @@ export async function aiLimitMessage(user: CurrentUser): Promise<string | null> 
 /** Records that an AI call happened. Metadata only, never the note content. */
 export async function logAiUsage(
   user: CurrentUser,
-  entry: { status: "success" | "error" | "rejected"; model?: string | null; inputTokens?: number | null; outputTokens?: number | null },
+  entry: {
+    status: "success" | "error" | "rejected";
+    model?: string | null;
+    inputTokens?: number | null;
+    outputTokens?: number | null;
+    operation?: "extract_interaction" | "assistant";
+  },
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("ai_processing_logs").insert({
     organization_id: user.organization.id,
     user_id: user.id,
-    operation_type: "extract_interaction",
+    operation_type: entry.operation ?? "extract_interaction",
     status: entry.status,
     model: entry.model ?? null,
     input_tokens: entry.inputTokens ?? null,

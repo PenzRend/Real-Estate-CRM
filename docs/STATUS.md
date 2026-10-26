@@ -44,6 +44,18 @@ Branch `feat/mvp-foundation`.
   skipped (a price alert was stored before this fix). Still untested: a real
   inquiry email from Gmail through Feldolgozás (needs a test email sent).
   A placeholder test mailbox (teszt-postafiok@example.test, revoked) exists.
+- AI assistant (`/assistant`): answers questions about clients, properties,
+  tasks, interactions, emails and matches using read-only tools only
+  (`src/lib/assistant/tools.ts`), cites every claim as `[S1]`, shown as
+  numbered chips plus a "Források" list linking to the records. The first
+  step must call a tool (falls back if Groq rejects a forced call, e.g. when
+  declining a request). Retries briefly on a 429 with `retry-after`.
+  Name search tolerates Hungarian suffixes ("Katáról"). It declines writes
+  and sending, pointing only to real features. Conversations are not stored;
+  only usage metadata (operation `assistant`). Tested in Chrome: client and
+  match question (parking flagged as missing), send-email refusal, no-data
+  answer. Groq's free tier can hit its per-minute token limit on multi-step
+  questions.
 - Day expressions ("kedden", "jövő kedden", "holnapután"…) are resolved in
   code and given to the model as a lookup table.
 - Migrations `20261025000000_initial_schema`, `20261026000000_client_search` and
@@ -60,5 +72,5 @@ Branch `feat/mvp-foundation`.
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).
 - Unused index `properties_title_trgm_idx` (superseded) can be dropped.
-- Next: set an AI key and test capture end to end; then email inbox sync, Android call capture app, matching.
+- Next: Android call capture app; Outlook mailbox; a real inquiry email through Feldolgozás.
 - Dev tip: don't run `next build` while `next dev` is running; it crashed the dev server once.

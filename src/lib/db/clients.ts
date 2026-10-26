@@ -69,9 +69,23 @@ export type ClientListFilters = {
   budgetM?: number;
   location?: string;
   archived?: boolean;
+  /** Match each word by its stem, so inflected names ("Katáról", "Péternek") still find the client. */
+  stemmedNames?: boolean;
 };
 
 export const LIST_LIMIT = 100;
+
+/**
+ * Word stems for searching names written with Hungarian suffixes: the first
+ * four letters of each word ("katarol" → "kata", "peternek" → "pete").
+ */
+export function nameStems(term: string) {
+  return term
+    .split(" ")
+    .filter((w) => w.length >= 2)
+    .slice(0, 4)
+    .map((w) => w.slice(0, 4));
+}
 
 export async function listClients(user: CurrentUser, f: ClientListFilters, now = new Date()) {
   const supabase = await createClient();
@@ -85,9 +99,13 @@ export async function listClients(user: CurrentUser, f: ClientListFilters, now =
   if (f.q) {
     const term = searchTerm(f.q);
     const digits = f.q.replace(/\D/g, "");
-    const conditions = term ? [`search_text.ilike.*${term}*`] : [];
-    if (digits.length >= 3) conditions.push(`phone_digits.like.*${digits}*`);
-    if (conditions.length) query = query.or(conditions.join(","));
+    if (f.stemmedNames && term && digits.length < 3) {
+      for (const stem of nameStems(term)) query = query.ilike("search_text", `%${stem}%`);
+    } else {
+      const conditions = term ? [`search_text.ilike.*${term}*`] : [];
+      if (digits.length >= 3) conditions.push(`phone_digits.like.*${digits}*`);
+      if (conditions.length) query = query.or(conditions.join(","));
+    }
   }
   if (f.status) query = query.eq("status", f.status);
   if (f.type) query = query.eq("client_type", f.type);
