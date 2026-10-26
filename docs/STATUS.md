@@ -56,6 +56,10 @@ Branch `feat/mvp-foundation`.
   match question (parking flagged as missing), send-email refusal, no-data
   answer. Groq's free tier can hit its per-minute token limit on multi-step
   questions.
+- Public landing page at `/` (`src/app/page.tsx`, static): hero, product
+  illustrations labelled "Példa", features, how it works, security, roadmap
+  ("Hamarosan"), FAQ, CTA to `/signup`. No invented reviews, customer counts
+  or prices. Signed-in visitors are redirected to `/dashboard` by the proxy.
 - Day expressions ("kedden", "jövő kedden", "holnapután"…) are resolved in
   code and given to the model as a lookup table.
 - Migrations `20261025000000_initial_schema`, `20261026000000_client_search` and
