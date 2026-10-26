@@ -7,6 +7,7 @@ import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
 import type { PropertyDetail } from "@/lib/db/properties";
 import { extrasForDisplay } from "@/lib/properties/extras";
+import { PropertyStatusPicker } from "./property-status-picker";
 import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
 import { interactionTypeLabels, listingTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 import { interactionIcons, TaskRow } from "./items";
@@ -71,7 +72,7 @@ export function PropertyDetailView({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <PropertyStatusBadge status={p.status} />
+              {p.archived_at ? <PropertyStatusBadge status={p.status} /> : <PropertyStatusPicker id={p.id} status={p.status} />}
               <Badge>{propertyTypeLabels[p.property_type]}</Badge>
               <Badge>{listingTypeLabels[p.listing_type]}</Badge>
               {p.reference_number && <span className="text-xs text-muted">#{p.reference_number}</span>}

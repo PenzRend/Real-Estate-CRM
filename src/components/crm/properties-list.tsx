@@ -1,6 +1,5 @@
 import { Building2, Plus, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { PropertyStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/form";
@@ -8,6 +7,7 @@ import { EmptyState } from "@/components/ui/page";
 import { formatArea, formatNumber, formatPrice } from "@/lib/i18n/format";
 import { listingTypeLabels, propertyStatusLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 import type { PropertyListEntry } from "@/lib/db/properties";
+import { PropertyStatusPicker } from "./property-status-picker";
 
 /** Raw filter values from the URL, as typed. */
 export type PropertyFilters = {
@@ -181,7 +181,7 @@ export function PropertiesTable({
                 {p.listingType === "rent" && p.price != null && <span className="font-normal text-muted"> / hó</span>}
               </td>
               <td className="md:px-5 md:py-3.5 md:text-right">
-                <PropertyStatusBadge status={p.status} />
+                <PropertyStatusPicker id={p.id} status={p.status} align="right" />
               </td>
             </tr>
           ))}

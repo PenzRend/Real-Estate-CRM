@@ -95,6 +95,10 @@ Branch `feat/mvp-foundation`.
   page text. Groq's free tier allows 8 000 tokens/minute (~2 imports a
   minute); imports wait up to 60 s when Groq asks, chat up to 20 s. For real
   use, a paid tier (Groq Dev tier or Claude Haiku) removes this limit.
+- Quick status change (`property-status-picker.tsx`): the status badge on the
+  listing page and in the property list opens a menu of statuses; the change
+  shows at once and saves in the background (`setPropertyStatusAction`). The
+  menu opens over the page (portal), so table cards can't clip it.
 - Gallery polish: fixed-height mosaic (cover + 4, full-size cover, previews
   elsewhere, fade-in loading), editing behind "Fotók kezelése", full-screen
   viewer with blurred placeholder, preloading, thumbnail strip, keys and swipe.

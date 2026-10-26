@@ -11,7 +11,7 @@ import {
 
 type Tone = "neutral" | "accent" | "success" | "warning" | "danger" | "dark";
 
-const tones: Record<Tone, string> = {
+export const tones: Record<Tone, string> = {
   neutral: "bg-surface-strong text-text",
   accent: "bg-accent-soft text-accent",
   success: "bg-success-soft text-success",
@@ -60,7 +60,7 @@ export function ClientStatusBadge({ status }: { status: ClientStatus }) {
   return <Badge tone={clientStatusTone[status]}>{clientStatusLabels[status]}</Badge>;
 }
 
-const propertyStatusTone: Record<PropertyStatus, Tone> = {
+export const propertyStatusTone: Record<PropertyStatus, Tone> = {
   draft: "neutral",
   active: "success",
   reserved: "warning",

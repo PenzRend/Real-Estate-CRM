@@ -1,7 +1,9 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { propertyStatusLabels } from "@/lib/i18n/labels";
 import { createClient } from "@/lib/supabase/server";
 import { EXTRAS } from "@/lib/properties/extras";
 import { parsePropertyForm, type PropertyFieldErrors } from "@/lib/validation/property";
@@ -111,4 +113,14 @@ export async function archivePropertyAction(id: string) {
 export async function restorePropertyAction(id: string) {
   await setArchived(id, false);
   redirect(`/properties/${id}`);
+}
+
+/** Quick status change from the listing page or the property list. */
+export async function setPropertyStatusAction(id: string, status: string) {
+  const user = await getCurrentUser();
+  if (!(status in propertyStatusLabels)) throw new Error("Unknown property status");
+  const supabase = await createClient();
+  const { error } = await supabase.from("properties").update({ status }).eq("id", id).eq("organization_id", user.organization.id);
+  if (error) throw new Error(`Failed to change property status: ${error.code}`);
+  refresh();
 }
