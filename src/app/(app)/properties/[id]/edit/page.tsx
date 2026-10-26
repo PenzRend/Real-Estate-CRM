@@ -5,8 +5,10 @@ import { PropertyForm, type PropertyFormValues } from "@/components/crm/property
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { getPropertyRow, listOwnerOptions, type PropertyRow } from "@/lib/db/properties";
+import { extrasToFormValues } from "@/lib/properties/extras";
 import { updatePropertyAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Ingatlan szerkesztése" };
@@ -43,6 +45,7 @@ function toFormValues(r: PropertyRow): PropertyFormValues {
     has_parking: flag(r.has_parking),
     description: r.description ?? "",
     internal_notes: r.internal_notes ?? "",
+    ...extrasToFormValues(r.features),
   };
 }
 
@@ -56,6 +59,7 @@ async function EditPropertyContent({ params }: Pick<PageProps<"/properties/[id]/
     <div className="flex flex-col gap-8">
       <PageHeader eyebrow={<Eyebrow>Ingatlanok</Eyebrow>} title={`${row.title} szerkesztése`} />
       <PropertyForm
+        canDictate={transcriptionConfig() != null}
         action={updatePropertyAction.bind(null, row.id)}
         owners={owners}
         initialValues={toFormValues(row)}

@@ -5,21 +5,26 @@ import { fieldErrors, keys, optionalNumber, optionalText } from "./common";
 
 export { parseHungarianNumber } from "./common";
 
+/** Name and contact rules, shared by the client form and quick "new owner" entry. */
+export const clientContactFields = {
+  full_name: z.string().trim().min(1, "Add meg az ügyfél nevét.").max(200),
+  email: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null),
+    z.email("Érvénytelen e-mail-cím.").max(320).nullable(),
+  ),
+  phone: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
+    z
+      .string()
+      .max(50)
+      .regex(/^[+\d][\d\s()/-]*$/, "Csak számjegyek, szóköz, +, -, / és zárójel szerepelhet benne.")
+      .nullable(),
+  ),
+};
+
 export const clientFormSchema = z
   .object({
-    full_name: z.string().trim().min(1, "Add meg az ügyfél nevét.").max(200),
-    email: z.preprocess(
-      (v) => (typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null),
-      z.email("Érvénytelen e-mail-cím.").max(320).nullable(),
-    ),
-    phone: z.preprocess(
-      (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
-      z
-        .string()
-        .max(50)
-        .regex(/^[+\d][\d\s()/-]*$/, "Csak számjegyek, szóköz, +, -, / és zárójel szerepelhet benne.")
-        .nullable(),
-    ),
+    ...clientContactFields,
     client_type: z.enum(keys(clientTypeLabels), { error: "Válassz ügyféltípust." }),
     status: z.enum(keys(clientStatusLabels), { error: "Válassz státuszt." }),
     budget_min: optionalNumber({ max: 1e12 }),

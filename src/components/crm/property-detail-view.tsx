@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
 import type { PropertyDetail } from "@/lib/db/properties";
+import { extrasForDisplay } from "@/lib/properties/extras";
 import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
 import { interactionTypeLabels, listingTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 import { interactionIcons, TaskRow } from "./items";
@@ -210,6 +211,11 @@ export function PropertyDetailView({
               <Detail label="Állapot">{p.condition}</Detail>
               <Detail label="Energetika">{p.energy_rating}</Detail>
               <Detail label="Forrás">{p.listing_source}</Detail>
+              {extrasForDisplay(p.features).map((x) => (
+                <Detail key={x.label} label={x.label}>
+                  {x.value}
+                </Detail>
+              ))}
             </dl>
             <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-5 py-4">
               <Feature label="Erkély / terasz" value={p.has_balcony} />

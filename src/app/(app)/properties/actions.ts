@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { EXTRAS } from "@/lib/properties/extras";
 import { parsePropertyForm, type PropertyFieldErrors } from "@/lib/validation/property";
 
 export type PropertyFormState = {
@@ -43,7 +44,7 @@ export async function createPropertyAction(_: PropertyFormState, formData: FormD
   const { data, error } = await supabase
     .from("properties")
     // organization_id comes from the session, never from the form; RLS checks it again.
-    .insert({ ...fields, organization_id: user.organization.id, features: videoLinks?.length ? { video_links: videoLinks } : {} })
+    .insert({ ...fields, organization_id: user.organization.id, features: { ...parsed.extras, ...(videoLinks?.length ? { video_links: videoLinks } : {}) } })
     .select("id")
     .single();
   if (error || !data) {
@@ -70,9 +71,12 @@ export async function updatePropertyAction(
   delete changes.source_url;
   delete changes.video_links;
   const supabase = await createClient();
+  // Extras are replaced as a set; other feature data (e.g. imported video links) is kept.
+  const { data: current } = await supabase.from("properties").select("features").eq("id", id).eq("organization_id", user.organization.id).maybeSingle();
+  const kept = Object.fromEntries(Object.entries((current?.features as Record<string, unknown>) ?? {}).filter(([k]) => !EXTRAS.some((e) => e.key === k)));
   const { data, error } = await supabase
     .from("properties")
-    .update(changes)
+    .update({ ...changes, features: { ...kept, ...parsed.extras } })
     .eq("id", id)
     .eq("organization_id", user.organization.id)
     .select("id")

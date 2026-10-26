@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { extrasToFormValues } from "@/lib/properties/extras";
 
 // What the AI may read from a listing page. Every field is nullable: anything
 // the page doesn't state stays empty for the agent to fill in.
@@ -15,6 +16,7 @@ export const listingExtractionSchema = z.object({
   postal_code: z.string().nullable(),
   area_sqm: z.number().nullable(),
   room_count: z.number().nullable().describe("Whole rooms plus 0.5 per half room: '2 + 1 fél' → 2.5."),
+  bedroom_count: z.number().nullable().describe("Bedrooms ('3 hálószobás' → 3), from the table or the description."),
   bathroom_count: z.number().nullable(),
   floor: z.string().nullable().describe("As written, e.g. 'földszint', '3. emelet'."),
   building_type: z.string().nullable().describe("e.g. tégla, panel, új építésű."),
@@ -26,6 +28,14 @@ export const listingExtractionSchema = z.object({
     .boolean()
     .nullable()
     .describe("True for an own or included parking space, garage or garage spot (also if for sale/rent with the flat). False for street parking only ('utcán', 'közterületen'). Null if not stated."),
+  elevator: z.boolean().nullable().describe("Lift: 'lift van' → true, 'lift nincs' → false."),
+  air_conditioning: z.boolean().nullable().describe("Klíma / légkondicionáló stated → true."),
+  furnished: z.boolean().nullable().describe("Bútorozott → true, bútorozatlan → false."),
+  heating: z.string().nullable().describe("Fűtés as written, e.g. 'gáz (cirko)', 'távfűtés'."),
+  orientation: z.string().nullable().describe("Tájolás as written, e.g. 'délnyugati'."),
+  view: z.string().nullable().describe("Kilátás as written, e.g. 'utcai', 'panorámás'."),
+  year_built: z.number().nullable().describe("Építés éve as a year, e.g. 1905."),
+  common_cost_huf: z.number().nullable().describe("Monthly shared building cost (közös költség) in HUF."),
   description_start: z.string().nullable().describe("The first 6-10 words of the listing's own description, copied exactly."),
   description_end: z.string().nullable().describe("The last 6-10 words of the listing's own description, copied exactly."),
   reference_number: z.string().nullable().describe("The agency's own reference (azonosító) if shown; not the portal's numeric id."),
@@ -37,6 +47,7 @@ export const LISTING_SYSTEM_PROMPT = `You read a real estate listing page (Hunga
 
 Rules:
 - Use only what the page states. Never guess: anything not stated is null.
+- Facts can be in the parameter table or in the description; use both. "3 hálószobás" → bedroom_count 3, "lift természetesen van" → elevator true, "minden szobában klíma" → air_conditioning true, "két fürdőszoba" → bathroom_count 2. When the table says "nincs megadva" but the description states the fact, use the description.
 - For yes/no features (balcony, garden, parking) use true only when the page says it exists, false only when it says it doesn't, otherwise null. Parking means a parking space or garage that comes with the property; street parking ("utcán", "közterületen", "fizetős övezet") is false.
 - Parameter tables list a label and then its value on the next line. "nincs megadva", "-", "nincs adat" or a missing value mean not stated (null), never yes. "Kertkapcsolatos: nincs megadva" → has_garden null.
 - Numbers: prices as full amounts in the stated currency ("79,9 M Ft" → 79900000, "185 000 Ft/hó" → 185000). Area in square metres. Half rooms count 0.5 each.
@@ -57,6 +68,7 @@ export const FIELD_LABELS: Record<keyof ListingExtraction, string> = {
   postal_code: "irányítószám",
   area_sqm: "alapterület",
   room_count: "szobák",
+  bedroom_count: "hálószobák",
   bathroom_count: "fürdőszobák",
   floor: "emelet",
   building_type: "építési mód",
@@ -65,6 +77,14 @@ export const FIELD_LABELS: Record<keyof ListingExtraction, string> = {
   has_balcony: "erkély",
   has_garden: "kert",
   has_parking: "parkolás",
+  elevator: "lift",
+  air_conditioning: "klíma",
+  furnished: "bútorozottság",
+  heating: "fűtés",
+  orientation: "tájolás",
+  view: "kilátás",
+  year_built: "építés éve",
+  common_cost_huf: "közös költség",
   description_start: "leírás",
   description_end: "leírás",
   reference_number: "azonosító",
@@ -115,6 +135,7 @@ export function extractionToFormValues(e: ListingExtraction, source: { url: stri
     postal_code: /^\d{4}$/.test(e.postal_code ?? "") ? e.postal_code! : "",
     area_sqm: num(e.area_sqm),
     room_count: num(e.room_count),
+    bedroom_count: e.bedroom_count != null && Number.isInteger(e.bedroom_count) ? String(e.bedroom_count) : "",
     bathroom_count: e.bathroom_count != null && Number.isInteger(e.bathroom_count) ? String(e.bathroom_count) : "",
     floor: text(e.floor, 50),
     building_type: text(e.building_type, 100),
@@ -126,6 +147,17 @@ export function extractionToFormValues(e: ListingExtraction, source: { url: stri
     description: sliceDescription(pageText, e.description_start, e.description_end) ?? "",
     reference_number: text(e.reference_number, 100),
     listing_source: source.portalName ?? "",
+    // "Felszereltség és egyéb" fields (stored in features), same names as the property form.
+    ...extrasToFormValues({
+      elevator: e.elevator,
+      air_conditioning: e.air_conditioning,
+      furnished: e.furnished,
+      heating: e.heating ? text(e.heating, 100) : null,
+      orientation: e.orientation ? text(e.orientation, 100) : null,
+      view: e.view ? text(e.view, 100) : null,
+      year_built: e.year_built != null && e.year_built > 1700 && e.year_built < 2100 ? Math.round(e.year_built) : null,
+      common_cost_huf: e.common_cost_huf != null && e.common_cost_huf >= 0 ? Math.round(e.common_cost_huf) : null,
+    }),
     source_url: source.url,
   } satisfies Record<string, string>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, CircleAlert, ImagePlus, Loader2, Play, Star, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CircleAlert, ImagePlus, Loader2, Play, Settings2, Star, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { addMediaAction, deleteMediaAction, moveMediaAction, setCoverAction } from "@/app/(app)/properties/[id]/media-actions";
@@ -11,6 +11,9 @@ import { clearPending, clearStoredImages, loadPendingImage, readPending } from "
 import { preparePhoto, prepareVideo } from "@/lib/media/process";
 import { acceptMedia, formatBytes, MAX_FILES_PER_PROPERTY, MEDIA_BUCKET, mediaPath, PHOTO_INPUT_MAX_MB, VIDEO_MAX_MB } from "@/lib/media/rules";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { FadeImage } from "./fade-image";
+import { MediaMosaic } from "./media-mosaic";
+import { MediaViewer } from "./media-viewer";
 
 type Upload = { name: string; status: "preparing" | "uploading" | "done" | "error"; error?: string };
 
@@ -22,62 +25,14 @@ function duration(s: number | null) {
   return `${m}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 }
 
-/** Full-size view with previous / next; Esc closes (native dialog). */
-function Viewer({ items, index, onClose, onIndex }: { items: MediaItem[]; index: number; onClose: () => void; onIndex: (i: number) => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const item = items[index];
-  return (
-    <dialog
-      ref={(el) => {
-        ref.current = el;
-        if (el && !el.open) el.showModal();
-      }}
-      onClose={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowLeft" && index > 0) onIndex(index - 1);
-        if (e.key === "ArrowRight" && index < items.length - 1) onIndex(index + 1);
-      }}
-      className="m-auto h-[min(90dvh,900px)] w-[min(96vw,1400px)] max-w-none overflow-hidden rounded-2xl bg-ink p-0 text-white backdrop:bg-ink/80"
-      aria-label="Fotók és videók"
-    >
-      <div className="relative flex h-full items-center justify-center">
-        {item.kind === "video" ? (
-          <video key={item.id} src={item.url ?? undefined} controls autoPlay playsInline className="max-h-full max-w-full" />
-        ) : (
-          // Signed links to private, already resized files: no image optimiser needed.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={item.id} src={item.url ?? undefined} alt="" className="max-h-full max-w-full object-contain" />
-        )}
-        <button type="button" onClick={() => ref.current?.close()} aria-label="Bezárás" className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-          <X className="size-5" />
-        </button>
-        {index > 0 && (
-          <button type="button" onClick={() => onIndex(index - 1)} aria-label="Előző" className="absolute left-3 grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-            <ChevronLeft className="size-6" />
-          </button>
-        )}
-        {index < items.length - 1 && (
-          <button type="button" onClick={() => onIndex(index + 1)} aria-label="Következő" className="absolute right-3 grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-            <ChevronRight className="size-6" />
-          </button>
-        )}
-        <p className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs tabular-nums">
-          {index + 1} / {items.length}
-        </p>
-      </div>
-    </dialog>
-  );
-}
-
+/** A photo in "Fotók kezelése": cover, order and delete controls. */
 function Tile({
   item,
-  big,
   canLeft,
   canRight,
   onOpen,
 }: {
   item: MediaItem;
-  big: boolean;
   canLeft: boolean;
   canRight: boolean;
   onOpen: () => void;
@@ -94,11 +49,10 @@ function Tile({
   };
   const btn = "grid size-8 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink disabled:opacity-50";
   return (
-    <li className={cn("group relative overflow-hidden rounded-2xl bg-surface-strong", big ? "col-span-2 row-span-2" : "aspect-[4/3]")}>
+    <li className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-surface-strong">
       <button type="button" onClick={onOpen} className="block size-full" aria-label={item.kind === "video" ? "Videó megnyitása" : "Fotó megnyitása"}>
         {item.thumbUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumbUrl} alt="" loading="lazy" className="size-full object-cover" />
+          <FadeImage src={item.thumbUrl} className="size-full object-cover" />
         ) : (
           <span className="grid size-full place-items-center text-xs text-muted">Nincs előnézet</span>
         )}
@@ -168,6 +122,7 @@ export function PropertyMedia({
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [viewing, setViewing] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [managing, setManaging] = useState(false);
   const busy = uploads.some((u) => u.status === "preparing" || u.status === "uploading");
 
   const setStatus = (i: number, patch: Partial<Upload>) => setUploads((list) => list.map((u, j) => (j === i ? { ...u, ...patch } : u)));
@@ -298,14 +253,29 @@ export function PropertyMedia({
               </span>
             )}
           </h2>
-          <button
-            type="button"
-            onClick={() => input.current?.click()}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />} {busy ? "Feltöltés…" : "Feltöltés"}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {items.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setManaging((m) => !m)}
+                aria-pressed={managing}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium",
+                  managing ? "bg-ink text-white" : "border border-border-strong text-ink hover:bg-surface",
+                )}
+              >
+                {managing ? <Check className="size-3.5" /> : <Settings2 className="size-3.5" />} {managing ? "Kész" : "Fotók kezelése"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />} {busy ? "Feltöltés…" : "Feltöltés"}
+            </button>
+          </div>
           <input
             ref={input}
             type="file"
@@ -319,13 +289,14 @@ export function PropertyMedia({
           />
         </div>
 
-        {items.length > 0 ? (
-          <ul className="grid auto-rows-auto grid-cols-2 gap-2 sm:grid-cols-4">
+        {items.length > 0 && !managing ? (
+          <MediaMosaic items={items} onOpen={setViewing} />
+        ) : items.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {items.map((item, i) => (
               <Tile
                 key={item.id}
                 item={item}
-                big={i === 0 && item.isCover}
                 // Order applies to everything after the cover.
                 canLeft={!item.isCover && i > 0 && !items[i - 1].isCover}
                 canRight={!item.isCover && i < items.length - 1}
@@ -365,7 +336,7 @@ export function PropertyMedia({
         )}
       </div>
 
-      {viewing != null && items[viewing] && <Viewer items={items} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />}
+      {viewing != null && items[viewing] && <MediaViewer items={items} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />}
     </Card>
   );
 }

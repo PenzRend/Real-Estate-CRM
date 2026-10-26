@@ -91,7 +91,7 @@ function ProfileList({ profile, onBack }: { profile: ProfilePayload; onBack: () 
   );
 }
 
-export function ImportWorkspace({ owners, aiEnabled }: { owners: OwnerOption[]; aiEnabled: boolean }) {
+export function ImportWorkspace({ owners, aiEnabled, canDictate }: { owners: OwnerOption[]; aiEnabled: boolean; canDictate: boolean }) {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
@@ -223,7 +223,15 @@ export function ImportWorkspace({ owners, aiEnabled }: { owners: OwnerOption[]; 
         <ImportPhotos sourceUrl={review.url} images={review.images} videos={review.videos} source={review.source} selected={selected} onChange={setSelected} />
         {/* The chosen photos are uploaded on the property page once the listing is saved. */}
         <div onSubmitCapture={() => savePending(review.url, { images: review.images.filter((u) => selected.has(u)), source: review.source })}>
-          <PropertyForm key={review.url} action={createPropertyAction} owners={owners} initialValues={review.values} submitLabel="Ingatlan mentése" cancelHref="/properties" />
+          <PropertyForm
+            key={review.url}
+            action={createPropertyAction}
+            owners={owners}
+            initialValues={review.values}
+            submitLabel="Ingatlan mentése"
+            cancelHref="/properties"
+            canDictate={canDictate}
+          />
         </div>
       </div>
     );

@@ -76,6 +76,7 @@ describe("extraction to the review form", () => {
     postal_code: "1117",
     area_sqm: 64.5,
     room_count: 2.5,
+    bedroom_count: 3,
     bathroom_count: 1,
     floor: "3. emelet",
     building_type: "tégla",
@@ -84,6 +85,14 @@ describe("extraction to the review form", () => {
     has_balcony: true,
     has_garden: null,
     has_parking: false,
+    elevator: true,
+    air_conditioning: true,
+    furnished: null,
+    heating: "gáz (cirko)",
+    orientation: null,
+    view: "utcai",
+    year_built: 1905,
+    common_cost_huf: 52000,
     description_start: "Világos, csendes lakás a",
     description_end: "metró 3 percre.",
     reference_number: null,
@@ -98,7 +107,9 @@ describe("extraction to the review form", () => {
     const fd = new FormData();
     for (const [k, v] of Object.entries(values)) fd.append(k, v);
     const parsed = parsePropertyForm(fd);
-    expect(parsed.ok && parsed.data).toMatchObject({ price: 79_900_000, area_sqm: 64.5, has_balcony: true, has_garden: null, has_parking: false, source_url: "https://ingatlan.com/34567890" });
+    expect(parsed.ok && parsed.data).toMatchObject({ price: 79_900_000, area_sqm: 64.5, bedroom_count: 3, has_balcony: true, has_garden: null, has_parking: false, source_url: "https://ingatlan.com/34567890" });
+    // Lift, klíma, fűtés… land in the "Felszereltség és egyéb" fields; unknowns stay out.
+    expect(parsed.ok && parsed.extras).toEqual({ elevator: true, air_conditioning: true, heating: "gáz (cirko)", view: "utcai", year_built: 1905, common_cost_huf: 52000 });
   });
 
   it("copies the description only when the marked words are on the page", () => {

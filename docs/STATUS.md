@@ -95,6 +95,17 @@ Branch `feat/mvp-foundation`.
   page text. Groq's free tier allows 8 000 tokens/minute (~2 imports a
   minute); imports wait up to 60 s when Groq asks, chat up to 20 s. For real
   use, a paid tier (Groq Dev tier or Claude Haiku) removes this limit.
+- Gallery polish: fixed-height mosaic (cover + 4, full-size cover, previews
+  elsewhere, fade-in loading), editing behind "Fotók kezelése", full-screen
+  viewer with blurred placeholder, preloading, thumbnail strip, keys and swipe.
+- "Felszereltség és egyéb" (`src/lib/properties/extras.ts`): lift, klíma,
+  bútorozott, fűtés, tájolás, kilátás, építés éve, közös költség, stored in
+  `properties.features`, editable, shown on the listing. The import fills
+  them and bedrooms from the parameter table and the description.
+- New owner from the property form (`owner-picker.tsx`,
+  `clients/quick-actions.ts`): typed or dictated (transcription + AI fill),
+  saved as a client and selected. Typed route tested; dictation not tested
+  (needs a microphone).
 - Property photos and videos (`src/lib/media/*`, `src/lib/db/media.ts`,
   `src/components/media/property-media.tsx`): private bucket `property-media`,
   files under `<organization>/<property>/`, storage policies check workspace

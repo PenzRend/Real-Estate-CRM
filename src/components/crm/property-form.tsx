@@ -13,6 +13,8 @@ import {
   propertyStatusLabels,
   propertyTypeLabels,
 } from "@/lib/i18n/labels";
+import { EXTRAS, extraField } from "@/lib/properties/extras";
+import { OwnerPicker } from "./owner-picker";
 import type { PropertyFieldErrors } from "@/lib/validation/property";
 
 export type PropertyFormValues = Record<string, string>;
@@ -24,6 +26,8 @@ type Props = {
   initialValues?: PropertyFormValues;
   submitLabel: string;
   cancelHref: string;
+  /** Voice dictation (transcription) is configured on the server. */
+  canDictate?: boolean;
 };
 
 /** Yes / no / not stated: an unknown feature must not be saved as "no". */
@@ -39,7 +43,7 @@ function FeatureSelect({ name, label, value }: { name: string; label: string; va
   );
 }
 
-export function PropertyForm({ action, owners, initialValues = {}, submitLabel, cancelHref }: Props) {
+export function PropertyForm({ action, owners, initialValues = {}, submitLabel, cancelHref, canDictate = false }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const values = state.values ?? initialValues;
   const errors: PropertyFieldErrors = state.errors ?? {};
@@ -82,21 +86,7 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
         <Field label="Belső azonosító" htmlFor="reference_number" error={errors.reference_number}>
           <Input id="reference_number" name="reference_number" placeholder="Pl. BP11-024" defaultValue={v("reference_number")} aria-invalid={invalid("reference_number")} />
         </Field>
-        <Field
-          label="Tulajdonos / eladó"
-          htmlFor="owner_client_id"
-          hint={owners.length ? undefined : "Előbb vedd fel a tulajdonost ügyfélként."}
-          error={errors.owner_client_id}
-        >
-          <Select id="owner_client_id" name="owner_client_id" defaultValue={v("owner_client_id")} aria-invalid={invalid("owner_client_id")}>
-            <option value="">Nincs megadva</option>
-            {owners.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name} ({clientTypeLabels[o.clientType].toLowerCase()})
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <OwnerPicker owners={owners} defaultValue={v("owner_client_id")} error={errors.owner_client_id} canDictate={canDictate} />
         <Field label="Hirdetés forrása" htmlFor="listing_source" error={errors.listing_source}>
           <Input id="listing_source" name="listing_source" placeholder="Pl. saját megbízás, ingatlan.com" defaultValue={v("listing_source")} />
         </Field>
@@ -157,7 +147,26 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
         </div>
       </FormSection>
 
-      <FormSection number="04" title="Leírás">
+      <FormSection number="04" title="Felszereltség és egyéb">
+        <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3">
+          {EXTRAS.filter((e) => e.kind === "flag").map((e) => (
+            <FeatureSelect key={e.key} name={extraField(e.key)} label={e.label} value={v(extraField(e.key))} />
+          ))}
+        </div>
+        {EXTRAS.filter((e) => e.kind !== "flag").map((e) => (
+          <Field key={e.key} label={e.label} htmlFor={extraField(e.key)}>
+            <Input
+              id={extraField(e.key)}
+              name={extraField(e.key)}
+              inputMode={e.kind === "number" ? "numeric" : undefined}
+              placeholder={"placeholder" in e ? e.placeholder : undefined}
+              defaultValue={v(extraField(e.key))}
+            />
+          </Field>
+        ))}
+      </FormSection>
+
+      <FormSection number="05" title="Leírás">
         <div className="sm:col-span-2">
           <Field label="Hirdetés szövege" htmlFor="description" error={errors.description}>
             <Textarea id="description" name="description" className="min-h-40" defaultValue={v("description")} />

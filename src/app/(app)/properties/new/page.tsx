@@ -6,6 +6,7 @@ import { Eyebrow } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { listOwnerOptions } from "@/lib/db/properties";
 import { createPropertyAction } from "../actions";
@@ -32,6 +33,7 @@ async function NewPropertyContent({ searchParams }: Pick<PageProps<"/properties/
         }
       />
       <PropertyForm
+        canDictate={transcriptionConfig() != null}
         action={createPropertyAction}
         owners={owners}
         initialValues={owner ? { owner_client_id: owner } : undefined}

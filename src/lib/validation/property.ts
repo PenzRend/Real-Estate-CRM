@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { currencyLabels, listingTypeLabels, propertyStatusLabels, propertyTypeLabels } from "@/lib/i18n/labels";
+import { parseExtras } from "@/lib/properties/extras";
 import { fieldErrors, keys, optionalNumber, optionalText } from "./common";
 
 // Yes / no / not stated. "Not stated" stays null so matching treats it as unknown, not as "no".
@@ -64,6 +65,7 @@ export type PropertyFieldErrors = Partial<Record<keyof PropertyInput, string>>;
 export function parsePropertyForm(formData: FormData) {
   const raw = Object.fromEntries([...formData.keys()].map((k) => [k, formData.get(k)]));
   const result = propertyFormSchema.safeParse(raw);
-  if (result.success) return { ok: true as const, data: result.data };
+  // Extras (lift, heating…) are optional details stored in features, never a reason to reject the form.
+  if (result.success) return { ok: true as const, data: result.data, extras: parseExtras((name) => formData.get(name)) };
   return { ok: false as const, errors: fieldErrors<keyof PropertyInput>(result.error.issues) as PropertyFieldErrors };
 }

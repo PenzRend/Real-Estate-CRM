@@ -4,7 +4,7 @@ import { ImportWorkspace } from "@/components/listings/import-workspace";
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { llmConfig } from "@/lib/ai/config";
+import { llmConfig, transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { listOwnerOptions } from "@/lib/db/properties";
 
@@ -18,9 +18,9 @@ async function ImportContent() {
       <PageHeader
         eyebrow={<Eyebrow>Ingatlanok</Eyebrow>}
         title="Importálás hirdetésből"
-        description="Illeszd be a hirdetés linkjét és szövegét – vagy használd a böngészőbővítményt –, az AI kitölti az adatlapot, te ellenőrzöd és mented."
+        description="Add meg a hirdetés linkjét: az AI kitölti az adatlapot, a fotókat és a videólinkeket is átveszi – te ellenőrzöd és mented."
       />
-      <ImportWorkspace owners={owners} aiEnabled={llmConfig() != null} />
+      <ImportWorkspace owners={owners} aiEnabled={llmConfig() != null} canDictate={transcriptionConfig() != null} />
     </div>
   );
 }
