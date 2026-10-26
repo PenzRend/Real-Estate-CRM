@@ -56,11 +56,14 @@ export type PropertyListItem = {
 };
 
 /** AI recommendation — not a task until the user accepts it. */
+/** A suggestion the agent can act on; not a task until accepted. */
 export type SuggestionItem = {
   id: string;
   title: string;
   reason: string;
   client: Ref | null;
+  property?: Ref | null;
+  category?: "strong" | "good" | "possible";
 };
 
 export type DashboardData = {

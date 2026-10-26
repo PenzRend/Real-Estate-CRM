@@ -196,6 +196,18 @@ describe("workflow", () => {
     expect(await rowsAs(USER_B, `select title from properties where search_text like '%napfenyes%'`)).toEqual([]);
   });
 
+  it("match decisions stay in their workspace and cannot point across workspaces", async () => {
+    const clientId = await createClientAsA("Döntés Teszt");
+    const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Döntés lakás') returning id`);
+    expect(
+      (await asUser(USER_A, `insert into property_client_matches (organization_id, property_id, client_id, status) values ('${orgA}', '${prop.id}', '${clientId}', 'dismissed')`)).ok,
+    ).toBe(true);
+    expect(await rowsAs(USER_B, `select id from property_client_matches`)).toEqual([]);
+    expect(
+      (await asUser(USER_B, `insert into property_client_matches (organization_id, property_id, client_id, status) values ('${orgB}', '${prop.id}', '${clientId}', 'dismissed')`)).ok,
+    ).toBe(false);
+  });
+
   it("rejects an inverted budget range", async () => {
     const r = await asUser(
       USER_A,

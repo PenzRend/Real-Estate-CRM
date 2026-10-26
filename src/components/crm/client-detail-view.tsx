@@ -24,6 +24,7 @@ export function ClientDetailView({
   actions,
   archivedAt,
   notice,
+  matches,
 }: {
   client: ClientDetail;
   /** Extra header actions, e.g. archive / restore. */
@@ -31,6 +32,8 @@ export function ClientDetailView({
   archivedAt?: string | null;
   /** One-off confirmation shown after a save, e.g. from quick capture. */
   notice?: string | null;
+  /** Matching listings card. */
+  matches?: ReactNode;
 }) {
   const r = client.requirements;
   const budget =
@@ -118,6 +121,8 @@ export function ClientDetailView({
               )}
             </div>
           </Card>
+
+          {matches}
 
           <Card>
             <CardHeader

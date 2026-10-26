@@ -8,7 +8,9 @@ import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { getClientDetail } from "@/lib/db/clients";
+import { matchesForClient } from "@/lib/db/matches";
 import { listOwnedProperties } from "@/lib/db/properties";
+import { PropertyMatchesCard } from "@/components/crm/match-lists";
 import { archiveClientAction, restoreClientAction } from "../actions";
 
 export const metadata: Metadata = { title: "Ügyfél" };
@@ -16,7 +18,11 @@ export const metadata: Metadata = { title: "Ügyfél" };
 async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
-  const [detail, owned] = await Promise.all([getClientDetail(user, id), listOwnedProperties(user, id)]);
+  const [detail, owned, matches] = await Promise.all([
+    getClientDetail(user, id),
+    listOwnedProperties(user, id),
+    matchesForClient(user, id),
+  ]);
   if (!detail) notFound();
   // Owned listings first, then properties linked through interest/viewings.
   const linkedIds = new Set(detail.relatedProperties.map((p) => p.id));
@@ -49,7 +55,19 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
   );
 
   const notice = query.saved === "1" ? "Elmentve. Az ügyfél adatai, a beszélgetés és a teendők frissültek." : null;
-  return <ClientDetailView client={client} actions={actions} archivedAt={client.archivedAt} notice={notice} />;
+  const hasRequirements = Boolean(
+    client.budgetMin != null || client.budgetMax != null || client.preferredLocations.length || client.requirements.propertyTypes.length,
+  );
+  const wantsListings = ["buyer", "investor", "tenant"].includes(client.clientType);
+  return (
+    <ClientDetailView
+      client={client}
+      actions={actions}
+      archivedAt={client.archivedAt}
+      notice={notice}
+      matches={wantsListings && !client.archivedAt ? <PropertyMatchesCard clientId={client.id} matches={matches} hasRequirements={hasRequirements} /> : null}
+    />
+  );
 }
 
 export default function ClientPage({ params, searchParams }: PageProps<"/clients/[id]">) {

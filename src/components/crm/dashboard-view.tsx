@@ -1,4 +1,4 @@
-import { AlarmClock, Building2, CalendarCheck, History, Plus, Sparkles, UserRound, Users } from "lucide-react";
+import { AlarmClock, Building2, CalendarCheck, History, Lightbulb, Plus, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { ClientStatusBadge, Eyebrow } from "@/components/ui/badge";
 import { ArrowLink, ButtonLink } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { EmptyState, PageHeader } from "@/components/ui/page";
 import { formatDate, formatLongDate, formatPriceShort } from "@/lib/i18n/format";
 import type { DashboardData } from "@/lib/types/view-models";
 import { ActivityRow, PropertyRow, TaskRow } from "./items";
+import { MatchActions, MatchCategoryBadge } from "./match-parts";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function greeting(now: Date) {
   const hour = Number(new Intl.DateTimeFormat("hu-HU", { hour: "numeric", timeZone: "Europe/Budapest" }).format(now));
@@ -78,33 +81,44 @@ export function DashboardView({ data, now }: { data: DashboardData; now: Date })
 
         <div className="flex flex-col gap-6">
           <Card className="overflow-hidden">
-            <CardHeader
-              title="AI-javaslatok"
-              count={data.suggestions.length}
-              action={<Sparkles className="size-4 text-accent" />}
-            />
+            <CardHeader title="Javaslatok" count={data.suggestions.length} action={<Lightbulb className="size-4 text-accent" />} />
             {data.suggestions.length ? (
               <ul className="divide-y divide-border">
                 {data.suggestions.map((s) => (
                   <li key={s.id} className="px-5 py-4">
-                    <p className="text-sm font-medium text-ink">{s.title}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium text-ink">
+                        {s.client && s.property ? (
+                          <>
+                            Ajánld{" "}
+                            <Link href={`/clients/${s.client.id}`} className="hover:underline">{s.client.name}</Link>
+                            {" részére: "}
+                            <Link href={`/properties/${s.property.id}`} className="hover:underline">{s.property.name}</Link>
+                          </>
+                        ) : (
+                          s.title
+                        )}
+                      </p>
+                      {s.category && <MatchCategoryBadge category={s.category} />}
+                    </div>
                     <p className="mt-1 text-xs leading-relaxed text-muted">
                       <span className="font-medium text-text">Miért? </span>
                       {s.reason}
                     </p>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" className="whitespace-nowrap rounded-full bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-hover">
-                        Feladat létrehozása
-                      </button>
-                      <button type="button" className="rounded-full px-3 py-1 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
-                        Elvetés
-                      </button>
-                    </div>
+                    {s.client && s.property && UUID.test(s.client.id) && UUID.test(s.property.id) && (
+                      <div className="mt-3">
+                        <MatchActions propertyId={s.property.id} clientId={s.client.id} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             ) : (
-              <EmptyState icon={Sparkles} title="Még nincs javaslat" description="A javaslatok a rögzített hívásokból és teendőkből készülnek." />
+              <EmptyState
+                icon={Lightbulb}
+                title="Most nincs javaslat"
+                description="Ha az elmúlt 14 napban felvett ingatlan illik egy ügyfeled igényeihez, itt jelezzük."
+              />
             )}
           </Card>
 

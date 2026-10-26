@@ -1,7 +1,9 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { startOfZonedDay } from "@/lib/i18n/timezone";
+import { matchSummary } from "@/lib/matching/match";
 import { createClient } from "@/lib/supabase/server";
+import { matchSuggestions } from "./matches";
 import type { DashboardData, Ref, TaskItem } from "@/lib/types/view-models";
 
 const OPEN_TASK = ["todo", "in_progress"];
@@ -143,8 +145,14 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
       nextFollowUpAt: c.next_follow_up_at,
       updatedAt: c.updated_at,
     })),
-    // AI suggestions arrive in phase 2.
-    suggestions: [],
+    suggestions: (await matchSuggestions(user, now)).map(({ client, property, match }) => ({
+      id: `${property.id}:${client.id}`,
+      title: `Ajánld ${client.full_name} részére: ${property.title}`,
+      reason: `Új ingatlan, ami illik a keresési igényeihez. ${matchSummary(match)}`,
+      client: { id: client.id, name: client.full_name },
+      property: { id: property.id, name: property.title },
+      category: match.category,
+    })),
     counts: { activeClients: activeClients.count ?? 0, activeProperties: activeProperties.count ?? 0 },
   };
 }

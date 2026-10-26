@@ -37,7 +37,16 @@ function Feature({ label, value }: { label: string; value: boolean | null }) {
   );
 }
 
-export function PropertyDetailView({ property: p, actions }: { property: PropertyDetail; actions?: ReactNode }) {
+export function PropertyDetailView({
+  property: p,
+  actions,
+  matches,
+}: {
+  property: PropertyDetail;
+  actions?: ReactNode;
+  /** Matching clients card. */
+  matches?: ReactNode;
+}) {
   const location = [p.postal_code, p.city, p.district].filter(Boolean).join(" ");
   const pricePerSqm =
     p.price != null && p.area_sqm ? formatPrice(Math.round(p.price / p.area_sqm), p.currency) + " / m²" : null;
@@ -107,9 +116,11 @@ export function PropertyDetailView({ property: p, actions }: { property: Propert
               </h2>
             </div>
             <p className="px-5 pt-3 pb-5 text-sm text-muted">
-              Az összefoglaló és az illeszkedő ügyfelek listája a következő fázisban készül el.
+              Az ingatlan AI-összefoglalója később készül el; az illő ügyfeleket lent látod.
             </p>
           </Card>
+
+          {matches}
 
           <Card>
             <CardHeader title="Leírás" />

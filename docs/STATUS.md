@@ -24,8 +24,16 @@ Branch `feat/mvp-foundation`.
   English clip; Hungarian dictation and the in-browser recorder still need a
   real person to try. Prompt gives the model a 14-day calendar because it got
   weekdays wrong when computing them itself.
+- Matching (uncommitted, awaiting review): rule-based client ↔ property
+  matching with per-requirement reasons (met / close / miss / no data) and a
+  category (Erős / Jó / Lehetséges), never suggesting an owner their own
+  property. Shown on client pages ("Illő ingatlanok"), property pages ("Illő
+  ügyfelek") and as dashboard suggestions for listings from the last 14 days.
+  "Ajánlom" creates a task and stops suggesting the pair; "Nem releváns" hides
+  it (decisions in `property_client_matches`). Tested in Chrome; "Nem releváns"
+  was not clicked in the browser (needs a second matching pair).
 - Migrations `20261025000000_initial_schema`, `20261026000000_client_search` and
-  `20261026120126_property_search` are applied and recorded in
+  `20261026120126_property_search` and `20261026145340_match_decisions` are applied and recorded in
   `supabase_migrations.schema_migrations`.
 - Supabase MCP `apply_migration` auto-declines migrations with DROP statements
   here; keep migrations additive (drop old indexes later, with the user).
