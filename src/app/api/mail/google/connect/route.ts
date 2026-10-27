@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { googleAuthUrl, googleConfig, safeNext } from "@/lib/mail/google";
+import { appOrigin } from "@/lib/origin";
 
 const OAUTH_COOKIE = "mail_oauth";
 
@@ -13,7 +14,8 @@ const OAUTH_COOKIE = "mail_oauth";
  */
 export async function GET(request: NextRequest) {
   await getCurrentUser();
-  const origin = request.nextUrl.origin;
+  // Google needs the exact public address (https behind the proxy), so not the request's own URL.
+  const origin = await appOrigin();
   if (!googleConfig() || !isMailCryptoConfigured()) {
     return NextResponse.redirect(new URL("/inbox?mail_error=config", origin));
   }
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
   );
   response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, send, calendar, next }), {
     httpOnly: true,
-    secure: request.nextUrl.protocol === "https:",
+    secure: origin.startsWith("https:"),
     sameSite: "lax",
     path: "/api/mail/google",
     maxAge: 600,

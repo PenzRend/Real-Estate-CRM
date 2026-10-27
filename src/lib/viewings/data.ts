@@ -5,7 +5,7 @@ import { formatDateTime } from "@/lib/i18n/format";
 import { zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { MailAccessRevoked } from "@/lib/mail/google";
 import { mailboxWithToken } from "@/lib/mail/sync";
-import { appOrigin } from "@/lib/shares/data";
+import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
 import { CalendarApiDisabled, CalendarNotAllowed, cancelEvent, createEvent, moveEvent } from "./calendar";
 import { followUpFor, outcomeLabels, relationFor, type CalendarOutcome, type Interest, type Outcome, type ViewingStatus } from "./logic";

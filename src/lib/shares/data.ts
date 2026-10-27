@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
 import type { CurrentUser } from "@/lib/auth";
+import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
 
 // Shareable listing links (property_shares): one active link per listing, made
@@ -35,14 +35,6 @@ type Row = {
 
 const COLUMNS = "id, token, show_address, contact_name, contact_phone, contact_email, view_count, last_viewed_at, created_at";
 
-/** The CRM's own address, for links that leave it (APP_URL when set, else this request's host). */
-export async function appOrigin() {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 const toShare = (r: Row, origin: string): Share => ({
   id: r.id,

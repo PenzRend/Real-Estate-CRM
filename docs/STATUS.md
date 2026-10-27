@@ -4,6 +4,19 @@ Branch `feat/mvp-foundation`.
 
 ## Done
 
+- Launch prep (2026-10-27): `output: "standalone"` + `Dockerfile` (non-root,
+  health check on `/api/health`); tested by running the standalone server
+  locally (landing, privacy, login, signed-in dashboard, extension download).
+  Not built with Docker here (no Docker on this PC). Redirects, OAuth and
+  emailed links use `appOrigin()` (`src/lib/origin.ts`, `APP_URL` first) so
+  they stay `https://` behind a proxy. Deployment guide: `docs/DEPLOY.md`
+  (production Supabase project, OVH + Coolify, DNS, Google, checks).
+- Workspace isolation checked on the hosted dev database with
+  `supabase/checks/workspace-isolation.sql` (temporary user, always rolls
+  back): 0 failures over 16 tables, storage and 6 write paths.
+- In-app feedback ("Visszajelzés" in the sidebar, `product_feedback` table):
+  bug / idea / other, typed or dictated, with the page it was sent from.
+  Agents see only their own; read all of it in the Supabase dashboard.
 - Renamed to **Flavio** (domain flavio.hu): app title, logo, landing page,
   shared listing page, privacy policy, and the extension (name, popup,
   badge; version 0.3.0; download folder `flavio-bovitmeny`).
@@ -226,8 +239,6 @@ Branch `feat/mvp-foundation`.
 
 ## Known gaps / next
 
-- Workspace isolation is tested only in PGlite (`tests/db/rls.test.ts`), not yet
-  against the hosted project.
 - Supabase advisor: enable leaked password protection (dashboard setting);
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).

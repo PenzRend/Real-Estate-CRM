@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
 
 async function signOut(request: NextRequest) {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  const url = new URL("/login", request.nextUrl.origin);
+  const url = new URL("/login", await appOrigin());
   const error = request.nextUrl.searchParams.get("error");
   if (error === "profile") url.searchParams.set("error", "profile");
   // 303 so a POST is followed by a GET of the login page.

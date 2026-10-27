@@ -4,7 +4,7 @@ import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib
 
 // Pages reachable without a session ("/" is the landing page; matched exactly;
 // "/l/…" are listing pages shared with clients). Everything else requires sign-in.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/adatvedelem"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/adatvedelem", "/api/health"];
 // Signed-in users have no reason to see these.
 const GUEST_ONLY_PATHS = ["/", "/login", "/signup", "/forgot-password"];
 

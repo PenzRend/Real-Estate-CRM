@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
 import { navItems } from "./nav-items";
 
@@ -96,6 +97,7 @@ export function Sidebar({ account }: { account: ReactNode }) {
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <QuickAdd />
+        <FeedbackButton />
         {account}
       </div>
     </aside>
@@ -160,6 +162,7 @@ export function MobileNav({ account }: { account: ReactNode }) {
             </div>
             <div className="mt-auto flex flex-col gap-3">
               <QuickAdd onNavigate={() => setOpen(false)} />
+              <FeedbackButton />
               {account}
             </div>
           </div>

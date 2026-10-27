@@ -1,8 +1,8 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -32,10 +32,8 @@ function translate(error: { code?: string; message: string }) {
   return (error.code && supabaseErrors[error.code]) || "Valami hiba történt. Próbáld újra később.";
 }
 
-async function siteOrigin() {
-  const h = await headers();
-  return process.env.NEXT_PUBLIC_SITE_URL ?? h.get("origin") ?? "http://localhost:3000";
-}
+// Emailed links point at the CRM's own address (APP_URL in production).
+const siteOrigin = appOrigin;
 
 /** Only allow same-site relative redirects ("/clients", not "//evil.com"). */
 function safeNext(value: FormDataEntryValue | null) {

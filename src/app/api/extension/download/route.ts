@@ -3,7 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { EXTENSION_FILES, EXTENSION_FOLDER, cleanOrigin, extensionZip } from "@/lib/extension/package";
-import { appOrigin } from "@/lib/shares/data";
+import { appOrigin } from "@/lib/origin";
 
 // The import extension as a zip, set up for this CRM's address. Used until the
 // extension is in the Chrome Web Store (then the install card links there).

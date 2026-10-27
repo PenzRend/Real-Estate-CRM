@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { encryptToken } from "@/lib/mail/crypto";
 import { CALENDAR_SCOPE, exchangeCode, gmail, GMAIL_SEND_SCOPE, safeNext } from "@/lib/mail/google";
+import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
 import { syncPendingToCalendar } from "@/lib/viewings/data";
 
@@ -16,7 +17,9 @@ function back(origin: string, query: string, path = "/inbox") {
 /** Google redirects here after consent: verify state, store the encrypted tokens. */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  // Must match the redirect URI the connect route sent to Google.
+  const origin = await appOrigin();
 
   if (searchParams.get("error")) return back(origin, "mail_error=denied");
 

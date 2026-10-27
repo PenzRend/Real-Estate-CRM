@@ -292,6 +292,20 @@ describe("workflow", () => {
     expect((await asUser(USER_A, `delete from viewings where id = '${v.id}'`)).ok).toBe(false);
   });
 
+  it("feedback is private to its author and can't be filed into another workspace", async () => {
+    const send = (who: string, org: string, author = who) =>
+      asUser(who, `insert into product_feedback (organization_id, user_id, kind, message, page) values ('${org}', '${author}', 'idea', 'Jó lenne…', '/dashboard')`);
+    expect((await send(USER_A, orgA)).ok).toBe(true);
+    // Not in someone else's workspace, nor in someone else's name.
+    expect((await send(USER_B, orgA)).ok).toBe(false);
+    expect((await send(USER_B, orgB, USER_A)).ok).toBe(false);
+    expect(await rowsAs(USER_A, `select message from product_feedback`)).toHaveLength(1);
+    expect(await rowsAs(USER_B, `select message from product_feedback`)).toEqual([]);
+    // Sent feedback isn't edited or deleted from the app.
+    expect((await asUser(USER_A, `update product_feedback set message = 'x'`)).ok).toBe(false);
+    expect((await asUser(USER_A, `delete from product_feedback`)).ok).toBe(false);
+  });
+
   it("property photos stay in their workspace and folder", async () => {
     const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Fotós lakás') returning id`);
     const path = (org: string, file: string) => `${org}/${prop.id}/${file}`;
