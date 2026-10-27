@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
   }
   if (saved.calendar) {
     // Viewings booked before the permission was given go into the calendar now.
-    const added = await syncPendingToCalendar(user, new Date()).catch(() => 0);
-    return back(origin, `calendar_enabled=${added}`, safeNext(saved.next ?? null));
+    const { added, problem } = await syncPendingToCalendar(user, new Date()).catch(() => ({ added: 0, problem: "failed" as const }));
+    return back(origin, `calendar_enabled=${added}${problem ? `&calendar_problem=${problem}` : ""}`, safeNext(saved.next ?? null));
   }
   return saved.send ? back(origin, "send_enabled=1", safeNext(saved.next ?? null)) : back(origin, "connected=1");
 }

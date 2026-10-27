@@ -1,4 +1,4 @@
-# Status (2026-10-26)
+# Status (2026-10-27)
 
 Branch `feat/mvp-foundation`.
 
@@ -137,8 +137,17 @@ Branch `feat/mvp-foundation`.
   follow-up task (high: tomorrow, medium: 2 days, no-show: today), and a clear
   "no" stops suggesting the listing. Dashboard shows the next two weeks and
   what waits for feedback. Tested: booking from a client and from an email,
-  feedback. Not yet tested: the Calendar part (needs the user's Google
-  consent and the Google Calendar API enabled in the Cloud project).
+  feedback. Calendar tested 2026-10-27: the event appeared in Google Calendar
+  at the right Budapest time and place. If the push fails right after consent
+  (e.g. the API is still off), the card says why (`calendar_problem`).
+- Reply drafts see the sender's upcoming booked viewings and confirm that
+  appointment. Listing features are sent to the AI only when recorded
+  (`features_present`, `details`), so an unticked box becomes a placeholder,
+  not "no parking". The assistant's `get_property` uses the same rule.
+- Chrome Web Store prep: extension icons (from the logo), `npm run
+  extension:pack -- https://<address>` (store zip for the production
+  address), a public privacy policy at `/adatvedelem` (`PRIVACY_CONTROLLER`,
+  `PRIVACY_EMAIL`), and the submission guide `docs/chrome-web-store.md`.
 - Quick status change (`property-status-picker.tsx`): the status badge on the
   listing page and in the property list opens a menu of statuses; the change
   shows at once and saves in the background (`setPropertyStatusAction`). The

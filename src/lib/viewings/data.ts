@@ -212,8 +212,11 @@ export async function addToCalendar(user: CurrentUser, id: string, invite: boole
   return pushToCalendar(user, row, invite);
 }
 
-/** After the Calendar permission is granted: the user's upcoming viewings not yet in the calendar. */
-export async function syncPendingToCalendar(user: CurrentUser, now: Date) {
+/**
+ * After the Calendar permission is granted: the user's upcoming viewings not
+ * yet in the calendar. Stops at the first failure and says why.
+ */
+export async function syncPendingToCalendar(user: CurrentUser, now: Date): Promise<{ added: number; problem: CalendarOutcome | null }> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("viewings")
@@ -226,16 +229,16 @@ export async function syncPendingToCalendar(user: CurrentUser, now: Date) {
     .order("starts_at")
     .limit(20);
   const rows = (data ?? []) as Row[];
-  if (!rows.length) return 0;
+  if (!rows.length) return { added: 0, problem: null };
   const access = await calendarAccess(user);
-  if ("reason" in access) return 0;
+  if ("reason" in access) return { added: 0, problem: access.reason };
   let added = 0;
   for (const row of rows) {
     const r = await pushToCalendar(user, row, false, access.token);
-    if (r === "added") added++;
-    else break;
+    if (r !== "added") return { added, problem: r };
+    added++;
   }
-  return added;
+  return { added, problem: null };
 }
 
 // ---------------------------------------------------------------------------

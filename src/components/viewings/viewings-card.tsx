@@ -38,11 +38,14 @@ function CalendarNotice() {
   const refused = params.get("mail_error") === "calendar_scope";
   if (enabled == null && !refused) return null;
   const added = Number(enabled);
+  const problem = calendarMessages[params.get("calendar_problem") as keyof typeof calendarMessages] ?? null;
   return (
-    <p role="status" className={cn("mx-5 mt-4 rounded-xl px-3 py-2 text-sm", refused ? "bg-danger-soft text-danger" : "bg-success-soft text-success")}>
+    <p role="status" className={cn("mx-5 mt-4 rounded-xl px-3 py-2 text-sm", refused ? "bg-danger-soft text-danger" : problem ? "bg-warning-soft text-warning" : "bg-success-soft text-success")}>
       {refused
         ? "A Google-engedélyezésnél a naptár-hozzáférés nem lett bepipálva, így a naptár nincs engedélyezve."
-        : `A Google Naptár engedélyezve.${added > 0 ? ` ${added} megtekintés bekerült a naptáradba.` : ""}`}
+        : problem
+          ? `A naptár-engedély megvan, de ${added > 0 ? `csak ${added} megtekintés került be a naptáradba` : "a megtekintések nem kerültek be a naptáradba"}. ${problem}`
+          : `A Google Naptár engedélyezve.${added > 0 ? ` ${added} megtekintés bekerült a naptáradba.` : ""}`}
     </p>
   );
 }
