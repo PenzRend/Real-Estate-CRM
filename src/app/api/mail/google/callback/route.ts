@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { encryptToken } from "@/lib/mail/crypto";
-import { exchangeCode, gmail, GMAIL_SEND_SCOPE, safeNext } from "@/lib/mail/google";
+import { CALENDAR_SCOPE, exchangeCode, gmail, GMAIL_SEND_SCOPE, safeNext } from "@/lib/mail/google";
 import { createClient } from "@/lib/supabase/server";
+import { syncPendingToCalendar } from "@/lib/viewings/data";
 
 const OAUTH_COOKIE = "mail_oauth";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   if (searchParams.get("error")) return back(origin, "mail_error=denied");
 
-  let saved: { state?: string; verifier?: string; send?: boolean; next?: string } = {};
+  let saved: { state?: string; verifier?: string; send?: boolean; calendar?: boolean; next?: string } = {};
   try {
     saved = JSON.parse(request.cookies.get(OAUTH_COOKIE)?.value ?? "{}");
   } catch {
@@ -35,8 +36,11 @@ export async function GET(request: NextRequest) {
     if (!tokens.refresh_token) return back(origin, "mail_error=no_refresh");
     if (!tokens.scope?.includes("gmail.readonly")) return back(origin, "mail_error=scope");
     // Google lets the user untick the send permission on the consent screen.
-    const canSend = tokens.scope.split(" ").includes(GMAIL_SEND_SCOPE);
+    const granted = tokens.scope.split(" ");
+    const canSend = granted.includes(GMAIL_SEND_SCOPE);
+    const canCalendar = granted.includes(CALENDAR_SCOPE);
     if (saved.send && !canSend) return back(origin, "mail_error=send_scope", safeNext(saved.next ?? null));
+    if (saved.calendar && !canCalendar) return back(origin, "mail_error=calendar_scope", safeNext(saved.next ?? null));
     const profile = await gmail<{ emailAddress: string }>("profile", tokens.access_token);
 
     const supabase = await createClient();
@@ -52,6 +56,7 @@ export async function GET(request: NextRequest) {
         status: "active",
         last_error: null,
         can_send: canSend,
+        can_calendar: canCalendar,
       },
       { onConflict: "user_id,provider,email_address" },
     );
@@ -62,6 +67,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("gmail connect failed", error instanceof Error ? error.message : error);
     return back(origin, "mail_error=exchange");
+  }
+  if (saved.calendar) {
+    // Viewings booked before the permission was given go into the calendar now.
+    const added = await syncPendingToCalendar(user, new Date()).catch(() => 0);
+    return back(origin, `calendar_enabled=${added}`, safeNext(saved.next ?? null));
   }
   return saved.send ? back(origin, "send_enabled=1", safeNext(saved.next ?? null)) : back(origin, "connected=1");
 }

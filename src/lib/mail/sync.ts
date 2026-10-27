@@ -14,6 +14,8 @@ export type Mailbox = {
   last_synced_at: string | null;
   /** Google granted the separate send permission. */
   can_send: boolean;
+  /** Google granted the separate Calendar permission. */
+  can_calendar: boolean;
 };
 
 type MailboxSecrets = Mailbox & {
@@ -31,7 +33,7 @@ export async function getMailbox(user: CurrentUser): Promise<Mailbox | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("mailboxes")
-    .select("id, email_address, status, last_error, last_synced_at, can_send")
+    .select("id, email_address, status, last_error, last_synced_at, can_send, can_calendar")
     .eq("user_id", user.id)
     .eq("organization_id", user.organization.id)
     .order("created_at", { ascending: false })
@@ -45,7 +47,7 @@ async function loadSecrets(user: CurrentUser): Promise<MailboxSecrets | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("mailboxes")
-    .select("id, organization_id, email_address, status, last_error, last_synced_at, can_send, refresh_token_enc, access_token_enc, access_token_expires_at")
+    .select("id, organization_id, email_address, status, last_error, last_synced_at, can_send, can_calendar, refresh_token_enc, access_token_enc, access_token_expires_at")
     .eq("user_id", user.id)
     .eq("organization_id", user.organization.id)
     .order("created_at", { ascending: false })

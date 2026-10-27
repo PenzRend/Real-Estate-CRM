@@ -14,6 +14,8 @@ import { listMedia } from "@/lib/db/media";
 import { getPropertyDetail } from "@/lib/db/properties";
 import { defaultContact, getActiveShare } from "@/lib/shares/data";
 import { ClientMatchesCard } from "@/components/crm/match-lists";
+import { ViewingsCard } from "@/components/viewings/viewings-card";
+import { listViewingsFor } from "@/lib/viewings/data";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
 
 export const metadata: Metadata = { title: "Ingatlan" };
@@ -21,12 +23,13 @@ export const metadata: Metadata = { title: "Ingatlan" };
 async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const [property, matches, media, share, contact] = await Promise.all([
+  const [property, matches, media, share, contact, viewings] = await Promise.all([
     getPropertyDetail(user, id),
     matchesForProperty(user, id),
     listMedia(user, id),
     getActiveShare(user, id),
     defaultContact(user),
+    listViewingsFor(user, { propertyId: id }),
   ]);
   if (!property) notFound();
 
@@ -58,6 +61,7 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
       property={property}
       actions={actions}
       matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} />}
+      viewings={<ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />}
       media={<PropertyMedia propertyId={property.id} organizationId={user.organization.id} items={media} sourceUrl={property.source_url} />}
     />
   );

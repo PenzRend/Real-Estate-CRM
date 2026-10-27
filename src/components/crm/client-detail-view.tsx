@@ -25,6 +25,7 @@ export function ClientDetailView({
   archivedAt,
   notice,
   matches,
+  viewings,
 }: {
   client: ClientDetail;
   /** Extra header actions, e.g. archive / restore. */
@@ -34,6 +35,8 @@ export function ClientDetailView({
   notice?: string | null;
   /** Matching listings card. */
   matches?: ReactNode;
+  /** Booked and past viewings card. */
+  viewings?: ReactNode;
 }) {
   const r = client.requirements;
   const budget =
@@ -121,6 +124,8 @@ export function ClientDetailView({
               )}
             </div>
           </Card>
+
+          {viewings}
 
           {matches}
 

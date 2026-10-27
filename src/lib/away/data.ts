@@ -6,13 +6,22 @@ import { PORTALS } from "@/lib/mail/relevance";
 import { getMailbox } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
 import type { Ref } from "@/lib/types/view-models";
+import { cleanProposedTimes } from "@/lib/viewings/logic";
 import { awayHeadline, awaySince, findMentionedProperty, nextVisit, replyRecipient, replySubject, type Visit } from "./logic";
 
 // "Mi történt, amíg távol voltál": unprocessed emails that arrived since the
 // last visit, with AI summaries and reply drafts once generated. Emails and
 // drafts are private to the user who connected the mailbox (RLS).
 
-export type AwayDraft = { summary: string | null; nextStep: string | null; to: string | null; subject: string | null; body: string | null };
+export type AwayDraft = {
+  summary: string | null;
+  nextStep: string | null;
+  to: string | null;
+  subject: string | null;
+  body: string | null;
+  /** The sender asked for a viewing; times they proposed (Budapest wall clock). */
+  viewing: { requested: boolean; times: string[] } | null;
+};
 
 export type AwayItem = {
   id: string;
@@ -42,7 +51,7 @@ export type AwaySummary = {
   tasksDue: number;
 };
 
-const DRAFT_COLUMNS = "ai_summary, ai_next_step, draft_to, draft_subject, draft_body, drafted_at, replied_at";
+const DRAFT_COLUMNS = "ai_summary, ai_next_step, draft_to, draft_subject, draft_body, drafted_at, replied_at, ai_viewing";
 const ITEM_LIMIT = 6;
 
 type Row = {
@@ -61,10 +70,18 @@ type Row = {
   draft_body: string | null;
   drafted_at: string | null;
   replied_at: string | null;
+  ai_viewing: { requested?: boolean; times?: string[] } | null;
 };
 
 const toDraft = (r: Row): AwayDraft | null =>
-  r.drafted_at ? { summary: r.ai_summary, nextStep: r.ai_next_step, to: r.draft_to, subject: r.draft_subject, body: r.draft_body } : null;
+  r.drafted_at
+    ? { summary: r.ai_summary, nextStep: r.ai_next_step, to: r.draft_to, subject: r.draft_subject, body: r.draft_body, viewing: toViewing(r.ai_viewing) }
+    : null;
+
+function toViewing(v: Row["ai_viewing"]): AwayDraft["viewing"] {
+  if (!v?.requested) return null;
+  return { requested: true, times: cleanProposedTimes(v.times, new Date()) };
+}
 
 async function getVisit(user: CurrentUser): Promise<Visit | null> {
   const supabase = await createClient();
@@ -208,6 +225,7 @@ export async function generateDraft(user: CurrentUser, emailId: string, now: Dat
       : null,
     subject: d.needs_reply ? (d.subject ?? replySubject(e.subject)) : null,
     body: d.body,
+    viewing: toViewing(d.viewing ?? null),
   };
   const { error } = await supabase
     .from("emails")
@@ -217,6 +235,7 @@ export async function generateDraft(user: CurrentUser, emailId: string, now: Dat
       draft_to: draft.to,
       draft_subject: draft.subject,
       draft_body: draft.body,
+      ai_viewing: d.viewing ?? null,
       drafted_at: now.toISOString(),
     })
     .eq("id", e.id)

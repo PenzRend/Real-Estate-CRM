@@ -273,6 +273,25 @@ describe("workflow", () => {
     expect((await anon(`select public.shared_media_visible('${orgA}/${prop.id}/x.jpg') as ok`))[0].ok).toBe(false);
   });
 
+  it("viewings stay in their workspace, and feedback is required to close one", async () => {
+    const clientId = await createClientAsA("Megtekintő Mária");
+    const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Megtekintett lakás') returning id`);
+    const book = (who: string, org: string) =>
+      asUser(who, `insert into viewings (organization_id, client_id, property_id, starts_at) values ('${org}', '${clientId}', '${prop.id}', now() + interval '1 day') returning id`);
+    // Another workspace can't book A's client and listing, nor see A's viewings.
+    expect((await book(USER_B, orgB)).ok).toBe(false);
+    const ok = await book(USER_A, orgA);
+    expect(ok.ok).toBe(true);
+    const [v] = await rowsAs(USER_A, `select id from viewings`);
+    expect(await rowsAs(USER_B, `select id from viewings`)).toEqual([]);
+    expect((await rowsAs(USER_B, `update viewings set status = 'cancelled' where id = '${v.id}' returning id`)).length).toBe(0);
+    // Completed means feedback was given.
+    expect((await asUser(USER_A, `update viewings set status = 'completed' where id = '${v.id}'`)).ok).toBe(false);
+    expect((await asUser(USER_A, `update viewings set status = 'completed', interest = 'high', feedback_at = now() where id = '${v.id}'`)).ok).toBe(true);
+    // No deleting: cancelled viewings stay on record.
+    expect((await asUser(USER_A, `delete from viewings where id = '${v.id}'`)).ok).toBe(false);
+  });
+
   it("property photos stay in their workspace and folder", async () => {
     const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Fotós lakás') returning id`);
     const path = (org: string, file: string) => `${org}/${prop.id}/${file}`;

@@ -11,6 +11,8 @@ import { getClientDetail } from "@/lib/db/clients";
 import { matchesForClient } from "@/lib/db/matches";
 import { listOwnedProperties } from "@/lib/db/properties";
 import { PropertyMatchesCard } from "@/components/crm/match-lists";
+import { BookViewingButton, ViewingsCard } from "@/components/viewings/viewings-card";
+import { listViewingsFor } from "@/lib/viewings/data";
 import { archiveClientAction, restoreClientAction } from "../actions";
 
 export const metadata: Metadata = { title: "Ügyfél" };
@@ -18,10 +20,11 @@ export const metadata: Metadata = { title: "Ügyfél" };
 async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
-  const [detail, owned, matches] = await Promise.all([
+  const [detail, owned, matches, viewings] = await Promise.all([
     getClientDetail(user, id),
     listOwnedProperties(user, id),
     matchesForClient(user, id),
+    listViewingsFor(user, { clientId: id }),
   ]);
   if (!detail) notFound();
   // Owned listings first, then properties linked through interest/viewings.
@@ -34,7 +37,7 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
     ],
   };
 
-  const actions = client.archivedAt ? (
+  const archiveAction = client.archivedAt ? (
     <form action={restoreClientAction.bind(null, client.id)}>
       <Button type="submit" variant="secondary">
         <ArchiveRestore /> Visszaállítás
@@ -53,6 +56,12 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       confirmLabel="Archiválás"
     />
   );
+  const actions = (
+    <>
+      {archiveAction}
+      {!client.archivedAt && <BookViewingButton clientId={client.id} variant="secondary" />}
+    </>
+  );
 
   const notice = query.saved === "1" ? "Elmentve. Az ügyfél adatai, a beszélgetés és a teendők frissültek." : null;
   const hasRequirements = Boolean(
@@ -65,6 +74,11 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       actions={actions}
       archivedAt={client.archivedAt}
       notice={notice}
+      viewings={
+        viewings.length || wantsListings ? (
+          <ViewingsCard viewings={viewings} now={new Date().toISOString()} showClient={false} empty="Még nincs foglalt megtekintés." />
+        ) : null
+      }
       matches={wantsListings && !client.archivedAt ? <PropertyMatchesCard clientId={client.id} matches={matches} hasRequirements={hasRequirements} /> : null}
     />
   );

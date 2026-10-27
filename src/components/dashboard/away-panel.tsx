@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Loader2, Mail, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Loader2, Mail, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,6 +12,8 @@ import { gmailComposeUrl } from "@/lib/away/logic";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/i18n/format";
 import { findPlaceholders } from "@/lib/mail/compose";
+import { ViewingDialog, type Booked } from "@/components/viewings/viewing-dialog";
+import { calendarMessages, fillTimePlaceholders, spokenTime } from "@/lib/viewings/logic";
 
 // Drafts written automatically on arrival, one at a time (provider rate limits).
 const AUTO_DRAFTS = 3;
@@ -188,14 +190,18 @@ function AwayRow({
   mailbox,
   aiEnabled,
   onDraft,
+  onBooked,
 }: {
   item: AwayItem;
   state: DraftState;
   mailbox: Mailbox;
   aiEnabled: boolean;
   onDraft: () => void;
+  onBooked: (b: Booked) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [booked, setBooked] = useState<Booked | null>(null);
   const [sent, setSent] = useState<Sent | null>(item.repliedAt ? { at: item.repliedAt, logged: null } : null);
   const router = useRouter();
   const draft = state.draft;
@@ -265,11 +271,45 @@ function AwayRow({
               </button>
             )
           )}
+          {!booked && (
+            <button
+              type="button"
+              onClick={() => setBooking(true)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium",
+                draft?.viewing?.requested ? "bg-accent-soft text-accent hover:bg-accent-soft/70" : "text-muted hover:bg-surface hover:text-ink",
+              )}
+            >
+              <CalendarPlus className="size-3.5" /> {draft?.viewing?.requested ? "Megtekintést kér – foglalás" : "Megtekintés"}
+            </button>
+          )}
           <Link href={`/interactions/new?email=${item.id}`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
             Rögzítés a CRM-ben
           </Link>
           {state.status === "error" && <span className="text-xs text-danger">{state.error}</span>}
         </div>
+      )}
+
+      {booked && (
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-success">
+          <CalendarCheck className="size-4" /> Megtekintés foglalva: {spokenTime(booked.startsAt)}
+          {booked.calendar === "added" && <span className="text-muted">· a naptáradban</span>}
+          {booked.calendar !== "added" && calendarMessages[booked.calendar] && <span className="text-warning">· {calendarMessages[booked.calendar]}</span>}
+        </p>
+      )}
+      {booking && (
+        <ViewingDialog
+          mode="book"
+          emailId={item.id}
+          clientId={item.client?.id}
+          onBooked={(b) => {
+            setBooked(b);
+            onBooked(b);
+            // The reply now confirms the booked time.
+            if (draft?.body && !sent) setOpen(true);
+          }}
+          onClose={() => setBooking(false)}
+        />
       )}
 
       {open && !sent && draft?.body && (
@@ -315,6 +355,16 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
     const r = await draftReplyAction(id);
     setStates((s) => ({ ...s, [id]: r.ok ? { status: "idle", draft: r.draft } : { ...current(s, id), status: "error", error: r.error } }));
     return r.ok;
+  }
+
+  // A booked viewing fills the time placeholders in that email's reply draft.
+  function confirmTime(id: string, b: Booked) {
+    setStates((s) => {
+      const cur = current(s, id);
+      if (!cur.draft?.body) return s;
+      const when = spokenTime(b.startsAt);
+      return { ...s, [id]: { ...cur, draft: { ...cur.draft, body: fillTimePlaceholders(cur.draft.body, when), subject: cur.draft.subject && fillTimePlaceholders(cur.draft.subject, when) } } };
+    });
   }
 
   useEffect(() => {
@@ -373,6 +423,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
               mailbox={summary.mailbox}
               aiEnabled={aiEnabled}
               onDraft={() => void draft(item.id)}
+              onBooked={(b) => confirmTime(item.id, b)}
             />
           ))}
         </ul>

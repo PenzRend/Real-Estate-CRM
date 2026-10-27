@@ -150,7 +150,7 @@ async function assertInWorkspace(user: CurrentUser, table: "clients" | "properti
 }
 
 /** Moves last_contacted_at forward (never back) and optionally sets the next follow-up. */
-async function touchClient(user: CurrentUser, clientId: string, occurredAt: string, nextFollowUpAt?: string | null) {
+export async function touchClient(user: CurrentUser, clientId: string, occurredAt: string, nextFollowUpAt?: string | null) {
   const supabase = await createClient();
   const patch: Record<string, string | null> = {};
   const { data } = await supabase.from("clients").select("last_contacted_at").eq("id", clientId).maybeSingle();

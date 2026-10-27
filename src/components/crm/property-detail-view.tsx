@@ -7,6 +7,7 @@ import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
 import type { PropertyDetail } from "@/lib/db/properties";
 import { extrasForDisplay } from "@/lib/properties/extras";
+import { BookViewingButton } from "@/components/viewings/viewings-card";
 import { PropertyStatusPicker } from "./property-status-picker";
 import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
 import { interactionTypeLabels, listingTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
@@ -44,6 +45,7 @@ export function PropertyDetailView({
   actions,
   matches,
   media,
+  viewings,
 }: {
   property: PropertyDetail;
   actions?: ReactNode;
@@ -51,6 +53,8 @@ export function PropertyDetailView({
   matches?: ReactNode;
   /** Photo and video gallery. */
   media?: ReactNode;
+  /** Booked and past viewings card. */
+  viewings?: ReactNode;
 }) {
   const location = [p.postal_code, p.city, p.district].filter(Boolean).join(" ");
   const videoLinks = Array.isArray(p.features?.video_links) ? p.features.video_links.filter((v) => typeof v === "string" && v.startsWith("https://")) : [];
@@ -89,9 +93,7 @@ export function PropertyDetailView({
             <ButtonLink href={`/properties/${p.id}/edit`} variant="secondary">
               <Pencil /> Szerkesztés
             </ButtonLink>
-            <ButtonLink href={`/interactions/new?property=${p.id}&type=viewing`}>
-              <Eye /> Megtekintés rögzítése
-            </ButtonLink>
+            {!p.archived_at && <BookViewingButton propertyId={p.id} />}
           </div>
         </div>
 
@@ -127,6 +129,8 @@ export function PropertyDetailView({
               Az ingatlan AI-összefoglalója később készül el; az illő ügyfeleket lent látod.
             </p>
           </Card>
+
+          {viewings}
 
           {matches}
 

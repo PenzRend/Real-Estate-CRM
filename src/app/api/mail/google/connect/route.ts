@@ -8,7 +8,8 @@ const OAUTH_COOKIE = "mail_oauth";
 
 /**
  * Starts "Connect Gmail": PKCE + state in a short-lived, http-only cookie.
- * `?send=1` also asks for the send permission (granted on top of reading).
+ * `?send=1` also asks for the send permission, `?calendar=1` for the
+ * Calendar permission (each granted on top of reading).
  */
 export async function GET(request: NextRequest) {
   await getCurrentUser();
@@ -22,11 +23,12 @@ export async function GET(request: NextRequest) {
   const challenge = createHash("sha256").update(verifier).digest("base64url");
 
   const send = request.nextUrl.searchParams.get("send") === "1";
+  const calendar = request.nextUrl.searchParams.get("calendar") === "1";
   const next = safeNext(request.nextUrl.searchParams.get("next"));
   const response = NextResponse.redirect(
-    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge, send }),
+    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge, send, calendar }),
   );
-  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, send, next }), {
+  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, send, calendar, next }), {
     httpOnly: true,
     secure: request.nextUrl.protocol === "https:",
     sameSite: "lax",

@@ -6,6 +6,8 @@ import "server-only";
 
 export const GMAIL_SCOPES = ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly"];
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+// Viewings in the agent's own calendar: events only, no access to other calendar settings.
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 export class MailAccessRevoked extends Error {}
 export class MailSendNotAllowed extends Error {}
@@ -21,7 +23,7 @@ export function googleConfig() {
   return clientId && clientSecret ? { clientId, clientSecret } : null;
 }
 
-export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string; send?: boolean }) {
+export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string; send?: boolean; calendar?: boolean }) {
   const config = googleConfig();
   if (!config) throw new Error("Google OAuth is not configured");
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -29,7 +31,7 @@ export function googleAuthUrl(p: { redirectUri: string; state: string; codeChall
     client_id: config.clientId,
     redirect_uri: p.redirectUri,
     response_type: "code",
-    scope: (p.send ? [...GMAIL_SCOPES, GMAIL_SEND_SCOPE] : GMAIL_SCOPES).join(" "),
+    scope: [...GMAIL_SCOPES, ...(p.send ? [GMAIL_SEND_SCOPE] : []), ...(p.calendar ? [CALENDAR_SCOPE] : [])].join(" "),
     access_type: "offline", // returns a refresh token
     prompt: "consent", // always return the refresh token, also on reconnect
     include_granted_scopes: "true",

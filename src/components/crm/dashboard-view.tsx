@@ -19,7 +19,7 @@ function greeting(now: Date) {
   return "Jó estét";
 }
 
-export function DashboardView({ data, now, away }: { data: DashboardData; now: Date; away?: ReactNode }) {
+export function DashboardView({ data, now, away, viewings }: { data: DashboardData; now: Date; away?: ReactNode; viewings?: ReactNode }) {
   const title = data.userFirstName ? `${greeting(now)}, ${data.userFirstName}` : "Áttekintés";
 
   return (
@@ -55,6 +55,8 @@ export function DashboardView({ data, now, away }: { data: DashboardData; now: D
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
+          {viewings}
+
           <Card>
             <CardHeader title="Mai teendők" count={data.tasksToday.length} action={<ArrowLink href="/tasks">Összes</ArrowLink>} />
             {data.tasksToday.length ? (
