@@ -70,7 +70,7 @@ export const appGuide: GuideEntry[] = [
     id: "settings",
     screen: "Beállítások",
     href: "/settings",
-    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; Gmail and Google Calendar connection and the browser extension ('Kapcsolatok'); password change ('Jelszó'). Also reachable from the account menu.",
+    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; Gmail and Google Calendar connection and the browser extension ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
   },
   { id: "feedback", screen: "Visszajelzés", href: "/dashboard", how: "Report a bug or idea to the Flavio team: 'Visszajelzés' at the bottom of the side menu." },
 ];

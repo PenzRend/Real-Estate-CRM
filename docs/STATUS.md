@@ -250,6 +250,13 @@ Branch `feat/mvp-foundation`.
   SQL test as a second user and in the browser; a real second account has not
   signed up end to end yet (needs a confirmable email).
 
+- Data export (Beállítások → Adatok, owner and admins): `/api/export` returns
+  one .xlsx with sheets Ügyfelek, Ingatlanok, Feladatok, Előzmények,
+  Megtekintések, Hungarian labels, archived records included (dated column).
+  Written by `src/lib/export/xlsx.ts` (no spreadsheet dependency: stored zip,
+  inline strings, bold frozen header); checked with Python's zipfile and an
+  XML parser, and against the live workspace in the browser.
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

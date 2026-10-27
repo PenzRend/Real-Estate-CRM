@@ -1,4 +1,4 @@
-import { ArrowRight, LogOut, Mail, Puzzle } from "lucide-react";
+import { ArrowRight, Download, LogOut, Mail, Puzzle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -183,7 +183,30 @@ async function SettingsContent() {
           />
         </FormSection>
 
-        <FormSection number="04" title="Jelszó">
+        <FormSection number="04" title="Adatok" description="Az összes ügyfél, ingatlan, feladat, előzmény és megtekintés egy Excel-fájlban.">
+          {canManageTeam(user) ? (
+            <a
+              href="/api/export"
+              download
+              className="group flex items-center gap-3 rounded-2xl border border-border p-4 transition-colors hover:bg-surface sm:col-span-2"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-muted group-hover:bg-background">
+                <Download className="size-[18px]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink">Exportálás Excelbe</p>
+                <p className="mt-0.5 text-sm text-muted">Munkalaponként: ügyfelek, ingatlanok, feladatok, előzmények, megtekintések.</p>
+              </div>
+              <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-ink">
+                Letöltés <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </a>
+          ) : (
+            <p className="text-sm text-muted sm:col-span-2">Az exportálást a munkaterület tulajdonosa vagy egy admin végezheti.</p>
+          )}
+        </FormSection>
+
+        <FormSection number="05" title="Jelszó">
           <div className="sm:col-span-2">
             <PasswordForm />
           </div>
