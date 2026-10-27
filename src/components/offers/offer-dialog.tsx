@@ -60,8 +60,13 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
 
   async function keepTask() {
     setBusy("task");
-    await offerTaskAction(propertyId, clientId).catch(() => undefined);
+    setError(null);
+    const ok = await offerTaskAction(propertyId, clientId).then(
+      () => true,
+      () => false,
+    );
     setBusy(null);
+    if (!ok) return setError("A feladatot nem sikerült létrehozni. Próbáld újra.");
     onDone("task");
     dialog.current?.close();
   }

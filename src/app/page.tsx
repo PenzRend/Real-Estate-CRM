@@ -2,12 +2,14 @@ import {
   ArrowRight,
   BellRing,
   Building2,
+  CalendarDays,
   Inbox,
   Lock,
   MessageSquareQuote,
   Mic,
   PhoneCall,
   ScanSearch,
+  Share2,
   ShieldCheck,
   Sparkles,
   UserRoundCheck,
@@ -95,7 +97,7 @@ const features = [
   {
     icon: Mic,
     title: "Mondd el, és kész az ügyféladat",
-    text: "Hívás vagy megtekintés után diktálj, vagy tölts fel hangfelvételt. Az AI kiszedi a nevet, a keresést, a keretet és a teendőket – kedden, holnapután is jó dátumra.",
+    text: "Hívás vagy megtekintés után diktáld le vagy írd be pár szóban. Az AI kiszedi a nevet, a keresést, a keretet és a teendőket – kedden, holnapután is jó dátumra.",
   },
   {
     icon: UserRoundCheck,
@@ -105,7 +107,7 @@ const features = [
   {
     icon: ScanSearch,
     title: "Párosítás, ami megmondja, miért",
-    text: "Minden ügyfélhez látod az illő ingatlanokat, feltételenként: mi teljesül, mi majdnem, mi nem, és miről nincs adat. Egy kattintással feladat lesz belőle.",
+    text: "Minden ügyfélhez látod az illő ingatlanokat, feltételenként: mi teljesül, mi majdnem, mi nem, és miről nincs adat. Egy kattintással megírja az ajánló levelet a hirdetés linkjével.",
   },
   {
     icon: Inbox,
@@ -115,7 +117,22 @@ const features = [
   {
     icon: MessageSquareQuote,
     title: "Kérdezz, és forrással válaszol",
-    text: "„Kiket kell ma visszahívnom?” „Mi illik Annához?” Az asszisztens csak a CRM adataiból válaszol, és minden állítás mellé odateszi, honnan tudja.",
+    text: "„Kiket kell ma visszahívnom?” „Mi illik Annához?” Az asszisztens csak a te adataidból válaszol, és minden állítás mellé odateszi, honnan tudja.",
+  },
+  {
+    icon: Building2,
+    title: "Hirdetés átvétele egy kattintással",
+    text: "Az ingatlan.com-os vagy más portálos hirdetésből a bővítmény átveszi az adatokat, a fotókat és a videólinkeket. Neked csak ellenőrizned kell.",
+  },
+  {
+    icon: CalendarDays,
+    title: "Megtekintés, naptárral együtt",
+    text: "Időpont a levélből vagy az ügyfél lapjáról: bekerül a Google Naptáradba emlékeztetővel, utána egy kattintással rögzíted, hogy tetszett-e.",
+  },
+  {
+    icon: Share2,
+    title: "Saját adatlap minden ingatlanhoz",
+    text: "Megosztható, reklámmentes oldal a fotókkal és a te elérhetőségeddel. A pontos cím csak akkor látszik, ha te is akarod.",
   },
   {
     icon: BellRing,
@@ -133,7 +150,7 @@ const steps = [
 const roadmap = [
   { icon: PhoneCall, title: "Automatikus hívásrögzítés", text: "Androidos alkalmazás: a hívás után magától átirat és összefoglaló." },
   { icon: Inbox, title: "Outlook-postafiók", text: "A Gmail mellett Microsoft-fiókok bekötése." },
-  { icon: Building2, title: "Hirdetések a portálokról", text: "Ingatlanok átvétele hirdetési portálokról kézi gépelés helyett." },
+  { icon: CalendarDays, title: "Apple Naptár", text: "A megtekintések a Google Naptár mellett iPhone-on és Macen is maguktól megjelennek." },
 ];
 
 const faqs = [
@@ -151,7 +168,7 @@ const faqs = [
   },
   {
     q: "Kitalálhat valamit az AI-asszisztens?",
-    a: "Úgy építettük, hogy ne tegye: csak a CRM-ből lekért adatokból válaszolhat, minden állítás mellé forrást tesz, és ha nincs adat, megmondja.",
+    a: "Úgy építettük, hogy ne tegye: csak a Flavióban tárolt adataidból válaszolhat, minden állítás mellé forrást tesz, és ha nincs adat, megmondja.",
   },
   {
     q: "Mennyibe kerül?",

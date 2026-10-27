@@ -80,12 +80,6 @@ export async function listEmails(user: CurrentUser, status: EmailStatus): Promis
   return rows.map((r) => toItem(r, clients));
 }
 
-export async function countNewEmails(user: CurrentUser) {
-  const supabase = await createClient();
-  const { count } = await supabase.from("emails").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new");
-  return count ?? 0;
-}
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function getEmail(user: CurrentUser, id: string): Promise<EmailDetail | null> {

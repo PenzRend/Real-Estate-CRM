@@ -140,14 +140,14 @@ export function CaptureReview({
             <label
               key={c.id}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors",
+                "flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm transition-colors",
                 clientChoice === c.id ? "border-ink bg-surface" : "border-border hover:border-border-strong",
               )}
             >
               <input type="radio" name="client" checked={clientChoice === c.id} onChange={() => setClientChoice(c.id)} className="accent-[var(--primary)]" />
               <UserRound className="size-4 text-muted" />
               <span className="font-medium text-ink">{c.full_name}</span>
-              <span className="text-muted">{[c.phone, c.email].filter(Boolean).join(" · ")}</span>
+              <span className="min-w-0 truncate text-muted">{[c.phone, c.email].filter(Boolean).join(" · ")}</span>
               {c.id === pinnedClientId && <Badge tone="accent">Erről az adatlapról</Badge>}
             </label>
           ))}
@@ -259,7 +259,7 @@ export function CaptureReview({
 
           {/* Tasks + follow-up */}
           <Card>
-            <CardHeader title="Teendők" count={tasks.length} action={<ListChecks className="size-4 text-subtle" />} />
+            <CardHeader title="Feladatok" count={tasks.length} action={<ListChecks className="size-4 text-subtle" />} />
             <div className="flex flex-col gap-2 p-4">
               <label className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3 sm:flex-row sm:items-center">
                 <span className="flex items-center gap-3 text-sm">
@@ -314,7 +314,7 @@ export function CaptureReview({
                 onClick={() => setTasks([...tasks, { checked: true, title: "", due: "" }])}
                 className="w-fit px-1 text-sm font-medium text-muted hover:text-ink"
               >
-                + Teendő hozzáadása
+                + Feladat hozzáadása
               </button>
             </div>
           </Card>

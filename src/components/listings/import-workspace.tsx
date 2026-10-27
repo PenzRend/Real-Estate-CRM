@@ -15,6 +15,7 @@ import { savePending, type PendingSelection } from "@/lib/listings/pending-media
 import { blocksServers, canonicalListingUrl, portalOf } from "@/lib/listings/source";
 import { ExtensionInstall, useExtensionInstalled, type InstallLinks } from "./extension-install";
 import { ImportPhotos } from "./import-photos";
+import { actionFailed } from "@/lib/action-failed";
 
 type Review = { url: string; values: Record<string, string>; missing: string[]; images: string[]; videos: string[]; source: PendingSelection["source"] };
 type Duplicate = ImportedRef & { url: string };
@@ -43,7 +44,7 @@ function ProfileList({ profile, onBack }: { profile: ProfilePayload; onBack: () 
       <div className="flex flex-col gap-1 border-b border-border px-5 py-4 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-lg">Hirdetések a profiloldalon</h2>
         <p className="text-xs text-muted">
-          {profile.listings.length} hirdetés · {done} már bent van a CRM-ben
+          {profile.listings.length} hirdetés · {done} már bent van a Flavióban
         </p>
       </div>
       <p className="px-5 pt-4 text-sm text-muted">
@@ -120,15 +121,15 @@ export function ImportWorkspace({
     setError(null);
     setDuplicate(null);
     setBlocked(null);
-    const r = await extractListingAction(input);
+    const r = await extractListingAction(input).catch(actionFailed);
     setPending(false);
     if (r.ok) {
       setReview({ url: r.url, values: r.values, missing: r.missing, images: r.images, videos: r.videos, source: r.imageSource });
       setSelected(new Set(r.images));
     } else {
       setError(r.error);
-      setDuplicate(r.duplicate ?? null);
-      setBlocked(r.blocked?.portal ?? null);
+      setDuplicate("duplicate" in r ? (r.duplicate ?? null) : null);
+      setBlocked("blocked" in r ? (r.blocked?.portal ?? null) : null);
     }
   }
 
@@ -242,7 +243,7 @@ export function ImportWorkspace({
         >
           {fromExtension && pending && (
             <p role="status" className="flex items-center gap-2 text-sm text-muted">
-              <Loader2 className="size-4 animate-spin" /> A bővítménytől kapott hirdetést olvasom… Ha az AI-szolgáltatás épp foglalt, ez egy percig is
+              <Loader2 className="size-4 animate-spin" /> A bővítménytől kapott hirdetés beolvasása… Ha az AI-szolgáltatás épp foglalt, ez egy percig is
               eltarthat.
             </p>
           )}
@@ -273,7 +274,7 @@ export function ImportWorkspace({
           {handedOff && (
             <p role="status" className="flex items-start gap-2 rounded-xl bg-accent-soft px-4 py-3 text-sm text-ink">
               <Puzzle className="mt-0.5 size-4 shrink-0 text-accent" />
-              Megnyitottam a hirdetést egy új lapon. A bővítmény beolvassa, és egy új CRM-lapon megnyitja az ellenőrzést, a fotókkal együtt.
+              A hirdetés megnyílt egy új lapon. A bővítmény beolvassa, és egy új Flavio-lapon megnyitja az ellenőrzést, a fotókkal együtt.
             </p>
           )}
 
@@ -303,7 +304,7 @@ export function ImportWorkspace({
                   )}
                   {!extension && (
                     <span className="basis-full text-xs text-text">
-                      Nem látom a bővítményt ezen az oldalon. Ha még nincs telepítve, a fenti „Importáló bővítmény” kártyán egy perc alatt felteheted.
+                      A bővítmény nem fut ezen az oldalon. Ha még nincs telepítve, a fenti „Importáló bővítmény” kártyán egy perc alatt felteheted.
                     </span>
                   )}
                   {!showPaste && (
@@ -322,11 +323,11 @@ export function ImportWorkspace({
             </Button>
             <p className="text-xs text-muted">
               {extension
-                ? "A bővítmény telepítve: az ingatlan.com hirdetéseit is be tudom olvasni."
+                ? "A bővítmény telepítve: az ingatlan.com hirdetéseit is be lehet olvasni."
                 : "Semmi nem mentődik, amíg az ellenőrzés után rá nem nyomsz a mentésre."}
             </p>
           </div>
-          {!aiEnabled && <p className="text-sm text-warning">Az AI-szolgáltatás még nincs beállítva, ezért az importálás nem érhető el.</p>}
+          {!aiEnabled && <p className="text-sm text-warning">Az AI most nem érhető el, ezért az importálás szünetel. Az ingatlant közben kézzel is felviheted.</p>}
         </form>
       </Card>
     </div>

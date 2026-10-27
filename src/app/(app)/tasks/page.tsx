@@ -29,11 +29,12 @@ async function TasksContent({ searchParams }: Pick<PageProps<"/tasks">, "searchP
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Feladatok" description="Utánkövetések és teendők ügyfelekhez, ingatlanokhoz kötve." />
+      <PageHeader title="Feladatok" description="Visszahívások és utánkövetések, ügyfelekhez és ingatlanokhoz kötve." />
 
-      <NewTaskForm clients={clients} />
+      {/* The sidebar's "Új feladat" link lands here with ?new=1. */}
+      <NewTaskForm clients={clients} autoFocus={params.new === "1"} />
 
-      <nav aria-label="Nézetek" className="flex w-fit gap-1 rounded-full border border-border p-1">
+      <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
         {views.map((v) => (
           <Link
             key={v.key}

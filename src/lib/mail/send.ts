@@ -46,7 +46,8 @@ async function sendingAccess(user: CurrentUser, now: Date) {
     access = await mailboxWithToken(user);
   } catch (error) {
     if (error instanceof MailAccessRevoked) return { ok: false as const, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-    throw error;
+    console.error("gmail access failed", error instanceof Error ? error.message : error);
+    return { ok: false as const, error: "A Gmail most nem érhető el. A levél nem ment el, próbáld újra pár perc múlva." };
   }
   if (!access) return { ok: false as const, error: "Nincs összekapcsolt Gmail-fiók. Kapcsold össze a Levelek oldalon." };
   if (!access.mailbox.can_send) return { ok: false as const, error: "A küldéshez engedélyezd a Gmail-küldést.", needsPermission: true };
@@ -201,7 +202,7 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
   if (outError) console.error("sent email record failed", outError.code);
 
   // The CRM timeline: on the client, or on the listing the email is about.
-  const properties = original.client_id ? [] : await listPropertyOptions(user);
+  const properties = original.client_id ? [] : await listPropertyOptions(user).catch(() => []);
   const property = original.client_id ? undefined : findMentionedProperty(`${original.subject ?? ""}\n${original.body_text ?? original.snippet ?? ""}`, properties);
   let interactionId: string | null = null;
   if (original.client_id || property) {

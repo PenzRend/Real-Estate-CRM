@@ -36,9 +36,17 @@ export async function draftOffer(user: CurrentUser, propertyId: string, clientId
     matchesForProperty(user, propertyId),
   ]);
   const match = matches.find((m) => m.client.id === clientId);
+  // Tool output is cut at 30k characters, so a very long record may not parse: pass it as text then.
+  const parse = (s: string) => {
+    try {
+      return JSON.parse(s) as unknown;
+    } catch {
+      return s;
+    }
+  };
   const facts = {
-    client: JSON.parse(client),
-    listing: JSON.parse(property),
+    client: parse(client),
+    listing: parse(property),
     why_it_matches: match ? explainMatch(match.match) : null,
   };
   const prompt = `AGENT: ${user.fullName ?? user.email} (${user.organization.name})

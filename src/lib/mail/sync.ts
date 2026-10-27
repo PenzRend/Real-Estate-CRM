@@ -27,6 +27,7 @@ type MailboxSecrets = Mailbox & {
 
 const FIRST_SYNC_DAYS = 14;
 const MAX_MESSAGES_PER_SYNC = 300;
+const MAX_IDS_LISTED = 3000; // ids are cheap; listing far back lets a capped sync resume from the oldest
 const OVERLAP_SECONDS = 600; // re-check the last 10 minutes so nothing slips between syncs
 
 export async function getMailbox(user: CurrentUser): Promise<Mailbox | null> {
@@ -124,12 +125,17 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
       );
       ids.push(...(page.messages ?? []).map((m) => m.id));
       pageToken = page.nextPageToken;
-    } while (pageToken && ids.length < MAX_MESSAGES_PER_SYNC);
+    } while (pageToken && ids.length < MAX_IDS_LISTED);
 
     // 2. Skip what is already stored.
     const { data: known } = await supabase.from("emails").select("provider_message_id").eq("mailbox_id", mailbox.id).in("provider_message_id", ids.length ? ids : ["-"]);
     const knownIds = new Set((known ?? []).map((k) => k.provider_message_id));
-    const fresh = ids.filter((id) => !knownIds.has(id)).slice(0, MAX_MESSAGES_PER_SYNC);
+    // Gmail lists newest first. Over the cap, take the oldest and resume after them next
+    // time, so a busy mailbox is caught up over a few syncs instead of skipping mail.
+    const unseen = ids.filter((id) => !knownIds.has(id));
+    const capped = unseen.length > MAX_MESSAGES_PER_SYNC;
+    const fresh = capped ? unseen.slice(-MAX_MESSAGES_PER_SYNC) : unseen;
+    let newestChecked = 0;
 
     // 3. Known client addresses in this workspace.
     const { data: clientRows } = await supabase
@@ -152,6 +158,7 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
         ),
       );
       for (const meta of metas) {
+        newestChecked = Math.max(newestChecked, Number(meta.internalDate ?? 0));
         const payload = meta.payload ?? {};
         const from = parseAddress(header(payload, "From"));
         const to = [...parseAddressList(header(payload, "To")), ...parseAddressList(header(payload, "Cc"))].map((a) => a.email);
@@ -186,7 +193,8 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
       }
     }
 
-    await markMailbox(mailbox.id, { last_synced_at: startedAt.toISOString(), status: "active", last_error: null });
+    const syncedUntil = capped && newestChecked ? new Date(newestChecked) : startedAt;
+    await markMailbox(mailbox.id, { last_synced_at: syncedUntil.toISOString(), status: "active", last_error: null });
     return { ok: true, checked: fresh.length, stored };
   } catch (error) {
     if (error instanceof MailAccessRevoked) {
@@ -199,16 +207,27 @@ export async function syncMailbox(user: CurrentUser): Promise<SyncResult> {
   }
 }
 
-/** Revokes Google access and deletes the mailbox; unprocessed imported emails go with it. */
+/**
+ * Revokes Google access and deletes the user's mailboxes (all of them, so an
+ * earlier connected account can't take over); unprocessed imported emails go with them.
+ */
 export async function disconnectMailbox(user: CurrentUser) {
-  const mailbox = await loadSecrets(user);
-  if (!mailbox) return;
-  try {
-    await revokeToken(decryptToken(mailbox.refresh_token_enc));
-  } catch {
-    // Revocation is best effort; deleting our copy still ends access from the CRM.
-  }
   const supabase = await createClient();
-  const { error } = await supabase.from("mailboxes").delete().eq("id", mailbox.id);
+  const { data: mailboxes } = await supabase
+    .from("mailboxes")
+    .select("id, refresh_token_enc")
+    .eq("user_id", user.id)
+    .eq("organization_id", user.organization.id);
+  if (!mailboxes?.length) return;
+  await Promise.all(
+    mailboxes.map(async (m) => {
+      try {
+        await revokeToken(decryptToken(m.refresh_token_enc));
+      } catch {
+        // Revocation is best effort; deleting our copy still ends access from Flavio.
+      }
+    }),
+  );
+  const { error } = await supabase.from("mailboxes").delete().eq("user_id", user.id).eq("organization_id", user.organization.id);
   if (error) throw new Error(`Failed to delete mailbox: ${error.code}`);
 }

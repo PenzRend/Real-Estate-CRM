@@ -24,6 +24,26 @@ export function fetchableUrl(raw: string): URL | null {
   }
 }
 
+/** The body up to `max` bytes; null when it is longer (the rest is never downloaded). */
+export async function readBytesCapped(res: Response, max: number): Promise<Buffer | null> {
+  const reader = res.body?.getReader();
+  if (!reader) return Buffer.alloc(0);
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+/** A page's HTML, cut at MAX_BYTES (the listing details are near the top). */
 async function readCapped(res: Response) {
   const reader = res.body?.getReader();
   if (!reader) return "";

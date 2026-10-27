@@ -1,4 +1,4 @@
-import { Archive, Check, ChevronLeft, ExternalLink, Eye, MapPin, Minus, Pencil, PlayCircle, Sparkles, UserRound } from "lucide-react";
+import { Archive, Check, ChevronLeft, ExternalLink, Eye, MapPin, Minus, Pencil, PlayCircle, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, PropertyStatusBadge } from "@/components/ui/badge";
@@ -119,17 +119,6 @@ export function PropertyDetailView({
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
-          <Card className="border-accent/15 bg-gradient-to-b from-accent-soft/60 to-background">
-            <div className="px-5 pt-5">
-              <h2 className="flex items-center gap-2 text-base tracking-tight">
-                <Sparkles className="size-4 text-accent" /> AI-összefoglaló
-              </h2>
-            </div>
-            <p className="px-5 pt-3 pb-5 text-sm text-muted">
-              Az ingatlan AI-összefoglalója később készül el; az illő ügyfeleket lent látod.
-            </p>
-          </Card>
-
           {viewings}
 
           {matches}
@@ -159,7 +148,7 @@ export function PropertyDetailView({
           </Card>
 
           <Card>
-            <CardHeader title="Megtekintések és kapcsolattartás" count={p.interactions.length} />
+            <CardHeader title="Előzmények" count={p.interactions.length} />
             {p.interactions.length ? (
               <ul className="divide-y divide-border">
                 {p.interactions.map((i) => {
@@ -185,7 +174,7 @@ export function PropertyDetailView({
                 })}
               </ul>
             ) : (
-              <EmptyState icon={Eye} title="Még nincs rögzített megtekintés" />
+              <EmptyState icon={Eye} title="Még nincs rögzített előzmény" />
             )}
           </Card>
         </div>

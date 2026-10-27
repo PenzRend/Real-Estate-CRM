@@ -12,8 +12,7 @@ const LIMIT = 8;
 function Explainer() {
   return (
     <p className="border-t border-border px-5 py-3 text-xs text-muted">
-      Szabályalapú egyezés: ár, helyszín és típus kötelező, a többi feltételt jelöljük. Zöld: teljesül · sárga: majdnem · piros:
-      nem teljesül · szürke: hiányzó adat.
+      Ár, helyszín és típus kötelező. Zöld: teljesül · sárga: majdnem · piros: nem · szürke: nincs adat.
     </p>
   );
 }

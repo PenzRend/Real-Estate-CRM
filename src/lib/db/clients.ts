@@ -265,7 +265,6 @@ export async function getClientDetail(
       other: row.other_requirements,
     },
     // AI summaries arrive in phase 2.
-    aiSummary: null,
     interactions: (interactions.data ?? []).map((i) => ({
       id: i.id,
       type: i.interaction_type,

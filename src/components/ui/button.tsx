@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
+type Size = "xs" | "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary: "bg-primary text-white hover:bg-primary-hover",
@@ -13,12 +13,14 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
+  xs: "h-7 px-3 text-xs gap-1 [&_svg]:size-3.5",
   sm: "h-8 px-3.5 text-[13px] gap-1.5",
   md: "h-10 px-5 text-sm gap-2",
   lg: "h-12 px-6 text-[15px] gap-2",
 };
 
-function classes(variant: Variant, size: Size, className?: string) {
+/** Button looks for elements that aren't a <Button>: plain <a>, form submits. */
+export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
     "inline-flex shrink-0 items-center justify-center rounded-full font-medium whitespace-nowrap transition-colors",
     "disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
@@ -31,13 +33,13 @@ function classes(variant: Variant, size: Size, className?: string) {
 type ButtonProps = ComponentProps<"button"> & { variant?: Variant; size?: Size };
 
 export function Button({ variant = "primary", size = "md", className, type = "button", ...props }: ButtonProps) {
-  return <button type={type} className={classes(variant, size, className)} {...props} />;
+  return <button type={type} className={buttonClasses(variant, size, className)} {...props} />;
 }
 
 type ButtonLinkProps = ComponentProps<typeof Link> & { variant?: Variant; size?: Size };
 
 export function ButtonLink({ variant = "primary", size = "md", className, ...props }: ButtonLinkProps) {
-  return <Link className={classes(variant, size, className)} {...props} />;
+  return <Link className={buttonClasses(variant, size, className)} {...props} />;
 }
 
 /** Inline text link with a trailing arrow, e.g. "Összes megtekintése →". */

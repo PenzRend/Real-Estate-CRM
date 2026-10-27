@@ -42,7 +42,7 @@ async function extractWithClaude(config: Extract<LlmConfig, { provider: "anthrop
       throw new AiError("Anthropic rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");
     }
     if (error instanceof Anthropic.AuthenticationError) {
-      throw new AiError("Anthropic authentication failed", "Az AI-szolgáltatás nincs jól beállítva (érvénytelen kulcs).");
+      throw new AiError("Anthropic authentication failed", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
     }
     if (error instanceof Anthropic.APIError) {
       throw new AiError(`Anthropic API error ${error.status}`, "Az AI-feldolgozás nem sikerült. Próbáld újra.");
@@ -60,6 +60,26 @@ async function extractWithClaude(config: Extract<LlmConfig, { provider: "anthrop
   };
 }
 
+const UNREACHABLE = "Az AI-szolgáltatás most nem érhető el. Próbáld újra egy perc múlva.";
+
+/** fetch, with timeouts and network failures turned into an AiError the user can read. */
+export async function fetchOrAiError(url: string, init: RequestInit) {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    throw new AiError(`AI request failed: ${error instanceof Error ? error.name : "unknown"}`, UNREACHABLE);
+  }
+}
+
+/** The provider's JSON body; an HTML error page or a cut-off body becomes an AiError. */
+export async function readJson(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    throw new AiError("AI response was not JSON", UNREACHABLE);
+  }
+}
+
 /**
  * Free tiers limit tokens per minute. When the provider asks for a wait
  * (retry-after up to `maxWaitSeconds`), wait and retry instead of failing the
@@ -68,7 +88,7 @@ async function extractWithClaude(config: Extract<LlmConfig, { provider: "anthrop
  */
 export async function postWithRetry(url: string, init: RequestInit, maxWaitSeconds = 20) {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(90_000) });
+    const res = await fetchOrAiError(url, { ...init, signal: AbortSignal.timeout(90_000) });
     const wait = Number(res.headers.get("retry-after"));
     if (res.status !== 429 || attempt >= 2 || !(wait > 0 && wait <= maxWaitSeconds)) return res;
     await new Promise((r) => setTimeout(r, wait * 1000 + 250));
@@ -132,7 +152,7 @@ ${JSON.stringify(schema)}`,
   if (res.status === 429) throw new AiError("Provider rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");
   if (!res.ok) throw new AiError(`Provider error ${res.status}`, "Az AI-feldolgozás nem sikerült. Próbáld újra.");
 
-  const body = (await res.json()) as {
+  const body = (await readJson(res)) as {
     choices?: { message?: { content?: string } }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number };
     model?: string;
@@ -162,7 +182,7 @@ export async function extractCapture(
   hint?: CaptureHint | null,
 ): Promise<ExtractionResult> {
   const config = llmConfig();
-  if (!config) throw new AiError("No AI provider configured", "Az AI-szolgáltatás még nincs beállítva.");
+  if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
   const prompt = captureUserPrompt(text, now, knownClientName, hint);
   return config.provider === "anthropic" ? extractWithClaude(config, prompt) : extractWithOpenAiCompatible(config, prompt);
 }

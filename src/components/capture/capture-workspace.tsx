@@ -80,7 +80,7 @@ export function CaptureWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
-      <div role="tablist" aria-label="Rögzítés módja" className="flex w-fit gap-1 rounded-full border border-border p-1">
+      <div role="tablist" aria-label="Rögzítés módja" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
         {[
           { key: "ai" as const, label: "Gyors rögzítés AI-val", icon: Sparkles },
           { key: "manual" as const, label: "Kézi rögzítés", icon: PenLine },
@@ -106,10 +106,7 @@ export function CaptureWorkspace({
       ) : !aiEnabled ? (
         <div className="flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-soft px-5 py-4 text-sm text-warning">
           <PlugZap className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Az AI-szolgáltatás még nincs beállítva, ezért most csak kézzel lehet rögzíteni. A beállításhoz kell egy
-            AI-kulcs a szerveren (lásd a projekt dokumentációját).
-          </p>
+          <p>Az AI most nem érhető el, ezért csak kézzel lehet rögzíteni. Válaszd fent a „Kézi rögzítés” lehetőséget.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

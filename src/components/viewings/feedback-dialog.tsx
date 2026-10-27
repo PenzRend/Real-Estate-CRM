@@ -70,7 +70,7 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
             <p className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
               <CheckCircle2 className="size-4 shrink-0" /> Rögzítve az ügyfél idővonalán.
             </p>
-            {done.task && <p className="text-sm text-text">Új teendő: {done.task}</p>}
+            {done.task && <p className="text-sm text-text">Új feladat: {done.task}</p>}
             <div>
               <Button onClick={() => dialog.current?.close()}>Kész</Button>
             </div>
@@ -107,12 +107,12 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
                 {error}
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
+                Később
+              </Button>
               <Button onClick={save} disabled={!outcome || busy}>
                 {busy && <Loader2 className="animate-spin" />} Mentés
-              </Button>
-              <Button variant="secondary" onClick={() => dialog.current?.close()} disabled={busy}>
-                Később
               </Button>
             </div>
           </>

@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import type { MediaItem } from "@/lib/db/media";
 import { clearPending, clearStoredImages, loadPendingImage, readPending } from "@/lib/listings/pending-media";
 import { preparePhoto, prepareVideo } from "@/lib/media/process";
-import { acceptMedia, formatBytes, MAX_FILES_PER_PROPERTY, MEDIA_BUCKET, mediaPath, PHOTO_INPUT_MAX_MB, VIDEO_MAX_MB } from "@/lib/media/rules";
+import { acceptMedia, MAX_FILES_PER_PROPERTY, MEDIA_BUCKET, mediaPath, PHOTO_INPUT_MAX_MB, VIDEO_MAX_MB } from "@/lib/media/rules";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { FadeImage } from "./fade-image";
 import { MediaMosaic } from "./media-mosaic";
@@ -39,10 +39,14 @@ function Tile({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
+    setFailed(false);
     try {
       await fn();
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -64,6 +68,11 @@ function Tile({
           </span>
         )}
       </button>
+      {failed && (
+        <span role="alert" className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-danger px-2 py-0.5 text-[11px] font-medium text-white">
+          Nem sikerült, próbáld újra
+        </span>
+      )}
       {item.isCover && (
         <span className="pointer-events-none absolute top-2 left-2 rounded-full bg-background/90 px-2 py-0.5 text-[11px] font-medium text-ink">Borítókép</span>
       )}
@@ -230,7 +239,6 @@ export function PropertyMedia({
     void upload([...e.dataTransfer.files]);
   };
 
-  const totalBytes = items.reduce((s, i) => s + i.sizeBytes, 0);
   const photos = items.filter((i) => i.kind === "photo").length;
   return (
     <Card
@@ -249,7 +257,7 @@ export function PropertyMedia({
             Fotók és videók{" "}
             {items.length > 0 && (
               <span className="text-sm font-normal text-muted">
-                · {photos} fotó, {items.length - photos} videó · {formatBytes(totalBytes)}
+                · {[photos && `${photos} fotó`, items.length - photos && `${items.length - photos} videó`].filter(Boolean).join(", ")}
               </span>
             )}
           </h2>

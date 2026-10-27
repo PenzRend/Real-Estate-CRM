@@ -9,7 +9,7 @@ import { taskPriorityLabels } from "@/lib/i18n/labels";
 import type { Option } from "@/lib/db/activity";
 
 /** One-line task entry: title, due time, priority, optional client. */
-export function NewTaskForm({ clients, defaultClientId }: { clients: Option[]; defaultClientId?: string }) {
+export function NewTaskForm({ clients, defaultClientId, autoFocus }: { clients: Option[]; defaultClientId?: string; autoFocus?: boolean }) {
   const [state, action, pending] = useActionState<TaskFormState, FormData>(createTaskAction, {});
   const title = useRef<HTMLInputElement>(null);
   const v = state.values ?? {};
@@ -28,6 +28,7 @@ export function NewTaskForm({ clients, defaultClientId }: { clients: Option[]; d
           name="title"
           placeholder="Új feladat, pl. Visszahívni Pétert"
           aria-label="Feladat"
+          autoFocus={autoFocus}
           defaultValue={v.title}
           aria-invalid={errors.title ? true : undefined}
           className="flex-1"

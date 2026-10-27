@@ -14,6 +14,7 @@ import { formatDateTime } from "@/lib/i18n/format";
 import { findPlaceholders } from "@/lib/mail/compose";
 import { ViewingDialog, type Booked } from "@/components/viewings/viewing-dialog";
 import { calendarMessages, fillTimePlaceholders, spokenTime } from "@/lib/viewings/logic";
+import { actionFailed } from "@/lib/action-failed";
 
 // Drafts written automatically on arrival, one at a time (provider rate limits).
 const AUTO_DRAFTS = 3;
@@ -69,13 +70,13 @@ function DraftEditor({
   async function send() {
     setSending(true);
     setError(null);
-    const r = await sendReplyAction({ emailId, to, subject, body, followUpDays: hasClient && followUp ? FOLLOW_UP_DAYS : null });
+    const r = await sendReplyAction({ emailId, to, subject, body, followUpDays: hasClient && followUp ? FOLLOW_UP_DAYS : null }).catch(actionFailed);
     setSending(false);
     if (r.ok) onSent({ at: r.sentAt, logged: r.logged });
     else {
       setConfirming(false);
       setError(r.error);
-      if (r.needsPermission) setNeedsPermission(true);
+      if ("needsPermission" in r && r.needsPermission) setNeedsPermission(true);
     }
   }
 
@@ -151,7 +152,7 @@ function DraftEditor({
             mailbox && (
               <a
                 href={ENABLE_SEND_HREF}
-                title="Egyszeri Google-engedély. A CRM csak akkor küld, ha megnyomod a Küldést."
+                title="Egyszeri Google-engedély. A Flavio csak akkor küld, ha megnyomod a Küldést."
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
               >
                 <ShieldCheck className="size-3.5" /> Küldés engedélyezése
@@ -243,7 +244,7 @@ function AwayRow({
           <span className="text-muted">· {loggedText[item.client ? "client" : (sent.logged ?? "none")]}</span>
           {!item.client && (
             <Link href={`/interactions/new?email=${item.id}`} className="ml-1 font-medium text-ink hover:text-accent">
-              Rögzítés a CRM-ben →
+              Rögzítés a Flavióban →
             </Link>
           )}
         </p>
@@ -284,7 +285,7 @@ function AwayRow({
             </button>
           )}
           <Link href={`/interactions/new?email=${item.id}`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
-            Rögzítés a CRM-ben
+            Rögzítés a Flavióban
           </Link>
           {state.status === "error" && <span className="text-xs text-danger">{state.error}</span>}
         </div>
@@ -352,7 +353,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
 
   async function draft(id: string) {
     setStates((s) => ({ ...s, [id]: { ...current(s, id), status: "loading" } }));
-    const r = await draftReplyAction(id);
+    const r = await draftReplyAction(id).catch(actionFailed);
     setStates((s) => ({ ...s, [id]: r.ok ? { status: "idle", draft: r.draft } : { ...current(s, id), status: "error", error: r.error } }));
     return r.ok;
   }
@@ -401,7 +402,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
       )}
       <div className="px-5 pt-4">
         <p className={cn("text-[15px]", quiet ? "text-muted" : "text-ink")}>
-          {summary.headline ?? "Nyugis időszak: azóta nem érkezett új levél, és nem lett esedékes teendő."}
+          {summary.headline ?? "Nyugis időszak: azóta nem érkezett új levél, és nem lett esedékes feladat."}
           {summary.items.some((i) => !i.isNew && !i.repliedAt) && <span className="text-muted"> Korábbról még válaszra vár:</span>}
         </p>
         {!summary.mailbox && (

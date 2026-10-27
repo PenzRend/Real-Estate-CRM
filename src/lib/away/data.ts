@@ -160,7 +160,8 @@ export async function getAwaySummary(user: CurrentUser, now: Date): Promise<Away
       repliedAt: r.replied_at,
       isNew: fresh(r),
     })),
-    olderNewCount: Math.max(0, rows.length - ITEM_LIMIT),
+    // Only what still waits for an answer; answered ones are listed just for the "sent" note.
+    olderNewCount: sorted.slice(ITEM_LIMIT).filter((r) => !r.replied_at).length,
     tasksDue: tasks.count ?? 0,
   };
 }

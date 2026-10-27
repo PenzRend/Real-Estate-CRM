@@ -8,6 +8,7 @@ import { Eyebrow } from "@/components/ui/badge";
 import { parseAnswer, type Inline } from "@/lib/assistant/format";
 import type { Source, SourceType } from "@/lib/assistant/tools";
 import { cn } from "@/lib/cn";
+import { actionFailed } from "@/lib/action-failed";
 
 type Message = { role: "user"; content: string } | { role: "assistant"; content: string; sources: Source[] };
 
@@ -117,7 +118,7 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
     setInput("");
     setError(null);
     start(async () => {
-      const r = await askAssistantAction(next.map((m) => ({ role: m.role, content: m.content })));
+      const r = await askAssistantAction(next.map((m) => ({ role: m.role, content: m.content }))).catch(actionFailed);
       if (r.ok) setMessages([...next, { role: "assistant", content: r.answer, sources: r.sources }]);
       else {
         setError(r.error);
@@ -186,7 +187,7 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
               <span className="grid size-8 place-items-center rounded-full bg-accent-soft text-accent">
                 <Loader2 className="size-4 animate-spin" />
               </span>
-              Keresek a CRM-ben…
+              Keresem az adataid között…
             </div>
           )}
           <div ref={bottom} />
@@ -214,7 +215,7 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
             }}
             rows={1}
             disabled={!aiEnabled}
-            placeholder={aiEnabled ? "Kérdezz bármit az ügyfeleidről, ingatlanaidról, feladataidról…" : "Az AI-szolgáltatás még nincs beállítva."}
+            placeholder={aiEnabled ? "Kérdezz bármit az ügyfeleidről, ingatlanaidról, feladataidról…" : "Az AI most nem érhető el."}
             aria-label="Kérdés az AI-asszisztensnek"
             className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-ink placeholder:text-subtle focus:outline-none"
           />

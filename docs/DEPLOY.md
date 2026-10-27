@@ -99,7 +99,7 @@ They usually take effect within an hour.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | build | production publishable key |
 | `PRIVACY_CONTROLLER` | build | data controller's name and address |
 | `PRIVACY_EMAIL` | build | contact email for privacy requests |
-| `APP_URL` | | `https://flavio.hu` |
+| `APP_URL` | | `https://flavio.hu`. Required: links and sign-in redirects are built from it |
 | `ANTHROPIC_API_KEY` or `AI_BASE_URL` + `AI_API_KEY` | | the production AI provider: a paid plan with a data processing agreement, never a free tier, for real clients' data |
 | `AI_MODEL` | | the model name |
 | `TRANSCRIBE_BASE_URL`, `TRANSCRIBE_API_KEY`, `TRANSCRIBE_MODEL` | | speech-to-text for dictation |

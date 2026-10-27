@@ -1,9 +1,9 @@
-import { AlarmClock, Building2, CalendarCheck, History, Lightbulb, Plus, UserRound, Users } from "lucide-react";
+import { Building2, CalendarCheck, History, Lightbulb, Plus, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ClientStatusBadge, Eyebrow } from "@/components/ui/badge";
 import { ArrowLink, ButtonLink } from "@/components/ui/button";
-import { Card, CardHeader, StatRow } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { formatDate, formatLongDate, formatPriceShort } from "@/lib/i18n/format";
 import type { DashboardData } from "@/lib/types/view-models";
@@ -15,7 +15,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function greeting(now: Date) {
   const hour = Number(new Intl.DateTimeFormat("hu-HU", { hour: "numeric", timeZone: "Europe/Budapest" }).format(now));
   if (hour < 10) return "Jó reggelt";
-  if (hour < 18) return "Szép napot";
+  if (hour < 18) return "Szia";
   return "Jó estét";
 }
 
@@ -27,59 +27,28 @@ export function DashboardView({ data, now, away, viewings }: { data: DashboardDa
       <PageHeader
         eyebrow={<Eyebrow>{formatLongDate(now)}</Eyebrow>}
         title={title}
-        description="Ami ma figyelmet kér: teendők, utánkövetések és a legutóbbi mozgások."
-        actions={
-          <>
-            <ButtonLink href="/clients/new" variant="secondary">
-              <Plus /> Új ügyfél
-            </ButtonLink>
-            <ButtonLink href="/interactions/new">Hívás rögzítése</ButtonLink>
-          </>
-        }
+        description="Ami ma figyelmet kér: levelek, megtekintések és feladatok."
       />
 
       {away}
-
-      <StatRow
-        stats={[
-          { label: "Mai feladat", value: data.counts ? data.tasksToday.length : "—" },
-          {
-            label: "Lejárt teendő",
-            value: data.counts ? data.overdue.length : "—",
-            hint: data.overdue.length ? "Érdemes ma rendezni" : undefined,
-          },
-          { label: "Aktív ügyfél", value: data.counts?.activeClients ?? "—" },
-          { label: "Aktív ingatlan", value: data.counts?.activeProperties ?? "—" },
-        ]}
-      />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           {viewings}
 
           <Card>
-            <CardHeader title="Mai teendők" count={data.tasksToday.length} action={<ArrowLink href="/tasks">Összes</ArrowLink>} />
-            {data.tasksToday.length ? (
+            <CardHeader title="Mai feladatok" count={data.overdue.length + data.tasksToday.length} action={<ArrowLink href="/tasks">Összes</ArrowLink>} />
+            {data.overdue.length + data.tasksToday.length ? (
               <ul className="divide-y divide-border">
+                {data.overdue.map((t) => (
+                  <TaskRow key={t.id} task={t} overdue />
+                ))}
                 {data.tasksToday.map((t) => (
                   <TaskRow key={t.id} task={t} />
                 ))}
               </ul>
             ) : (
-              <EmptyState icon={CalendarCheck} title="Mára nincs teendő" description="Ha egy hívás után utánkövetést vállalsz, itt fog megjelenni." />
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader title="Lejárt utánkövetések" count={data.overdue.length} />
-            {data.overdue.length ? (
-              <ul className="divide-y divide-border">
-                {data.overdue.map((t) => (
-                  <TaskRow key={t.id} task={t} overdue />
-                ))}
-              </ul>
-            ) : (
-              <EmptyState icon={AlarmClock} title="Nincs lejárt teendő" description="Minden utánkövetés időben megtörtént." />
+              <EmptyState icon={CalendarCheck} title="Mára nincs feladat" description="Ha egy hívás után visszahívást vagy utánkövetést vállalsz, itt jelenik meg." />
             )}
           </Card>
         </div>
@@ -136,7 +105,7 @@ export function DashboardView({ data, now, away, viewings }: { data: DashboardDa
                 ))}
               </ul>
             ) : (
-              <EmptyState icon={History} title="Nincs még rögzített kapcsolattartás" />
+              <EmptyState icon={History} title="Még nincs rögzített előzmény" />
             )}
           </Card>
         </div>

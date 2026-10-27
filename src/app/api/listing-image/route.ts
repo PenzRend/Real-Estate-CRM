@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { fetchableUrl, portalFetch, robotsAllow } from "@/lib/listings/fetch-page";
+import { fetchableUrl, portalFetch, readBytesCapped, robotsAllow } from "@/lib/listings/fetch-page";
 
 // Hands a listing photo from a portal to the signed-in agent's browser, so the
 // import can resize it and strip its metadata there like any upload. Portal
@@ -20,9 +20,10 @@ export async function GET(request: NextRequest) {
     const type = res?.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
     const length = Number(res?.headers.get("content-length") ?? 0);
     if (!res?.ok || !TYPES.includes(type) || length > MAX_BYTES) return new NextResponse("Image not available", { status: 502 });
-    const body = await res.arrayBuffer();
-    if (body.byteLength > MAX_BYTES) return new NextResponse("Image too large", { status: 502 });
-    return new NextResponse(body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=600" } });
+    // content-length can be missing (chunked), so the cap is enforced while reading.
+    const body = await readBytesCapped(res, MAX_BYTES);
+    if (!body) return new NextResponse("Image too large", { status: 502 });
+    return new NextResponse(new Uint8Array(body), { headers: { "Content-Type": type, "Cache-Control": "private, max-age=600" } });
   } catch {
     return new NextResponse("Image not available", { status: 502 });
   }

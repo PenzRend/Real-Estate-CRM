@@ -25,11 +25,11 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
   await connection();
   const now = new Date();
   if (!isSupabaseConfigured) {
-    // Without a database every section shows its empty state and counts are unknown.
+    // Without a database every section shows its empty state.
     return (
       <DashboardView
         now={now}
-        data={{ userFirstName: null, tasksToday: [], overdue: [], activity: [], recentProperties: [], recentClients: [], suggestions: [], counts: null }}
+        data={{ userFirstName: null, tasksToday: [], overdue: [], activity: [], recentProperties: [], recentClients: [], suggestions: [] }}
       />
     );
   }

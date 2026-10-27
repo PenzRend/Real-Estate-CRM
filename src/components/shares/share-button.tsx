@@ -24,6 +24,7 @@ export function ShareButton({ propertyId, share, defaults }: { propertyId: strin
   const [errors, setErrors] = useState<Partial<Record<"contactPhone" | "contactEmail", string>>>({});
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState(false);
 
@@ -33,10 +34,13 @@ export function ShareButton({ propertyId, share, defaults }: { propertyId: strin
     setBusy(true);
     setErrors({});
     setSaved(false);
+    setFailed(false);
     try {
       const r = await fn();
       if (r && !r.ok && r.errors) setErrors(r.errors);
       else if (r) setSaved(true);
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -63,7 +67,7 @@ export function ShareButton({ propertyId, share, defaults }: { propertyId: strin
         className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-3xl border border-border bg-background p-0 text-text shadow-float backdrop:bg-ink/30"
         aria-label="Megosztás ügyféllel"
       >
-        <div className="flex flex-col gap-5 p-6">
+        <div className="flex max-h-[90dvh] flex-col gap-5 overflow-y-auto p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg">Megosztás ügyféllel</h2>
@@ -124,6 +128,7 @@ export function ShareButton({ propertyId, share, defaults }: { propertyId: strin
               </Button>
             )}
             {saved && <span className="text-xs text-success">Elmentve</span>}
+            {failed && <span className="text-xs text-danger">Nem sikerült. Próbáld újra.</span>}
             {share &&
               (confirmRevoke ? (
                 <span className="ml-auto flex items-center gap-1.5 text-xs">

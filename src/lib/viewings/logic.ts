@@ -91,15 +91,16 @@ export function fillTimePlaceholders(text: string, when: string) {
   return text.replace(/\[(?:javasolt |megtekintési |pontos )?(?:időpont|dátum|nap és időpont|dátum és időpont|időpontot)\]/gi, when);
 }
 
-export type CalendarOutcome = "added" | "updated" | "skipped" | "needs_permission" | "api_disabled" | "revoked" | "failed";
+export type CalendarOutcome = "added" | "updated" | "skipped" | "other_calendar" | "needs_permission" | "api_disabled" | "revoked" | "failed";
 
 /** What to tell the agent about the Google Calendar part; null when there is nothing to say. */
 export const calendarMessages: Record<CalendarOutcome, string | null> = {
   added: "Bekerült a Google Naptáradba, emlékeztetővel előtte egy nappal és egy órával.",
   updated: "A Google Naptárad is frissült.",
   skipped: null,
+  other_calendar: "A naptáresemény egy kollégád Google Naptárában van, azt ő tudja frissíteni.",
   needs_permission: "A Google Naptárhoz engedély kell.",
-  api_disabled: "A Google Naptár nincs bekapcsolva a Google Cloud-projektben (Google Calendar API). Kapcsold be, és próbáld újra.",
+  api_disabled: "A Google Naptár-kapcsolat most nem működik, szólj nekünk a Visszajelzés gombbal. A megtekintés mentve van.",
   revoked: "A Google-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon.",
   failed: "A Google Naptárba most nem sikerült beírni. A megtekintés mentve van; később próbáld újra.",
 };

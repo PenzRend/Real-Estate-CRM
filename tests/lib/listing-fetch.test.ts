@@ -39,6 +39,19 @@ describe("reading a listing page on the server", () => {
     expect(structuredData(PAGE)).toContain("Residence");
   });
 
+  it("reads photos from pretty-printed JSON-LD", () => {
+    const html = `<script type="application/ld+json">
+{
+  "@type": "Residence",
+  "image": [
+    "https://pic01.example.test/ingatlan/a.jpg",
+    { "url": "https://pic01.example.test/ingatlan/b.jpg" }
+  ]
+}
+</script>`;
+    expect(pageImages(html, "https://www.ingatlannet.hu/x/1")).toEqual(["https://pic01.example.test/ingatlan/a.jpg", "https://pic01.example.test/ingatlan/b.jpg"]);
+  });
+
   it("unwraps image-resizer addresses to the original photo", () => {
     const html = `<main><img alt="1. képe" width="0" srcSet="/_next/image?url=https%3A%2F%2Fpic01.example.test%2Fingatlan%2F1.jpg&amp;w=640&amp;q=75 640w, /_next/image?url=https%3A%2F%2Fpic01.example.test%2Fingatlan%2F1.jpg&amp;w=3840&amp;q=75 3840w"><img alt="logo" width="38" src="https://pic01.example.test/fhk/9.jpg"><meta content="https://pic01.example.test/ingatlan/0.jpg" property="og:image"></main>`;
     expect(pageImages(html, "https://www.ingatlannet.hu/x/1")).toEqual(["https://pic01.example.test/ingatlan/0.jpg", "https://pic01.example.test/ingatlan/1.jpg"]);

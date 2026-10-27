@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A hangfelvétel üres." }, { status: 400 });
   }
   if (audio.size > MAX_AUDIO_BYTES) {
-    return NextResponse.json({ error: "A felvétel túl hosszú. Legfeljebb kb. 20 perc lehet." }, { status: 413 });
+    return NextResponse.json({ error: "A felvétel túl hosszú. Legfeljebb 15 perc lehet." }, { status: 413 });
   }
   if (!audio.type.startsWith("audio/") && !audio.type.startsWith("video/webm")) {
     return NextResponse.json({ error: "Ismeretlen hangformátum." }, { status: 415 });

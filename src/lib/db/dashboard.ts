@@ -7,7 +7,6 @@ import { matchSuggestions } from "./matches";
 import type { DashboardData, Ref, TaskItem } from "@/lib/types/view-models";
 
 const OPEN_TASK = ["todo", "in_progress"];
-const INACTIVE_CLIENT = "(converted,lost,archived)";
 const num = (v: unknown) => (v == null ? null : Number(v));
 
 /**
@@ -20,23 +19,24 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
   const today = startOfZonedDay(now, user.timezone).toISOString();
   const tomorrow = startOfZonedDay(now, user.timezone, 1).toISOString();
 
-  const [tasks, followUps, activity, properties, clients, activeClients, activeProperties] = await Promise.all([
+  const [tasks, followUps, activity, properties, clients] = await Promise.all([
     supabase
       .from("tasks")
       .select("id, title, due_at, priority, client_id, property_id")
       .eq("organization_id", org)
       .in("status", OPEN_TASK)
       .lt("due_at", tomorrow)
-      .order("due_at")
-      .limit(50),
+      // Latest first, so a long overdue backlog can't push today's tasks past the limit.
+      .order("due_at", { ascending: false })
+      .limit(100),
     supabase
       .from("clients")
       .select("id, full_name, next_follow_up_at")
       .eq("organization_id", org)
       .is("archived_at", null)
       .lt("next_follow_up_at", tomorrow)
-      .order("next_follow_up_at")
-      .limit(50),
+      .order("next_follow_up_at", { ascending: false })
+      .limit(100),
     supabase
       .from("interactions")
       .select("id, interaction_type, occurred_at, summary, client_id")
@@ -57,20 +57,8 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
       .is("archived_at", null)
       .order("updated_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", org)
-      .is("archived_at", null)
-      .not("status", "in", INACTIVE_CLIENT),
-    supabase
-      .from("properties")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", org)
-      .is("archived_at", null)
-      .eq("status", "active"),
   ]);
-  for (const r of [tasks, followUps, activity, properties, clients, activeClients, activeProperties]) {
+  for (const r of [tasks, followUps, activity, properties, clients]) {
     if (r.error) throw new Error(`Failed to load dashboard: ${r.error.message}`);
   }
 
@@ -106,12 +94,15 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
     client: { id: c.id, name: c.full_name },
     property: null,
   }));
-  const due = [...taskItems, ...followUpItems].sort((a, b) => (a.dueAt ?? "").localeCompare(b.dueAt ?? ""));
+  // Postgres and JS write timestamps differently ("+00:00" vs "Z"): compare instants, not strings.
+  const at = (t: TaskItem) => (t.dueAt ? Date.parse(t.dueAt) : 0);
+  const startOfToday = Date.parse(today);
+  const due = [...taskItems, ...followUpItems].sort((a, b) => at(a) - at(b));
 
   return {
     userFirstName: user.firstName,
-    tasksToday: due.filter((t) => t.dueAt != null && t.dueAt >= today),
-    overdue: due.filter((t) => t.dueAt != null && t.dueAt < today),
+    tasksToday: due.filter((t) => t.dueAt != null && at(t) >= startOfToday),
+    overdue: due.filter((t) => t.dueAt != null && at(t) < startOfToday),
     activity: (activity.data ?? []).map((a) => ({
       id: a.id,
       type: a.interaction_type,
@@ -153,6 +144,5 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
       property: { id: property.id, name: property.title },
       category: match.category,
     })),
-    counts: { activeClients: activeClients.count ?? 0, activeProperties: activeProperties.count ?? 0 },
   };
 }

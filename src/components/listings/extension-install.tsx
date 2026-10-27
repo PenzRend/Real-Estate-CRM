@@ -115,13 +115,13 @@ export function ExtensionInstall({ installed, links }: { installed: boolean; lin
         <a href={links.safari} target="_blank" rel="noopener noreferrer" className={linkButton} style={{ alignSelf: "flex-start" }}>
           <Puzzle className="size-4" /> Letöltés az App Store-ból
         </a>
-        <p className="text-xs text-muted">Telepítés után: Safari → Beállítások → Bővítmények → kapcsold be az „Flavio – Importálás”-t.</p>
+        <p className="text-xs text-muted">Telepítés után: Safari → Beállítások → Bővítmények → kapcsold be a „Flavio – Importálás” bővítményt.</p>
       </>
     );
   } else if (browser === "safari" || browser === "ios") {
     body = (
       <p className="text-sm text-text">
-        A Safari-bővítmény hamarosan elérhető az App Store-ban. Addig nyisd meg a CRM-et Chrome-ban a bővítményhez, vagy importálj a hirdetés linkjével, illetve
+        A Safari-bővítmény hamarosan elérhető az App Store-ban. Addig nyisd meg a Flaviót Chrome-ban a bővítményhez, vagy importálj a hirdetés linkjével, illetve
         a szövegének beillesztésével.
       </p>
     );

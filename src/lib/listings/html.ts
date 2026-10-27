@@ -28,8 +28,12 @@ export function pageText(html: string): string {
     .trim();
 }
 
+function ldBlocks(html: string) {
+  return [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1].trim());
+}
+
 export function structuredData(html: string): string | null {
-  const blocks = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1].trim());
+  const blocks = ldBlocks(html);
   return blocks.length ? blocks.join("\n").slice(0, 20_000) : null;
 }
 
@@ -73,8 +77,7 @@ export function largestFromSrcset(srcset: string) {
   return best?.url ?? null;
 }
 
-function ldImages(structured: string | null): string[] {
-  if (!structured) return [];
+function ldImages(blocks: string[]): string[] {
   const found: string[] = [];
   const walk = (v: unknown) => {
     if (typeof v === "string") return;
@@ -90,11 +93,12 @@ function ldImages(structured: string | null): string[] {
       }
     }
   };
-  for (const block of structured.split("\n")) {
+  // Each <script> block whole: pretty-printed JSON spans many lines.
+  for (const block of blocks) {
     try {
       walk(JSON.parse(block));
     } catch {
-      // not one JSON object per line; skip
+      // malformed block; skip
     }
   }
   return found;
@@ -108,7 +112,7 @@ export function pageImages(html: string, baseUrl: string, max = 60): string[] {
     const url = absolute(src, baseUrl);
     if (url && !SKIP_IMAGE.test(url) && out.size < max) out.set(url, true);
   };
-  ldImages(structuredData(html)).forEach(add);
+  ldImages(ldBlocks(html)).forEach(add);
   for (const m of html.matchAll(/<meta\b[^>]*>/gi)) {
     if (/property=["']og:image(?::url)?["']/i.test(m[0])) add(m[0].match(/content=["']([^"']+)["']/i)?.[1]);
   }

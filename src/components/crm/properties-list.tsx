@@ -1,6 +1,6 @@
 import { Building2, Plus, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/page";
@@ -38,8 +38,15 @@ function Check({ name, label, checked }: { name: string; label: string; checked:
 /** GET form so filters live in the URL and survive reloads and sharing. */
 export function PropertyFilterBar({ filters }: { filters: PropertyFilters }) {
   const advanced = Boolean(
-    filters.minPrice || filters.maxPrice || filters.minRooms || filters.minArea || filters.maxArea ||
-      filters.balcony || filters.garden || filters.parking || filters.archived,
+    filters.minPrice ||
+    filters.maxPrice ||
+    filters.minRooms ||
+    filters.minArea ||
+    filters.maxArea ||
+    filters.balcony ||
+    filters.garden ||
+    filters.parking ||
+    filters.archived,
   );
   const any = advanced || Boolean(filters.q || filters.type || filters.status || filters.listing);
   return (
@@ -52,19 +59,31 @@ export function PropertyFilterBar({ filters }: { filters: PropertyFilters }) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
           <Select name="type" defaultValue={filters.type ?? ""} aria-label="Típus" className="lg:w-36">
             <option value="">Minden típus</option>
-            {Object.entries(propertyTypeLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {Object.entries(propertyTypeLabels).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </Select>
           <Select name="listing" defaultValue={filters.listing ?? ""} aria-label="Eladó vagy kiadó" className="lg:w-44">
             <option value="">Eladó és kiadó</option>
-            {Object.entries(listingTypeLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {Object.entries(listingTypeLabels).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </Select>
           <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="lg:w-40">
             <option value="">Minden státusz</option>
-            {Object.entries(propertyStatusLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {Object.entries(propertyStatusLabels).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </Select>
-          <button type="submit" className="h-11 rounded-xl bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover">
+          <Button type="submit" className="h-11">
             Szűrés
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -89,9 +108,7 @@ export function PropertyFilterBar({ filters }: { filters: PropertyFilters }) {
           <Check name="parking" label="Parkolás" checked={filters.parking === "1"} />
           <Check name="archived" label="Csak archiváltak" checked={filters.archived === "1"} />
         </div>
-        {(filters.minPrice || filters.maxPrice) && (
-          <p className="mt-2 text-xs text-muted">Az árszűrő csak a forintban meghirdetett ingatlanokra vonatkozik.</p>
-        )}
+        {(filters.minPrice || filters.maxPrice) && <p className="mt-2 text-xs text-muted">Az árszűrő csak a forintban meghirdetett ingatlanokra vonatkozik.</p>}
       </details>
     </form>
   );
@@ -120,14 +137,22 @@ export function PropertiesTable({
             icon={Building2}
             title="Nincs aktív ingatlan"
             description={`${archivedCount} archivált ingatlanod van. Bármikor visszaállíthatod őket.`}
-            action={<ButtonLink href="/properties?archived=1" variant="secondary">Archiváltak megtekintése</ButtonLink>}
+            action={
+              <ButtonLink href="/properties?archived=1" variant="secondary">
+                Archiváltak megtekintése
+              </ButtonLink>
+            }
           />
         ) : (
           <EmptyState
             icon={Building2}
             title="Még nincs ingatlanod"
-            description="Vidd fel az első hirdetést, és a rendszer megmutatja, mely ügyfeleid keresnek hasonlót."
-            action={<ButtonLink href="/properties/new"><Plus /> Új ingatlan</ButtonLink>}
+            description="Vidd fel az első ingatlanodat, és Flavio megmutatja, mely ügyfeleid keresnek hasonlót."
+            action={
+              <ButtonLink href="/properties/new">
+                <Plus /> Új ingatlan
+              </ButtonLink>
+            }
           />
         )}
       </Card>

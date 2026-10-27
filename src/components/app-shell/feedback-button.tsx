@@ -92,7 +92,7 @@ function FeedbackDialog({ page, onClose }: { page: string | null; onClose: () =>
               </p>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => dialog.current?.close()}>
+              <Button variant="ghost" onClick={() => dialog.current?.close()}>
                 Mégse
               </Button>
               <Button onClick={send} disabled={busy || !message.trim()}>

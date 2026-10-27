@@ -1,8 +1,8 @@
-import { Archive, CalendarClock, ChevronLeft, Mail, Pencil, Phone, Plus, RefreshCw, Sparkles } from "lucide-react";
+import { Archive, CalendarClock, ChevronLeft, Mail, Mic, Pencil, Phone, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, ClientStatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { ArrowLink, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
 import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
@@ -43,6 +43,20 @@ export function ClientDetailView({
     client.budgetMin != null || client.budgetMax != null
       ? [client.budgetMin, client.budgetMax].map((v) => (v == null ? "…" : formatPrice(v))).join(" – ")
       : null;
+  const requirements = (
+    [
+      ["Költségkeret", budget],
+      ["Helyszín", client.preferredLocations.join(", ")],
+      ["Típus", r.propertyTypes.map((t) => propertyTypeLabels[t as keyof typeof propertyTypeLabels] ?? t).join(", ")],
+      ["Szobák", r.minRooms != null ? `min. ${formatNumber(r.minRooms)}` : null],
+      ["Hálószobák", r.minBedrooms != null ? `min. ${formatNumber(r.minBedrooms)}` : null],
+      [
+        "Alapterület",
+        r.minAreaSqm != null || r.maxAreaSqm != null ? [r.minAreaSqm, r.maxAreaSqm].map((v) => (v == null ? "…" : formatArea(v))).join(" – ") : null,
+      ],
+      ["Költözés", r.desiredMoveDate ? formatDate(r.desiredMoveDate) : null],
+    ] satisfies [string, string | null][]
+  ).filter((row): row is [string, string] => Boolean(row[1]));
 
   return (
     <div className="flex flex-col gap-8">
@@ -67,14 +81,16 @@ export function ClientDetailView({
               <ClientStatusBadge status={client.status} />
               <Badge>{clientTypeLabels[client.clientType]}</Badge>
             </div>
-            <h1 className="mt-3 text-[34px] leading-tight">{client.fullName}</h1>
+            <h1 className="mt-3 text-[28px] leading-tight sm:text-[34px]">{client.fullName}</h1>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {actions}
             <ButtonLink href={`/clients/${client.id}/edit`} variant="secondary">
               <Pencil /> Szerkesztés
             </ButtonLink>
-            <ButtonLink href={`/interactions/new?client=${client.id}`}>Hívás rögzítése</ButtonLink>
+            <ButtonLink href={`/interactions/new?client=${client.id}`}>
+              <Mic /> Rögzítés
+            </ButtonLink>
           </div>
         </div>
 
@@ -102,43 +118,12 @@ export function ClientDetailView({
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
-          <Card className="border-accent/15 bg-gradient-to-b from-accent-soft/60 to-background">
-            <div className="flex items-start justify-between gap-4 px-5 pt-5">
-              <h2 className="flex items-center gap-2 text-base tracking-tight">
-                <Sparkles className="size-4 text-accent" /> AI-összefoglaló
-              </h2>
-              {client.aiSummary && (
-                <button type="button" className="text-xs font-medium text-muted hover:text-ink">Újragenerálás</button>
-              )}
-            </div>
-            <div className="px-5 pt-3 pb-5">
-              {client.aiSummary ? (
-                <>
-                  <p className="text-[15px] leading-relaxed text-ink">{client.aiSummary.text}</p>
-                  <p className="mt-3 text-xs text-muted">
-                    A rögzített adatok és kapcsolattartások alapján · {formatDateTime(client.aiSummary.generatedAt)}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted">Még nincs összefoglaló. Néhány rögzített hívás után érdemes elkészíteni.</p>
-              )}
-            </div>
-          </Card>
-
           {viewings}
 
           {matches}
 
           <Card>
-            <CardHeader
-              title="Kapcsolattartási előzmények"
-              count={client.interactions.length}
-              action={
-                <ButtonLink href={`/interactions/new?client=${client.id}`} size="sm" variant="secondary">
-                  <Plus /> Új bejegyzés
-                </ButtonLink>
-              }
-            />
+            <CardHeader title="Előzmények" count={client.interactions.length} />
             {client.interactions.length ? (
               <ol className="relative px-5 py-2">
                 <span aria-hidden className="absolute top-6 bottom-6 left-[35px] w-px bg-border" />
@@ -182,29 +167,26 @@ export function ClientDetailView({
                 })}
               </ol>
             ) : (
-              <EmptyState icon={Phone} title="Még nincs rögzített kapcsolattartás" />
+              <EmptyState icon={Phone} title="Még nincs rögzített előzmény" />
             )}
           </Card>
         </div>
 
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader title="Keresési igények" />
-            <dl className="divide-y divide-border px-5 py-1">
-              <Detail label="Költségkeret">{budget}</Detail>
-              <Detail label="Helyszín">{client.preferredLocations.join(", ") || null}</Detail>
-              <Detail label="Típus">
-                {r.propertyTypes.map((t) => propertyTypeLabels[t as keyof typeof propertyTypeLabels] ?? t).join(", ") || null}
-              </Detail>
-              <Detail label="Szobák">{r.minRooms != null ? `min. ${formatNumber(r.minRooms)}` : null}</Detail>
-              <Detail label="Hálószobák">{r.minBedrooms != null ? `min. ${formatNumber(r.minBedrooms)}` : null}</Detail>
-              <Detail label="Alapterület">
-                {r.minAreaSqm != null || r.maxAreaSqm != null
-                  ? [r.minAreaSqm, r.maxAreaSqm].map((v) => (v == null ? "…" : formatArea(v))).join(" – ")
-                  : null}
-              </Detail>
-              <Detail label="Költözés">{r.desiredMoveDate ? formatDate(r.desiredMoveDate) : null}</Detail>
-            </dl>
+            <CardHeader title="Keresési igények" action={<ArrowLink href={`/clients/${client.id}/edit`}>Szerkesztés</ArrowLink>} />
+            {/* Only what is known: a new client would otherwise show a column of dashes. */}
+            {requirements.length ? (
+              <dl className="divide-y divide-border px-5 py-1">
+                {requirements.map(([label, value]) => (
+                  <Detail key={label} label={label}>
+                    {value}
+                  </Detail>
+                ))}
+              </dl>
+            ) : (
+              !r.other && <p className="px-5 py-4 text-sm text-muted">Még nincs megadva. Egy rögzített hívásból Flavio kitölti, vagy add meg a szerkesztésnél.</p>
+            )}
             {r.other && <p className="border-t border-border px-5 py-3 text-sm text-muted">{r.other}</p>}
           </Card>
 

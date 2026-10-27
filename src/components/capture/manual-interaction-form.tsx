@@ -75,7 +75,9 @@ export function ManualInteractionForm({
         </Field>
       </div>
       <div className="flex justify-end gap-2 border-t border-border pt-5">
-        <ButtonLink href="/dashboard" variant="ghost">Mégse</ButtonLink>
+        <ButtonLink href={defaults.clientId ? `/clients/${defaults.clientId}` : "/dashboard"} variant="ghost">
+          Mégse
+        </ButtonLink>
         <Button type="submit" disabled={pending}>{pending ? "Mentés…" : "Mentés"}</Button>
       </div>
     </form>

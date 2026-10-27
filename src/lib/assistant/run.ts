@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { relativeDayTable } from "@/lib/ai/capture-prompt";
 import { llmConfig, type LlmConfig } from "@/lib/ai/config";
-import { AiError, postWithRetry } from "@/lib/ai/extract";
+import { AiError, postWithRetry, readJson } from "@/lib/ai/extract";
 import type { CurrentUser } from "@/lib/auth";
 import { runTool, SourceRegistry, toolJsonSchemas, type Source } from "./tools";
 
@@ -135,7 +135,7 @@ async function runWithOpenAiCompatible(
       console.error("assistant provider", res.status, detail);
       throw new AiError(`provider ${res.status}`, "Az AI-asszisztens most nem érhető el. Próbáld újra.");
     }
-    const body = (await res.json()) as {
+    const body = (await readJson(res)) as {
       model?: string;
       usage?: { prompt_tokens?: number; completion_tokens?: number };
       choices?: { finish_reason?: string; message?: Extract<OpenAiMessage, { role: "assistant" }> }[];
@@ -168,7 +168,7 @@ async function runWithOpenAiCompatible(
 /** Answers a question using only read-only CRM tools; returns the answer and the records it cites. */
 export async function askAssistant(user: CurrentUser, history: ChatTurn[], now: Date): Promise<AssistantAnswer> {
   const config = llmConfig();
-  if (!config) throw new AiError("No AI provider configured", "Az AI-szolgáltatás még nincs beállítva.");
+  if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
   const sources = new SourceRegistry();
   const ctx = { user, now, sources };
   // The context goes first as a user turn so the system prompt stays identical (and cacheable).

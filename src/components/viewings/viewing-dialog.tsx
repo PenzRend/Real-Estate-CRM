@@ -330,12 +330,12 @@ export function ViewingDialog(
               </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
+                Mégse
+              </Button>
               <Button onClick={save} disabled={!ready || busy}>
                 {busy ? <Loader2 className="animate-spin" /> : <CalendarCheck />} {editing ? "Mentés" : "Megtekintés foglalása"}
-              </Button>
-              <Button variant="secondary" onClick={() => dialog.current?.close()} disabled={busy}>
-                Mégse
               </Button>
             </div>
           </>

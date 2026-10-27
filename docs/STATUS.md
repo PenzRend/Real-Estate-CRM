@@ -120,7 +120,7 @@ Branch `feat/mvp-foundation`.
   a cookie-less anon client, is noindex, has OG preview, mobile call/email
   bar. Supabase advisor warns that `shared_listing` and
   `shared_media_visible` are callable anonymously: intended.
-  Set `APP_URL` in production so links use the real domain.
+  `APP_URL` is required in production (the app refuses to build links from the Host header there).
 - Offers: "Ajánlom" on a match opens an AI-drafted email to the client
   (`src/lib/offers/draft.ts`: fits first, price within budget as good news,
   one honest miss, CRM words only) with the share link; send from Gmail

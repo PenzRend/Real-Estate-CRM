@@ -91,7 +91,13 @@ export async function loadPendingImage(sourceUrl: string, imageUrl: string, sour
     }
   }
   if (!blob || !/^image\/(jpeg|png|webp)$/.test(blob.type)) return null;
-  const name = decodeURIComponent(new URL(imageUrl).pathname.split("/").pop() || "foto") || "foto";
+  const last = new URL(imageUrl).pathname.split("/").pop() || "foto";
+  let name = last;
+  try {
+    name = decodeURIComponent(last) || "foto";
+  } catch {
+    // a stray "%" in the file name: keep it as it is
+  }
   return new File([blob], name, { type: blob.type });
 }
 

@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { llmConfig } from "./config";
-import { AiError, callChatCompletions } from "./extract";
+import { AiError, callChatCompletions, readJson } from "./extract";
 
 export type StructuredResult<T> = { data: T; model: string; inputTokens: number | null; outputTokens: number | null };
 
@@ -18,7 +18,7 @@ export async function structuredCall<S extends z.ZodType>(
   opts: { maxTokens?: number; failMessage: string; maxWaitSeconds?: number },
 ): Promise<StructuredResult<z.infer<S>>> {
   const config = llmConfig();
-  if (!config) throw new AiError("No AI provider configured", "Az AI-szolgáltatás még nincs beállítva.");
+  if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
 
   if (config.provider === "anthropic") {
     const client = new Anthropic();
@@ -72,7 +72,7 @@ export async function structuredCall<S extends z.ZodType>(
     console.error(`ai ${res.status}`, (await res.text()).slice(0, 300));
     throw new AiError(`provider ${res.status}`, opts.failMessage);
   }
-  const body = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number }; model?: string };
+  const body = (await readJson(res)) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number }; model?: string };
   let json: unknown;
   try {
     json = JSON.parse(body.choices?.[0]?.message?.content ?? "");

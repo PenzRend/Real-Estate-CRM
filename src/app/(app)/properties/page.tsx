@@ -64,7 +64,7 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Ingatlanok"
-        description="Aktív hirdetések, foglalt és lezárt ingatlanok."
+        description="Eladó és kiadó ingatlanaid, fotókkal és illő ügyfelekkel."
         actions={
           <>
             <ButtonLink href="/properties/import" variant="secondary">

@@ -54,7 +54,7 @@ export default function PrivacyPage() {
             .
           </p>
           <p>
-            Az ügyfelek, ingatlanok és levelek adatait az ingatlanos (a munkaterület) viszi fel; ezekért ő felel, a CRM az ő megbízásából tárolja és dolgozza fel
+            Az ügyfelek, ingatlanok és levelek adatait az ingatlanos (a munkaterület) viszi fel; ezekért ő felel, a Flavio az ő megbízásából tárolja és dolgozza fel
             őket. Minden munkaterület csak a saját adatait látja.
           </p>
         </Section>
@@ -76,10 +76,10 @@ export default function PrivacyPage() {
               <b>E-mailek olvasása:</b> a beérkező levelek beolvasása, hogy a Flavio az ügyfelekhez rendelje őket, összefoglalja, és válaszvázlatot írjon.
             </li>
             <li>
-              <b>E-mail küldése:</b> csak akkor küld levelet, amikor az ingatlanos a CRM-ben a küldés gombra nyom.
+              <b>E-mail küldése:</b> csak akkor küld levelet, amikor az ingatlanos a Flavióban a küldés gombra nyom.
             </li>
             <li>
-              <b>Naptár:</b> csak a CRM-ben foglalt megtekintések eseményeit hozza létre, módosítja és törli az ingatlanos naptárában.
+              <b>Naptár:</b> csak a Flavióban foglalt megtekintések eseményeit hozza létre, módosítja és törli az ingatlanos naptárában.
             </li>
           </ul>
           <p>
@@ -96,12 +96,12 @@ export default function PrivacyPage() {
           <p>A bővítmény az ingatlanos saját hirdetéseit hozza át egy hirdetési portálról a Flavióba.</p>
           <ul className="list-disc pl-5">
             <li>
-              Csak akkor olvas egy oldalt, amikor az ingatlanos rákattint a bővítményre, vagy amikor a CRM-ből importálásra nyit meg egy hirdetést. A háttérben,
+              Csak akkor olvas egy oldalt, amikor az ingatlanos rákattint a bővítményre, vagy amikor a Flavióból importálásra nyit meg egy hirdetést. A háttérben,
               ütemezetten vagy más oldalakon nem fut.
             </li>
             <li>Az oldal szövegét, strukturált adatait, a fotók és videók linkjeit olvassa ki, és közvetlenül a Flavio importáló oldalának adja át.</li>
             <li>
-              A fotókat csak azokról a képszerverekről tölti le, amelyekhez az ingatlanos engedélyt adott, és a CRM lapjának saját tárolójában tartja őket,
+              A fotókat csak azokról a képszerverekről tölti le, amelyekhez az ingatlanos engedélyt adott, és a Flavio lapjának saját tárolójában tartja őket,
               amíg az ingatlanos el nem menti a hirdetést.
             </li>
             <li>Semmit nem küld harmadik félnek, nem gyűjt böngészési előzményt, és nem tartalmaz hirdetést vagy követőkódot.</li>

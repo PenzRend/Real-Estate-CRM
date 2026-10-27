@@ -8,7 +8,7 @@ import { utcToZonedLocal } from "@/lib/i18n/timezone";
 import { listViewingsFor } from "@/lib/viewings/data";
 import { spokenTime } from "@/lib/viewings/logic";
 import { llmConfig } from "./config";
-import { AiError, callChatCompletions } from "./extract";
+import { AiError, callChatCompletions, readJson } from "./extract";
 
 // Reply drafts for imported emails. The model sees the email and a fixed set
 // of CRM facts gathered here (no tool loop), and returns a draft the agent
@@ -127,7 +127,7 @@ function clean(d: ReplyDraft): ReplyDraft {
 
 export async function draftReply(user: CurrentUser, input: DraftInput, now: Date): Promise<DraftResult> {
   const config = llmConfig();
-  if (!config) throw new AiError("No AI provider configured", "Az AI-szolgáltatás még nincs beállítva.");
+  if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
   const prompt = userPrompt(user, input, await crmFacts(user, input, now), now);
 
   if (config.provider === "anthropic") {
@@ -162,7 +162,7 @@ export async function draftReply(user: CurrentUser, input: DraftInput, now: Date
   );
   if (res.status === 429) throw new AiError("rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");
   if (!res.ok) throw new AiError(`provider ${res.status}`, "A vázlat elkészítése nem sikerült. Próbáld újra.");
-  const body = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number }; model?: string };
+  const body = (await readJson(res)) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number }; model?: string };
   const parsed = replyDraftSchema.safeParse(json(body.choices?.[0]?.message?.content ?? ""));
   if (!parsed.success) throw new AiError("invalid draft", "Az AI válasza hiányos volt. Próbáld újra.");
   return { draft: clean(parsed.data), model: body.model ?? config.model, inputTokens: body.usage?.prompt_tokens ?? null, outputTokens: body.usage?.completion_tokens ?? null };

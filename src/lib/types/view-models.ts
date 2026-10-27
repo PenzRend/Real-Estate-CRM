@@ -74,7 +74,6 @@ export type DashboardData = {
   recentProperties: PropertyListItem[];
   recentClients: ClientListItem[];
   suggestions: SuggestionItem[];
-  counts: { activeClients: number; activeProperties: number } | null;
 };
 
 export type ClientDetail = ClientListItem & {
@@ -92,7 +91,6 @@ export type ClientDetail = ClientListItem & {
     desiredMoveDate: string | null;
     other: string | null;
   };
-  aiSummary: { text: string; generatedAt: string } | null;
   interactions: (ActivityItem & { notes: string | null; outcome: string | null; property: Ref | null; source?: string })[];
   tasks: TaskItem[];
   relatedProperties: (PropertyListItem & { relation: string })[];

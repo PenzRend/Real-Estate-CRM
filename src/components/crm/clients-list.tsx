@@ -1,7 +1,7 @@
 import { Plus, Search, SlidersHorizontal, Users } from "lucide-react";
 import Link from "next/link";
 import { ClientStatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/page";
@@ -23,8 +23,7 @@ export type ClientFilters = {
 
 function budget(c: ClientListItem) {
   if (c.budgetMin == null && c.budgetMax == null) return "—";
-  if (c.budgetMin != null && c.budgetMax != null)
-    return `${formatPriceShort(c.budgetMin).replace(" M Ft", "")}–${formatPriceShort(c.budgetMax)}`;
+  if (c.budgetMin != null && c.budgetMax != null) return `${formatPriceShort(c.budgetMin).replace(" M Ft", "")}–${formatPriceShort(c.budgetMax)}`;
   return c.budgetMax != null ? `max. ${formatPriceShort(c.budgetMax)}` : `min. ${formatPriceShort(c.budgetMin)}`;
 }
 
@@ -37,13 +36,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
-          <Input
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Név, e-mail vagy telefonszám"
-            aria-label="Keresés"
-            className="pl-10"
-          />
+          <Input name="q" defaultValue={filters.q} placeholder="Név, e-mail vagy telefonszám" aria-label="Keresés" className="pl-10" />
         </div>
         <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
           <option value="">Minden státusz</option>
@@ -63,12 +56,9 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
             </option>
           ))}
         </Select>
-        <button
-          type="submit"
-          className="h-11 rounded-xl bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover"
-        >
+        <Button type="submit" className="h-11">
           Szűrés
-        </button>
+        </Button>
       </div>
 
       <details open={advanced} className="group">
@@ -180,9 +170,19 @@ export function ClientsTable({
                 <td className="md:px-3 md:py-3.5">
                   <ClientStatusBadge status={c.status} />
                 </td>
-                <td className="text-muted md:px-3 md:py-3.5">{c.preferredLocations.join(", ") || "—"}</td>
-                <td className="text-ink tabular-nums md:px-3 md:py-3.5">{budget(c)}</td>
-                <td className={cn("tabular-nums md:px-5 md:py-3.5 md:text-right", overdue ? "text-danger" : "text-muted")}>
+                {/* Stacked on phones: an empty cell would be a lone dash with no header, so it's hidden there. */}
+                <td className={cn("text-muted md:table-cell md:px-3 md:py-3.5", !c.preferredLocations.length && "hidden")}>
+                  {c.preferredLocations.join(", ") || "—"}
+                </td>
+                <td className={cn("text-ink tabular-nums md:table-cell md:px-3 md:py-3.5", budget(c) === "—" && "hidden")}>{budget(c)}</td>
+                <td
+                  className={cn(
+                    "tabular-nums md:table-cell md:px-5 md:py-3.5 md:text-right",
+                    overdue ? "text-danger" : "text-muted",
+                    !c.nextFollowUpAt && "hidden",
+                  )}
+                >
+                  {c.nextFollowUpAt ? <span className="md:hidden">Utánkövetés: </span> : null}
                   {c.nextFollowUpAt ? formatDate(c.nextFollowUpAt) : "—"}
                 </td>
               </tr>

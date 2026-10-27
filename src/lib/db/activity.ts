@@ -291,17 +291,24 @@ export async function saveCapture(user: CurrentUser, c: CaptureSave) {
     clientId = data.id;
   }
 
-  const interactionId = await insertInteraction(user, {
-    client_id: clientId,
-    property_id: c.property_id,
-    interaction_type: c.interaction_type,
-    occurred_at: c.occurred_at,
-    summary: c.summary,
-    notes: c.transcript,
-    outcome: c.outcome,
-    follow_up_required: Boolean(c.next_follow_up_at || c.tasks.length),
-    source: "ai_assisted",
-  });
+  let interactionId: string;
+  try {
+    interactionId = await insertInteraction(user, {
+      client_id: clientId,
+      property_id: c.property_id,
+      interaction_type: c.interaction_type,
+      occurred_at: c.occurred_at,
+      summary: c.summary,
+      notes: c.transcript,
+      outcome: c.outcome,
+      follow_up_required: Boolean(c.next_follow_up_at || c.tasks.length),
+      source: "ai_assisted",
+    });
+  } catch (error) {
+    // A client created just now would be duplicated by the retry: remove it.
+    if (c.client.mode !== "existing") await supabase.from("clients").delete().eq("id", clientId).eq("organization_id", user.organization.id);
+    throw error;
+  }
   await touchClient(user, clientId, c.occurred_at, c.next_follow_up_at ?? undefined);
   if (c.email_id) {
     // RLS limits this to the user's own imported emails.

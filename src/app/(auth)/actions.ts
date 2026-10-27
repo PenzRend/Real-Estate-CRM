@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { appOrigin } from "@/lib/origin";
+import { authErrorMessage as translate, newPassword } from "@/lib/password";
+import { safePath } from "@/lib/safe-path";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -13,32 +15,9 @@ export type AuthFormState = {
 };
 
 const email = z.string().trim().toLowerCase().email("Adj meg egy érvényes e-mail-címet.").max(320);
-const newPassword = z
-  .string()
-  .min(8, "A jelszó legalább 8 karakter legyen.")
-  .max(72, "A jelszó legfeljebb 72 karakter lehet.");
-
-const supabaseErrors: Record<string, string> = {
-  invalid_credentials: "Hibás e-mail-cím vagy jelszó.",
-  email_not_confirmed: "Előbb erősítsd meg az e-mail-címedet a neked küldött levélben található linkkel.",
-  user_already_exists: "Ezzel az e-mail-címmel már van fiók. Jelentkezz be, vagy kérj új jelszót.",
-  weak_password: "Ez a jelszó túl gyenge. Válassz hosszabbat, kevésbé kitalálhatót.",
-  same_password: "Az új jelszó nem egyezhet meg a régivel.",
-  over_email_send_rate_limit: "Túl sok e-mail ment ki rövid idő alatt. Próbáld újra néhány perc múlva.",
-  over_request_rate_limit: "Túl sok próbálkozás. Próbáld újra néhány perc múlva.",
-};
-
-function translate(error: { code?: string; message: string }) {
-  return (error.code && supabaseErrors[error.code]) || "Valami hiba történt. Próbáld újra később.";
-}
 
 // Emailed links point at the CRM's own address (APP_URL in production).
 const siteOrigin = appOrigin;
-
-/** Only allow same-site relative redirects ("/clients", not "//evil.com"). */
-function safeNext(value: FormDataEntryValue | null) {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
-}
 
 export async function signIn(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = z
@@ -51,7 +30,7 @@ export async function signIn(_: AuthFormState, formData: FormData): Promise<Auth
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: translate(error), values };
 
-  redirect(safeNext(formData.get("next")));
+  redirect(safePath(formData.get("next"), "/dashboard"));
 }
 
 export async function signUp(_: AuthFormState, formData: FormData): Promise<AuthFormState> {

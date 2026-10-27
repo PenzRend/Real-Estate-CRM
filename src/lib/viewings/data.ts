@@ -1,7 +1,6 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { insertInteraction, insertTasks, SaveError, touchClient } from "@/lib/db/activity";
-import { formatDateTime } from "@/lib/i18n/format";
 import { zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { MailAccessRevoked } from "@/lib/mail/google";
 import { mailboxWithToken } from "@/lib/mail/sync";
@@ -102,7 +101,7 @@ export async function listOpenViewings(user: CurrentUser, now: Date): Promise<Vi
     .gte("starts_at", new Date(now.getTime() - 14 * 86_400_000).toISOString())
     .lte("starts_at", new Date(now.getTime() + 14 * 86_400_000).toISOString())
     .order("starts_at")
-    .limit(30);
+    .limit(100);
   if (error) throw new Error(`Failed to list viewings: ${error.message}`);
   return hydrate(user, (data ?? []) as Row[]);
 }
@@ -139,8 +138,8 @@ async function calendarAccess(user: CurrentUser): Promise<{ token: string } | { 
     if (!access.mailbox.can_calendar) return { reason: "needs_permission" };
     return { token: access.token };
   } catch (error) {
-    if (error instanceof MailAccessRevoked) return { reason: "revoked" };
-    throw error;
+    // Never throw: the viewing is already saved, and an error screen invites a duplicate retry.
+    return { reason: await calendarFailure(user, error) };
   }
 }
 
@@ -318,6 +317,8 @@ export async function bookViewing(user: CurrentUser, input: BookingInput, now: D
     .single();
   if (error || !row) {
     console.error("viewing insert failed", error?.code);
+    // Undo the client made for this booking, so trying again doesn't create a duplicate.
+    if (!input.clientId) await supabase.from("clients").delete().eq("id", clientId).eq("organization_id", org);
     return { ok: false, error: "A megtekintés mentése nem sikerült. Próbáld újra." };
   }
 
@@ -355,16 +356,21 @@ export async function updateViewing(user: CurrentUser, id: string, input: MoveIn
   if (!row || row.status !== "scheduled") return { ok: false, error: "Ez a megtekintés már nem módosítható." };
   const startsAt = zonedLocalToUtc(input.start);
   if (!startsAt) return { ok: false, error: "Adj meg érvényes dátumot és időpontot." };
-  if (startsAt !== row.starts_at && new Date(startsAt).getTime() < now.getTime() - 3600_000) return { ok: false, error: "Az időpont a múltban van." };
+  const moved = new Date(startsAt).getTime() !== new Date(row.starts_at).getTime();
+  if (moved && new Date(startsAt).getTime() < now.getTime() - 3600_000) return { ok: false, error: "Az időpont a múltban van." };
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("viewings")
     .update({ starts_at: startsAt, duration_minutes: input.durationMinutes, location: input.location, notes: input.notes })
     .eq("id", id)
-    .eq("organization_id", user.organization.id);
+    .eq("organization_id", user.organization.id)
+    .eq("status", "scheduled")
+    .select("id");
   if (error) return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
+  if (!updated?.length) return { ok: false, error: "Ez a megtekintés már nem módosítható." };
 
-  if (!row.calendar_event_id || row.calendar_user_id !== user.id) return { ok: true, calendar: "skipped" };
+  if (!row.calendar_event_id) return { ok: true, calendar: "skipped" };
+  if (row.calendar_user_id !== user.id) return { ok: true, calendar: "other_calendar" };
   const access = await calendarAccess(user);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
@@ -379,9 +385,18 @@ export async function cancelViewing(user: CurrentUser, id: string): Promise<{ ok
   const row = await getRow(user, id);
   if (!row || row.status !== "scheduled") return { ok: false, error: "Ez a megtekintés már nem mondható le." };
   const supabase = await createClient();
-  const { error } = await supabase.from("viewings").update({ status: "cancelled" }).eq("id", id).eq("organization_id", user.organization.id);
+  const { data: updated, error } = await supabase
+    .from("viewings")
+    .update({ status: "cancelled" })
+    .eq("id", id)
+    .eq("organization_id", user.organization.id)
+    .eq("status", "scheduled")
+    .select("id");
   if (error) return { ok: false, error: "A lemondás nem sikerült. Próbáld újra." };
-  if (!row.calendar_event_id || row.calendar_user_id !== user.id) return { ok: true, calendar: "skipped" };
+  // A second click (or a colleague) got there first: already cancelled, nothing more to do.
+  if (!updated?.length) return { ok: true, calendar: "skipped" };
+  if (!row.calendar_event_id) return { ok: true, calendar: "skipped" };
+  if (row.calendar_user_id !== user.id) return { ok: true, calendar: "other_calendar" };
   const access = await calendarAccess(user);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
@@ -412,6 +427,25 @@ export async function saveFeedback(user: CurrentUser, id: string, input: { outco
   const noShow = input.outcome === "no_show";
   const label = outcomeLabels[input.outcome];
 
+  // Claim the viewing first, so a double click or a colleague can't record it twice.
+  const { data: claimed, error } = await supabase
+    .from("viewings")
+    .update({
+      status: noShow ? "no_show" : "completed",
+      interest: noShow ? null : input.outcome,
+      feedback: input.feedback,
+      feedback_at: now.toISOString(),
+    })
+    .eq("id", id)
+    .eq("organization_id", org)
+    .eq("status", "scheduled")
+    .select("id");
+  if (error) {
+    console.error("viewing feedback save failed", error.code);
+    return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
+  }
+  if (!claimed?.length) return { ok: false, error: "Ehhez a megtekintéshez már van visszajelzés." };
+
   let interactionId: string;
   try {
     interactionId = await insertInteraction(user, {
@@ -425,25 +459,20 @@ export async function saveFeedback(user: CurrentUser, id: string, input: { outco
       follow_up_required: input.outcome !== "none" && input.outcome !== "low",
       source: "manual",
     });
-  } catch (error) {
-    return { ok: false, error: error instanceof SaveError ? error.userMessage : "A mentés nem sikerült. Próbáld újra." };
+  } catch (e) {
+    await supabase
+      .from("viewings")
+      .update({ status: "scheduled", interest: null, feedback: null, feedback_at: null })
+      .eq("id", id)
+      .eq("organization_id", org);
+    return { ok: false, error: e instanceof SaveError ? e.userMessage : "A mentés nem sikerült. Próbáld újra." };
   }
-
-  const { error } = await supabase
+  await supabase
     .from("viewings")
-    .update({
-      status: noShow ? "no_show" : "completed",
-      interest: noShow ? null : input.outcome,
-      feedback: input.feedback,
-      feedback_at: now.toISOString(),
-      interaction_id: interactionId,
-    })
+    .update({ interaction_id: interactionId })
     .eq("id", id)
-    .eq("organization_id", org);
-  if (error) {
-    console.error("viewing feedback save failed", error.code);
-    return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
-  }
+    .eq("organization_id", org)
+    .then(({ error: e }) => e && console.error("viewing interaction link failed", e.code));
 
   const relation = relationFor(input.outcome);
   const followUp = followUpFor(input.outcome, { client: v.client.name, property: v.property.name }, now);
@@ -475,5 +504,3 @@ export async function saveFeedback(user: CurrentUser, id: string, input: { outco
   return { ok: true, task: followUp?.title ?? null };
 }
 
-/** For a reply: the booked time in words, e.g. "2026. nov. 3. 17:00". */
-export const viewingTimeText = (startsAt: string) => formatDateTime(startsAt);

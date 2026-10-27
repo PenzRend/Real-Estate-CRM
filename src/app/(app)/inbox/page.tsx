@@ -15,17 +15,23 @@ import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { googleConfig } from "@/lib/mail/google";
 import { getMailbox } from "@/lib/mail/sync";
 import { ignoreEmailAction, restoreEmailAction } from "./actions";
+import { FormSubmit } from "@/components/ui/form-submit";
+import { buttonClasses } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Levelek" };
 
 const tabs: { key: EmailStatus; label: string; empty: string }[] = [
   { key: "new", label: "Feldolgozandó", empty: "Nincs feldolgozandó levél." },
-  { key: "processed", label: "Feldolgozott", empty: "Még nincs feldolgozott levél." },
+  {
+    key: "processed",
+    label: "Feldolgozott",
+    empty: "Még nincs feldolgozott levél.",
+  },
   { key: "ignored", label: "Elrejtett", empty: "Nincs elrejtett levél." },
 ];
 
 const errors: Record<string, string> = {
-  config: "A Gmail-kapcsolat még nincs beállítva a szerveren.",
+  config: "A Gmail-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal.",
   denied: "A Google-engedélyezést megszakítottad, így nem jött létre kapcsolat.",
   state: "A kapcsolódás lejárt vagy megszakadt. Próbáld újra.",
   no_refresh: "A Google nem adott tartós hozzáférést. Próbáld újra, és engedélyezd a hozzáférést.",
@@ -59,16 +65,13 @@ function EmailRow({ e }: { e: EmailItem }) {
       <div className="flex shrink-0 items-center gap-1.5">
         {e.status === "new" && (
           <>
-            <Link
-              href={`/interactions/new?email=${e.id}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
-            >
-              <Sparkles className="size-3.5" /> Feldolgozás
+            <Link href={`/interactions/new?email=${e.id}`} className={buttonClasses("primary", "xs")}>
+              <Sparkles /> Feldolgozás
             </Link>
             <form action={ignoreEmailAction.bind(null, e.id)}>
-              <button type="submit" className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
-                <EyeOff className="size-3.5" /> Elrejtés
-              </button>
+              <FormSubmit className={buttonClasses("ghost", "xs", "text-muted hover:text-ink")}>
+                <EyeOff /> Elrejtés
+              </FormSubmit>
             </form>
           </>
         )}
@@ -79,9 +82,7 @@ function EmailRow({ e }: { e: EmailItem }) {
         )}
         {e.status === "ignored" && (
           <form action={restoreEmailAction.bind(null, e.id)}>
-            <button type="submit" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
-              Visszaállítás
-            </button>
+            <FormSubmit className={buttonClasses("ghost", "xs", "text-muted hover:text-ink")}>Visszaállítás</FormSubmit>
           </form>
         )}
       </div>
@@ -98,12 +99,12 @@ function ConnectCard() {
         </span>
         <h2 className="text-2xl">Kapcsold össze a Gmail-fiókodat</h2>
         <p className="text-muted">
-          Az ügyfeleiddel váltott levelek és a portálokról (ingatlan.com, Jófogás…) érkező érdeklődések maguktól megjelennek itt.
-          Egy kattintással ügyféladattá, beszélgetéssé és teendővé alakíthatod őket.
+          Az ügyfeleiddel váltott levelek és a portálokról (ingatlan.com, Jófogás…) érkező érdeklődések maguktól megjelennek itt. Egy kattintással ügyféllé,
+          előzménnyé és feladattá alakíthatod őket.
         </p>
         <ul className="flex flex-col gap-2 text-sm text-text">
           {[
-            "Alapból csak olvasási jog. Válaszolni a CRM-ből akkor tudsz, ha a küldést külön engedélyezed – és akkor is csak a te kattintásodra megy el levél. Törölni vagy módosítani nem tud.",
+            "Alapból csak olvasási jog. Válaszolni a Flavióból akkor tudsz, ha a küldést külön engedélyezed – és akkor is csak a te kattintásodra megy el levél. Törölni vagy módosítani nem tud.",
             "Csak a releváns leveleket tároljuk: ügyfelekkel váltott, portálról érkező vagy ingatlanos érdeklődés. A többit nem mentjük el.",
             "A hozzáférési kulcsot titkosítva tároljuk, és bármikor leválaszthatod.",
           ].map((t) => (
@@ -112,10 +113,7 @@ function ConnectCard() {
             </li>
           ))}
         </ul>
-        <a
-          href="/api/mail/google/connect"
-          className="inline-flex h-12 w-fit items-center gap-2 rounded-full bg-primary px-6 text-[15px] font-medium text-white hover:bg-primary-hover"
-        >
+        <a href="/api/mail/google/connect" className={buttonClasses("primary", "lg", "w-fit")}>
           <Mail className="size-4" /> Gmail összekapcsolása
         </a>
       </div>
@@ -150,7 +148,7 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
       {!configured ? (
         <div className="flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-soft px-5 py-4 text-sm text-warning">
           <PlugZap className="mt-0.5 size-4 shrink-0" />
-          <p>A Gmail-kapcsolathoz a szerveren be kell állítani a Google-alkalmazás adatait és a titkosítási kulcsot (lásd a projekt dokumentációját).</p>
+          <p>A Gmail-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal, és beállítjuk.</p>
         </div>
       ) : !mailbox ? (
         <ConnectCard />
@@ -158,13 +156,16 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
         <>
           <MailboxBar email={mailbox.email_address} status={mailbox.status} lastSyncedAt={mailbox.last_synced_at} lastError={mailbox.last_error} />
 
-          <nav aria-label="Nézetek" className="flex w-fit gap-1 rounded-full border border-border p-1">
+          <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
             {tabs.map((t) => (
               <Link
                 key={t.key}
                 href={`/inbox?view=${t.key}`}
                 aria-current={t.key === tab.key ? "page" : undefined}
-                className={cn("rounded-full px-4 py-1.5 text-sm transition-colors", t.key === tab.key ? "bg-primary font-medium text-white" : "text-muted hover:text-ink")}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm transition-colors",
+                  t.key === tab.key ? "bg-primary font-medium text-white" : "text-muted hover:text-ink",
+                )}
               >
                 {t.label}
               </Link>

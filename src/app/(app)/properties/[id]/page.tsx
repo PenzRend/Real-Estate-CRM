@@ -5,10 +5,11 @@ import { Suspense } from "react";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
 import { PropertyMedia } from "@/components/media/property-media";
 import { ShareButton } from "@/components/shares/share-button";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
+import { recordTitle } from "@/lib/db/titles";
 import { matchesForProperty } from "@/lib/db/matches";
 import { listMedia } from "@/lib/db/media";
 import { getPropertyDetail } from "@/lib/db/properties";
@@ -17,8 +18,11 @@ import { ClientMatchesCard } from "@/components/crm/match-lists";
 import { ViewingsCard } from "@/components/viewings/viewings-card";
 import { listViewingsFor } from "@/lib/viewings/data";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
+import { FormSubmit } from "@/components/ui/form-submit";
 
-export const metadata: Metadata = { title: "Ingatlan" };
+export async function generateMetadata({ params }: PageProps<"/properties/[id]">): Promise<Metadata> {
+  return { title: await recordTitle("properties", (await params).id, "Ingatlan") };
+}
 
 async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
   const { id } = await params;
@@ -35,9 +39,9 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
 
   const actions = property.archived_at ? (
     <form action={restorePropertyAction.bind(null, property.id)}>
-      <Button type="submit" variant="secondary">
+      <FormSubmit className={buttonClasses("secondary")}>
         <ArchiveRestore /> Visszaállítás
-      </Button>
+      </FormSubmit>
     </form>
   ) : (
     <>
@@ -61,7 +65,9 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
       property={property}
       actions={actions}
       matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} />}
-      viewings={<ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />}
+      viewings={
+        <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />
+      }
       media={<PropertyMedia propertyId={property.id} organizationId={user.organization.id} items={media} sourceUrl={property.source_url} />}
     />
   );

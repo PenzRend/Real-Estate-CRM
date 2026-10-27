@@ -29,7 +29,7 @@ export function MailboxBar({
 
   function runSync() {
     start(async () => {
-      const r = await syncMailAction();
+      const r = await syncMailAction().catch(() => ({ ok: false as const, error: "A levelek lekérése nem sikerült. Próbáld újra." }));
       setMessage(
         r.ok
           ? { tone: "ok", text: r.stored ? `${r.stored} új releváns levél.` : "Nincs új releváns levél." }
