@@ -48,19 +48,20 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
   const values = { email: String(formData.get("email") ?? ""), full_name: String(formData.get("full_name") ?? "") };
   if (!parsed.success) return { error: parsed.error.issues[0].message, values };
 
+  const next = safePath(formData.get("next"), "/dashboard");
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.full_name },
-      emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=/dashboard`,
+      emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`,
     },
   });
   if (error) return { error: translate(error), values };
 
   // Email confirmation disabled in Supabase → already signed in.
-  if (data.session) redirect("/dashboard");
+  if (data.session) redirect(next);
 
   return {
     message: `Küldtünk egy megerősítő levelet a(z) ${parsed.data.email} címre. Kattints a benne lévő linkre a fiókod aktiválásához.`,

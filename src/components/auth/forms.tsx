@@ -57,17 +57,19 @@ export function LoginForm({ next, notice }: { next?: string; notice?: string }) 
   );
 }
 
-export function SignupForm() {
+/** `next` and `email` come from an invite link: back to the invite after sign-up, with the invited address filled in. */
+export function SignupForm({ next, email }: { next?: string; email?: string }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(signUp, {});
   if (state.message) return <SentNotice message={state.message} />;
   return (
     <form action={action} className="mt-8 flex flex-col gap-5">
       <FormError message={state.error} />
+      {next && <input type="hidden" name="next" value={next} />}
       <Field label="Teljes név" htmlFor="full_name">
         <Input id="full_name" name="full_name" autoComplete="name" required placeholder="Kovács Anna" defaultValue={state.values?.full_name} />
       </Field>
       <Field label="E-mail-cím" htmlFor="email">
-        <Input id="email" name="email" type="email" autoComplete="email" required placeholder="nev@iroda.hu" defaultValue={state.values?.email} />
+        <Input id="email" name="email" type="email" autoComplete="email" required placeholder="nev@iroda.hu" defaultValue={state.values?.email ?? email} />
       </Field>
       <Field label="Jelszó" htmlFor="password" hint="Legalább 8 karakter.">
         <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} required />

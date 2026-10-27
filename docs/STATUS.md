@@ -237,6 +237,19 @@ Branch `feat/mvp-foundation`.
 - Supabase MCP `apply_migration` auto-declines migrations with DROP statements
   here; keep migrations additive (drop old indexes later, with the user).
 
+- Team invites (Beállítások → Csapat): owners and admins invite a colleague
+  by email; the invite is a 14-day link (only its SHA-256 hash is stored)
+  that works only for the invited address, sent from the agent's own mail
+  program (mailto) or copied, since Flavio has no outgoing mail provider yet.
+  `/invite/[token]` handles signed-out (sign up / sign in, then back to the
+  invite), wrong account (sign out) and joining (`accept_invitation` RPC).
+  Owners remove anyone, admins remove members, members can leave; only the
+  owner invites admins. A person in several workspaces works in the one they
+  chose (cookie), otherwise a joined team before the personal workspace.
+  Migration `20261027184305_team_invitations`. Checked with a rolled-back
+  SQL test as a second user and in the browser; a real second account has not
+  signed up end to end yet (needs a confirmable email).
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

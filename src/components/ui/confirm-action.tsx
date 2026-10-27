@@ -21,6 +21,7 @@ export function ConfirmAction({
   description,
   confirmLabel,
   tone = "primary",
+  size = "md",
 }: {
   action: () => Promise<void>;
   trigger: ReactNode;
@@ -28,12 +29,13 @@ export function ConfirmAction({
   description: string;
   confirmLabel: string;
   tone?: "primary" | "danger";
+  size?: "xs" | "sm" | "md";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   return (
     <>
-      <Button variant="secondary" onClick={() => dialog.current?.showModal()}>
+      <Button variant="secondary" size={size} onClick={() => dialog.current?.showModal()}>
         {trigger}
       </Button>
       <dialog
