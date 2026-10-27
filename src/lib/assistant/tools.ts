@@ -25,7 +25,7 @@ const label = <T extends Record<string, string>>(map: T, key: string | null | un
   key == null ? null : ((map as Record<string, string>)[key] ?? key);
 
 /** Explicit lists, so the model cannot misread which requirement fits and which does not. */
-function explainMatch(m: Match) {
+export function explainMatch(m: Match) {
   const pick = (statuses: string[]) => m.checks.filter((c) => statuses.includes(c.status)).map((c) => `${c.label}: ${c.detail}`);
   return {
     category: categoryLabels[m.category],

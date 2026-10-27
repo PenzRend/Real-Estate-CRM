@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
 import { PropertyMedia } from "@/components/media/property-media";
+import { ShareButton } from "@/components/shares/share-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -11,6 +12,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { matchesForProperty } from "@/lib/db/matches";
 import { listMedia } from "@/lib/db/media";
 import { getPropertyDetail } from "@/lib/db/properties";
+import { defaultContact, getActiveShare } from "@/lib/shares/data";
 import { ClientMatchesCard } from "@/components/crm/match-lists";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
 
@@ -19,7 +21,13 @@ export const metadata: Metadata = { title: "Ingatlan" };
 async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const [property, matches, media] = await Promise.all([getPropertyDetail(user, id), matchesForProperty(user, id), listMedia(user, id)]);
+  const [property, matches, media, share, contact] = await Promise.all([
+    getPropertyDetail(user, id),
+    matchesForProperty(user, id),
+    listMedia(user, id),
+    getActiveShare(user, id),
+    defaultContact(user),
+  ]);
   if (!property) notFound();
 
   const actions = property.archived_at ? (
@@ -29,17 +37,20 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
       </Button>
     </form>
   ) : (
-    <ConfirmAction
-      action={archivePropertyAction.bind(null, property.id)}
-      trigger={
-        <>
-          <Archive /> Archiválás
-        </>
-      }
-      title={`${property.title} archiválása`}
-      description="Az ingatlan kikerül a listákból, de minden adata megmarad. Bármikor visszaállíthatod."
-      confirmLabel="Archiválás"
-    />
+    <>
+      <ShareButton propertyId={property.id} share={share} defaults={contact} />
+      <ConfirmAction
+        action={archivePropertyAction.bind(null, property.id)}
+        trigger={
+          <>
+            <Archive /> Archiválás
+          </>
+        }
+        title={`${property.title} archiválása`}
+        description="Az ingatlan kikerül a listákból, de minden adata megmarad. Bármikor visszaállíthatod."
+        confirmLabel="Archiválás"
+      />
+    </>
   );
 
   return (

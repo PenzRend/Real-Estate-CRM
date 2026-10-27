@@ -2,7 +2,6 @@
 
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
-import { insertTasks } from "@/lib/db/activity";
 import { createClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,26 +19,6 @@ async function decide(propertyId: string, clientId: string, status: "dismissed" 
     );
   if (error) throw new Error(`Failed to save match decision: ${error.code}`);
   return { user, supabase };
-}
-
-/** "Ajánlom": creates a task to send the listing and stops suggesting the pair. */
-export async function createMatchTaskAction(propertyId: string, clientId: string) {
-  const { user, supabase } = await decide(propertyId, clientId, "task_created");
-  const [{ data: property }, { data: client }] = await Promise.all([
-    supabase.from("properties").select("title").eq("id", propertyId).maybeSingle(),
-    supabase.from("clients").select("full_name").eq("id", clientId).maybeSingle(),
-  ]);
-  await insertTasks(user, [
-    {
-      title: `Ajánlani: ${property?.title ?? "ingatlan"} → ${client?.full_name ?? "ügyfél"}`,
-      due_at: null,
-      priority: "normal",
-      client_id: clientId,
-      property_id: propertyId,
-      source: "ai_suggestion",
-    },
-  ]);
-  refresh();
 }
 
 /** "Nem releváns": hides the pair from lists and suggestions. */

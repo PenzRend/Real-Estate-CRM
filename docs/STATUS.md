@@ -95,6 +95,22 @@ Branch `feat/mvp-foundation`.
   page text. Groq's free tier allows 8 000 tokens/minute (~2 imports a
   minute); imports wait up to 60 s when Groq asks, chat up to 20 s. For real
   use, a paid tier (Groq Dev tier or Claude Haiku) removes this limit.
+- Client-facing listing page (`/l/<token>`, `src/app/l/[token]/page.tsx`,
+  `src/lib/shares/*`): "Megosztás" on a listing creates a private link
+  (property_shares; one active per listing; contact name/phone/email per link,
+  exact address optional; views counted; revocable). Visitors read only
+  through `shared_listing()` (no internal notes/owner; address only if
+  allowed) and photos via the "shared listings" storage policy; the page uses
+  a cookie-less anon client, is noindex, has OG preview, mobile call/email
+  bar. Supabase advisor warns that `shared_listing` and
+  `shared_media_visible` are callable anonymously: intended.
+  Set `APP_URL` in production so links use the real domain.
+- Offers: "Ajánlom" on a match opens an AI-drafted email to the client
+  (`src/lib/offers/draft.ts`: fits first, price within budget as good news,
+  one honest miss, CRM words only) with the share link; send from Gmail
+  (`sendNewEmail`: logs email + interaction, 2-day follow-up task), open in
+  Gmail / copy, or "Csak feladat". Tested: draft, task-only, revoke. Not yet
+  tested: actually sending an offer (same path as the tested reply send).
 - Quick status change (`property-status-picker.tsx`): the status badge on the
   listing page and in the property list opens a menu of statuses; the change
   shows at once and saves in the background (`setPropertyStatusAction`). The

@@ -234,6 +234,45 @@ describe("workflow", () => {
     expect(mbB.id).toBeDefined();
   });
 
+  it("a shared listing shows only what the page needs, and only while the link is active", async () => {
+    const [prop] = await rowsAs(
+      USER_A,
+      `insert into properties (organization_id, title, address, internal_notes, price) values ('${orgA}', 'Megosztott lakás', 'Titok utca 1.', 'belső megjegyzés', 50000000) returning id`,
+    );
+    const token = "TesztLinkToken_1234567890";
+    const share = (who: string, org: string) =>
+      asUser(who, `insert into property_shares (organization_id, property_id, token, contact_name) values ('${org}', '${prop.id}', '${token}', 'Anna') returning id`);
+    // Another workspace can't create a link to A's listing.
+    expect((await share(USER_B, orgB)).ok).toBe(false);
+    expect((await share(USER_A, orgA)).ok).toBe(true);
+    // Only one active link per listing.
+    expect((await asUser(USER_A, `insert into property_shares (organization_id, property_id, token) values ('${orgA}', '${prop.id}', 'MasikLinkToken_12345678901')`)).ok).toBe(false);
+    expect(await rowsAs(USER_B, `select id from property_shares`)).toEqual([]);
+
+    const anon = async (sql: string) => {
+      await db.exec("set role anon");
+      try {
+        return (await db.query<Record<string, unknown>>(sql)).rows;
+      } finally {
+        await db.exec("reset role");
+      }
+    };
+    const page = (await anon(`select public.shared_listing('${token}') as page`))[0].page as Record<string, unknown>;
+    expect(page.title).toBe("Megosztott lakás");
+    expect(page.address).toBeNull(); // address hidden unless allowed
+    expect(page).not.toHaveProperty("internal_notes");
+    expect(page).not.toHaveProperty("owner_client_id");
+    expect((await anon(`select public.shared_listing('nincs-ilyen-token-12345678') as page`))[0].page).toBeNull();
+    // Anonymous visitors still can't read tables directly.
+    await expect(anon(`select id from property_shares`)).rejects.toThrow();
+    await expect(anon(`select title from properties`)).rejects.toThrow();
+    // Views are counted; revoking ends access.
+    expect((await rowsAs(USER_A, `select view_count from property_shares where token = '${token}'`))[0].view_count).toBe(1);
+    await rowsAs(USER_A, `update property_shares set revoked_at = now() where token = '${token}' returning id`);
+    expect((await anon(`select public.shared_listing('${token}') as page`))[0].page).toBeNull();
+    expect((await anon(`select public.shared_media_visible('${orgA}/${prop.id}/x.jpg') as ok`))[0].ok).toBe(false);
+  });
+
   it("property photos stay in their workspace and folder", async () => {
     const [prop] = await rowsAs(USER_A, `insert into properties (organization_id, title) values ('${orgA}', 'Fotós lakás') returning id`);
     const path = (org: string, file: string) => `${org}/${prop.id}/${file}`;

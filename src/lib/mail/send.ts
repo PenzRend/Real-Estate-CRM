@@ -20,8 +20,10 @@ export type SendResult =
   | { ok: true; sentAt: string; logged: "client" | "property" | null; clientId: string | null }
   | { ok: false; error: string; needsPermission?: boolean };
 
-export async function sendReply(user: CurrentUser, input: SendInput, now: Date): Promise<SendResult> {
-  if (!UUID.test(input.emailId)) return { ok: false, error: "Ismeretlen levél." };
+type Fail = { ok: false; error: string; needsPermission?: boolean };
+
+/** The checks every outgoing email passes before anything is sent. */
+function checkMessage(input: { to: string; subject: string; body: string }): { ok: true; to: string[]; subject: string; body: string } | Fail {
   const to = parseRecipients(input.to);
   if (!to) return { ok: false, error: "Adj meg érvényes címzettet." };
   const subject = input.subject.trim();
@@ -30,6 +32,109 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
   if (!body || body.length > 10_000) return { ok: false, error: "A levél szövege üres vagy túl hosszú." };
   const gaps = findPlaceholders(`${subject}\n${body}`);
   if (gaps.length) return { ok: false, error: `Töltsd ki küldés előtt: ${gaps.join(", ")}` };
+  return { ok: true, to, subject, body };
+}
+
+/** The daily limit, then the user's mailbox with a token and the send permission. */
+async function sendingAccess(user: CurrentUser, now: Date) {
+  const supabase = await createClient();
+  const dayAgo = new Date(now.getTime() - 24 * 3600_000).toISOString();
+  const { count } = await supabase.from("emails").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("sent_from_crm", true).gte("created_at", dayAgo);
+  if ((count ?? 0) >= DAILY_LIMIT) return { ok: false as const, error: "Elérted a napi küldési keretet. Holnap újra küldhetsz." };
+  let access;
+  try {
+    access = await mailboxWithToken(user);
+  } catch (error) {
+    if (error instanceof MailAccessRevoked) return { ok: false as const, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
+    throw error;
+  }
+  if (!access) return { ok: false as const, error: "Nincs összekapcsolt Gmail-fiók. Kapcsold össze a Levelek oldalon." };
+  if (!access.mailbox.can_send) return { ok: false as const, error: "A küldéshez engedélyezd a Gmail-küldést.", needsPermission: true };
+  return { ok: true as const, access };
+}
+
+export type NewEmailInput = { to: string; subject: string; body: string; clientId: string; propertyId: string | null; followUpDays: number | null; taskTitle: string };
+
+/**
+ * Sends a new email (not a reply), e.g. a listing offer, from the user's own
+ * Gmail, and records it: the outgoing email, an interaction on the client
+ * (and listing), and an optional follow-up task.
+ */
+export async function sendNewEmail(user: CurrentUser, input: NewEmailInput, now: Date): Promise<{ ok: true; sentAt: string } | Fail> {
+  if (!UUID.test(input.clientId) || (input.propertyId && !UUID.test(input.propertyId))) return { ok: false, error: "Ismeretlen ügyfél vagy ingatlan." };
+  const msg = checkMessage(input);
+  if (!msg.ok) return msg;
+  const gate = await sendingAccess(user, now);
+  if (!gate.ok) return gate;
+  const { access } = gate;
+  const supabase = await createClient();
+
+  const from = user.fullName ? `${encodeHeader(user.fullName)} <${access.mailbox.email_address}>` : access.mailbox.email_address;
+  let sent;
+  try {
+    sent = await gmailSend(access.token, toBase64Url(buildReplyMime({ from, to: msg.to, subject: msg.subject, body: msg.body })), null);
+  } catch (error) {
+    if (error instanceof MailSendNotAllowed) {
+      await supabase.from("mailboxes").update({ can_send: false }).eq("id", access.mailbox.id);
+      return { ok: false, error: "A Gmail nem engedélyezte a küldést. Engedélyezd újra.", needsPermission: true };
+    }
+    if (error instanceof MailAccessRevoked) return { ok: false, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
+    console.error("gmail send failed", error instanceof Error ? error.message : error);
+    return { ok: false, error: "A küldés nem sikerült. A levél nem ment el, próbáld újra." };
+  }
+
+  // Sent: record it, but never report failure for bookkeeping hiccups.
+  const sentAt = now.toISOString();
+  const { error: outError } = await supabase.from("emails").insert({
+    organization_id: user.organization.id,
+    user_id: user.id,
+    mailbox_id: access.mailbox.id,
+    provider_message_id: sent.id,
+    thread_id: sent.threadId,
+    direction: "outgoing",
+    from_email: access.mailbox.email_address,
+    from_name: user.fullName,
+    to_emails: msg.to,
+    subject: msg.subject,
+    snippet: msg.body.slice(0, 200),
+    body_text: msg.body,
+    received_at: sentAt,
+    client_id: input.clientId,
+    status: "processed",
+    sent_from_crm: true,
+  });
+  if (outError) console.error("sent email record failed", outError.code);
+  const { error: interactionError } = await supabase.from("interactions").insert({
+    organization_id: user.organization.id,
+    client_id: input.clientId,
+    property_id: input.propertyId,
+    interaction_type: "email",
+    occurred_at: sentAt,
+    summary: `Elküldött e-mail: ${msg.subject}`.slice(0, 1000),
+    notes: `Címzett: ${msg.to.join(", ")}\n\n${msg.body}`.slice(0, 20_000),
+    follow_up_required: input.followUpDays != null,
+    source: "ai_assisted",
+  });
+  if (interactionError) console.error("sent email interaction failed", interactionError.code);
+  if (input.followUpDays != null) {
+    const { error } = await supabase.from("tasks").insert({
+      organization_id: user.organization.id,
+      client_id: input.clientId,
+      property_id: input.propertyId,
+      title: input.taskTitle.slice(0, 300),
+      due_at: new Date(now.getTime() + input.followUpDays * 86_400_000).toISOString(),
+      priority: "normal",
+    });
+    if (error) console.error("follow-up task failed", error.code);
+  }
+  return { ok: true, sentAt };
+}
+
+export async function sendReply(user: CurrentUser, input: SendInput, now: Date): Promise<SendResult> {
+  if (!UUID.test(input.emailId)) return { ok: false, error: "Ismeretlen levél." };
+  const msg = checkMessage(input);
+  if (!msg.ok) return msg;
+  const { to, subject, body } = msg;
 
   const supabase = await createClient();
   const { data: original } = await supabase
@@ -40,19 +145,10 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
     .maybeSingle();
   if (!original) return { ok: false, error: "Ismeretlen levél." };
 
-  const dayAgo = new Date(now.getTime() - 24 * 3600_000).toISOString();
-  const { count } = await supabase.from("emails").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("sent_from_crm", true).gte("created_at", dayAgo);
-  if ((count ?? 0) >= DAILY_LIMIT) return { ok: false, error: "Elérted a napi küldési keretet. Holnap újra küldhetsz." };
-
-  let access;
-  try {
-    access = await mailboxWithToken(user);
-  } catch (error) {
-    if (error instanceof MailAccessRevoked) return { ok: false, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-    throw error;
-  }
-  if (!access || access.mailbox.id !== original.mailbox_id) return { ok: false, error: "Ez a levél nem a jelenlegi postafiókodból jött." };
-  if (!access.mailbox.can_send) return { ok: false, error: "A küldéshez engedélyezd a Gmail-küldést.", needsPermission: true };
+  const gate = await sendingAccess(user, now);
+  if (!gate.ok) return gate;
+  const { access } = gate;
+  if (access.mailbox.id !== original.mailbox_id) return { ok: false, error: "Ez a levél nem a jelenlegi postafiókodból jött." };
 
   // Threading: the original's Message-ID. Missing (e.g. test data) → sent as a new conversation.
   let thread: { inReplyTo: string | null; references: string | null; threadId: string | null } = { inReplyTo: null, references: null, threadId: null };

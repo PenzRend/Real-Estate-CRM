@@ -2,7 +2,8 @@
 
 import { Check, CircleHelp, Minus, X } from "lucide-react";
 import { useState, useTransition } from "react";
-import { createMatchTaskAction, dismissMatchAction } from "@/app/(app)/matches/actions";
+import { dismissMatchAction } from "@/app/(app)/matches/actions";
+import { OfferDialog } from "@/components/offers/offer-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { categoryLabels, type Check as MatchCheck, type CheckStatus, type MatchCategory } from "@/lib/matching/match";
@@ -42,7 +43,11 @@ export function MatchChecks({ checks }: { checks: MatchCheck[] }) {
   );
 }
 
-/** "Ajánlom" creates a task and stops suggesting the pair; "Nem releváns" hides it. */
+/**
+ * "Ajánlom" opens a drafted offer (email with the listing's share link) to
+ * send, open in Gmail, copy or keep as a task; either way the pair is no
+ * longer suggested. "Nem releváns" hides it.
+ */
 export function MatchActions({
   propertyId,
   clientId,
@@ -53,9 +58,12 @@ export function MatchActions({
   decided?: "task_created" | null;
 }) {
   const [pending, start] = useTransition();
-  const [done, setDone] = useState<"task_created" | "dismissed" | null>(decided ?? null);
+  const [offering, setOffering] = useState(false);
+  const [done, setDone] = useState<"offered" | "sent" | "task" | "dismissed" | null>(decided ? "offered" : null);
 
-  if (done === "task_created") return <span className="text-xs font-medium text-success">✓ Feladat létrehozva</span>;
+  if (done === "sent") return <span className="text-xs font-medium text-success">✓ Ajánlat elküldve</span>;
+  if (done === "task") return <span className="text-xs font-medium text-success">✓ Feladat létrehozva</span>;
+  if (done === "offered") return <span className="text-xs font-medium text-success">✓ Ajánlva</span>;
   if (done === "dismissed") return <span className="text-xs text-muted">Elrejtve</span>;
 
   return (
@@ -63,16 +71,12 @@ export function MatchActions({
       <button
         type="button"
         disabled={pending}
-        onClick={() =>
-          start(async () => {
-            await createMatchTaskAction(propertyId, clientId);
-            setDone("task_created");
-          })
-        }
+        onClick={() => setOffering(true)}
         className="rounded-full bg-primary px-3 py-1 text-xs font-medium whitespace-nowrap text-white hover:bg-primary-hover disabled:opacity-50"
       >
         Ajánlom
       </button>
+      {offering && <OfferDialog propertyId={propertyId} clientId={clientId} onDone={setDone} onClose={() => setOffering(false)} />}
       <button
         type="button"
         disabled={pending}

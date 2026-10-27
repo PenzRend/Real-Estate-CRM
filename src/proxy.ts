@@ -2,9 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
-// Pages reachable without a session ("/" is the landing page; matched exactly).
-// Everything else requires sign-in.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth"];
+// Pages reachable without a session ("/" is the landing page; matched exactly;
+// "/l/…" are listing pages shared with clients). Everything else requires sign-in.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l"];
 // Signed-in users have no reason to see these.
 const GUEST_ONLY_PATHS = ["/", "/login", "/signup", "/forgot-password"];
 
