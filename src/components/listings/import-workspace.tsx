@@ -13,6 +13,7 @@ import type { ImportedRef } from "@/lib/listings/import";
 import { decodePayload, type ProfilePayload } from "@/lib/listings/payload";
 import { savePending, type PendingSelection } from "@/lib/listings/pending-media";
 import { blocksServers, canonicalListingUrl, portalOf } from "@/lib/listings/source";
+import { ExtensionInstall, useExtensionInstalled, type InstallLinks } from "./extension-install";
 import { ImportPhotos } from "./import-photos";
 
 type Review = { url: string; values: Record<string, string>; missing: string[]; images: string[]; videos: string[]; source: PendingSelection["source"] };
@@ -21,9 +22,6 @@ type ExtractInput = { url: string; text?: string; structured?: string | null; im
 
 /** Opening a listing with this fragment lets the extension send it straight back here. */
 const EXTENSION_HANDOFF = "#crm-import";
-
-/** The extension's bridge script marks CRM pages it runs on. */
-const hasExtension = () => typeof document !== "undefined" && document.documentElement.dataset.crmExtension === "1";
 
 function ProfileList({ profile, onBack }: { profile: ProfilePayload; onBack: () => void }) {
   const [imported, setImported] = useState<Record<string, ImportedRef>>({});
@@ -49,8 +47,8 @@ function ProfileList({ profile, onBack }: { profile: ProfilePayload; onBack: () 
         </p>
       </div>
       <p className="px-5 pt-4 text-sm text-muted">
-        Az „Importálás” megnyitja a hirdetést egy új lapon, a bővítmény onnan visszaküldi ide ellenőrzésre – a fotókkal együtt. Csak a saját vagy az
-        irodád hirdetéseit importáld.
+        Az „Importálás” megnyitja a hirdetést egy új lapon, a bővítmény onnan visszaküldi ide ellenőrzésre – a fotókkal együtt. Csak a saját vagy az irodád
+        hirdetéseit importáld.
       </p>
       <ul className="mt-2 divide-y divide-border">
         {profile.listings.map((l) => {
@@ -91,7 +89,17 @@ function ProfileList({ profile, onBack }: { profile: ProfilePayload; onBack: () 
   );
 }
 
-export function ImportWorkspace({ owners, aiEnabled, canDictate }: { owners: OwnerOption[]; aiEnabled: boolean; canDictate: boolean }) {
+export function ImportWorkspace({
+  owners,
+  aiEnabled,
+  canDictate,
+  installLinks,
+}: {
+  owners: OwnerOption[];
+  aiEnabled: boolean;
+  canDictate: boolean;
+  installLinks: InstallLinks;
+}) {
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
@@ -100,7 +108,7 @@ export function ImportWorkspace({ owners, aiEnabled, canDictate }: { owners: Own
   const [blocked, setBlocked] = useState<string | null>(null);
   const [showPaste, setShowPaste] = useState(false);
   const [handedOff, setHandedOff] = useState(false);
-  const [extension, setExtension] = useState(false);
+  const extension = useExtensionInstalled();
   const [review, setReview] = useState<Review | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
@@ -143,25 +151,6 @@ export function ImportWorkspace({ owners, aiEnabled, canDictate }: { owners: Own
     if (blocksServers(canonical) && extension) return openWithExtension(canonical);
     void extract({ url });
   }
-
-  // The extension marks this page and answers a ping; either one counts.
-  useEffect(() => {
-    const check = () => hasExtension() && setExtension(true);
-    const onMessage = (e: MessageEvent) => {
-      if (e.source === window && e.origin === window.location.origin && e.data?.type === "crm-extension-pong") setExtension(true);
-    };
-    window.addEventListener("message", onMessage);
-    check();
-    window.postMessage({ type: "crm-extension-ping" }, window.location.origin);
-    const t = setTimeout(() => {
-      check();
-      window.postMessage({ type: "crm-extension-ping" }, window.location.origin);
-    }, 800);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("message", onMessage);
-    };
-  }, []);
 
   // A payload from the browser extension arrives once, in the address fragment.
   useEffect(() => {
@@ -241,87 +230,105 @@ export function ImportWorkspace({ owners, aiEnabled, canDictate }: { owners: Own
 
   const canonical = canonicalListingUrl(url);
   return (
-    <Card className="p-5 sm:p-6">
-      <form
-        className="flex flex-col gap-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submitLink();
-        }}
-      >
-        {fromExtension && pending && (
-          <p role="status" className="flex items-center gap-2 text-sm text-muted">
-            <Loader2 className="size-4 animate-spin" /> A bővítménytől kapott hirdetést olvasom… Ha az AI-szolgáltatás épp foglalt, ez egy percig is
-            eltarthat.
-          </p>
-        )}
-        <Field label="A hirdetés linkje" htmlFor="listing-url" hint="Pl. https://ingatlan.com/34567890 – az adatokat, a fotókat és a videólinkeket is átvesszük.">
-          <Input id="listing-url" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" required />
-        </Field>
-
-        {showPaste && (
-          <Field label="A hirdetés oldalának szövege" htmlFor="listing-text" hint="Nyisd meg a hirdetést, nyomj Ctrl+A-t, majd Ctrl+C-t, és illeszd be ide. Így fotók nélkül kerül át.">
-            <Textarea id="listing-text" value={text} onChange={(e) => setText(e.target.value)} className="min-h-48" placeholder="Illeszd be az oldal szövegét…" />
-          </Field>
-        )}
-
-        {handedOff && (
-          <p role="status" className="flex items-start gap-2 rounded-xl bg-accent-soft px-4 py-3 text-sm text-ink">
-            <Puzzle className="mt-0.5 size-4 shrink-0 text-accent" />
-            Megnyitottam a hirdetést egy új lapon. A bővítmény beolvassa, és egy új CRM-lapon megnyitja az ellenőrzést, a fotókkal együtt.
-          </p>
-        )}
-
-        {error && (
-          <div role="alert" className="flex flex-col gap-3 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
-            <p className="flex items-start gap-2">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" />
-              <span>
-                {error}
-                {duplicate && (
-                  <>
-                    {" "}
-                    <Link href={`/properties/${duplicate.id}`} className="font-medium underline">
-                      Megnyitás: {duplicate.title}
-                    </Link>
-                  </>
-                )}
-              </span>
+    <div className="flex flex-col gap-6">
+      <ExtensionInstall installed={extension} links={installLinks} />
+      <Card className="p-5 sm:p-6">
+        <form
+          className="flex flex-col gap-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitLink();
+          }}
+        >
+          {fromExtension && pending && (
+            <p role="status" className="flex items-center gap-2 text-sm text-muted">
+              <Loader2 className="size-4 animate-spin" /> A bővítménytől kapott hirdetést olvasom… Ha az AI-szolgáltatás épp foglalt, ez egy percig is
+              eltarthat.
             </p>
-            {blocked && (
-              <div className="flex flex-wrap items-center gap-2 text-ink">
-                {/* Offered even when the extension wasn't detected: if it's installed, it works; if not, the listing just opens. */}
-                {canonical && (
-                  <Button size="sm" onClick={() => openWithExtension(canonical)}>
-                    <Puzzle /> Megnyitás a bővítménnyel
-                  </Button>
-                )}
-                {!extension && (
-                  <span className="basis-full text-xs text-text">
-                    Nem látom a bővítményt ezen az oldalon. Ha még nincs telepítve: Chrome → <code>chrome://extensions</code> → Fejlesztői mód → „Kicsomagolt bővítmény betöltése” → a projekt <code>extension</code> mappája.
-                    Ha már telepítve van, kattints a kártyáján a frissítés ikonra, majd töltsd újra ezt az oldalt.
-                  </span>
-                )}
-                {!showPaste && (
-                  <Button size="sm" variant="secondary" onClick={() => setShowPaste(true)}>
-                    <ClipboardPaste /> Inkább beillesztem a szövegét
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+          <Field
+            label="A hirdetés linkje"
+            htmlFor="listing-url"
+            hint="Pl. https://ingatlan.com/34567890 – az adatokat, a fotókat és a videólinkeket is átvesszük."
+          >
+            <Input id="listing-url" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" required />
+          </Field>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={!aiEnabled || pending}>
-            {pending ? <Loader2 className="animate-spin" /> : <Link2 />} {pending ? "Hirdetés beolvasása…" : "Importálás"}
-          </Button>
-          <p className="text-xs text-muted">
-            {extension ? "A bővítmény telepítve: az ingatlan.com hirdetéseit is be tudom olvasni." : "Semmi nem mentődik, amíg az ellenőrzés után rá nem nyomsz a mentésre."}
-          </p>
-        </div>
-        {!aiEnabled && <p className="text-sm text-warning">Az AI-szolgáltatás még nincs beállítva, ezért az importálás nem érhető el.</p>}
-      </form>
-    </Card>
+          {showPaste && (
+            <Field
+              label="A hirdetés oldalának szövege"
+              htmlFor="listing-text"
+              hint="Nyisd meg a hirdetést, nyomj Ctrl+A-t, majd Ctrl+C-t, és illeszd be ide. Így fotók nélkül kerül át."
+            >
+              <Textarea
+                id="listing-text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="min-h-48"
+                placeholder="Illeszd be az oldal szövegét…"
+              />
+            </Field>
+          )}
+
+          {handedOff && (
+            <p role="status" className="flex items-start gap-2 rounded-xl bg-accent-soft px-4 py-3 text-sm text-ink">
+              <Puzzle className="mt-0.5 size-4 shrink-0 text-accent" />
+              Megnyitottam a hirdetést egy új lapon. A bővítmény beolvassa, és egy új CRM-lapon megnyitja az ellenőrzést, a fotókkal együtt.
+            </p>
+          )}
+
+          {error && (
+            <div role="alert" className="flex flex-col gap-3 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
+              <p className="flex items-start gap-2">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  {error}
+                  {duplicate && (
+                    <>
+                      {" "}
+                      <Link href={`/properties/${duplicate.id}`} className="font-medium underline">
+                        Megnyitás: {duplicate.title}
+                      </Link>
+                    </>
+                  )}
+                </span>
+              </p>
+              {blocked && (
+                <div className="flex flex-wrap items-center gap-2 text-ink">
+                  {/* Offered even when the extension wasn't detected: if it's installed, it works; if not, the listing just opens. */}
+                  {canonical && (
+                    <Button size="sm" onClick={() => openWithExtension(canonical)}>
+                      <Puzzle /> Megnyitás a bővítménnyel
+                    </Button>
+                  )}
+                  {!extension && (
+                    <span className="basis-full text-xs text-text">
+                      Nem látom a bővítményt ezen az oldalon. Ha még nincs telepítve, a fenti „Importáló bővítmény” kártyán egy perc alatt felteheted.
+                    </span>
+                  )}
+                  {!showPaste && (
+                    <Button size="sm" variant="secondary" onClick={() => setShowPaste(true)}>
+                      <ClipboardPaste /> Inkább beillesztem a szövegét
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={!aiEnabled || pending}>
+              {pending ? <Loader2 className="animate-spin" /> : <Link2 />} {pending ? "Hirdetés beolvasása…" : "Importálás"}
+            </Button>
+            <p className="text-xs text-muted">
+              {extension
+                ? "A bővítmény telepítve: az ingatlan.com hirdetéseit is be tudom olvasni."
+                : "Semmi nem mentődik, amíg az ellenőrzés után rá nem nyomsz a mentésre."}
+            </p>
+          </div>
+          {!aiEnabled && <p className="text-sm text-warning">Az AI-szolgáltatás még nincs beállítva, ezért az importálás nem érhető el.</p>}
+        </form>
+      </Card>
+    </div>
   );
 }

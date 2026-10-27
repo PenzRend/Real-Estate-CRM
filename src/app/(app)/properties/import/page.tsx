@@ -20,7 +20,12 @@ async function ImportContent() {
         title="Importálás hirdetésből"
         description="Add meg a hirdetés linkjét: az AI kitölti az adatlapot, a fotókat és a videólinkeket is átveszi – te ellenőrzöd és mented."
       />
-      <ImportWorkspace owners={owners} aiEnabled={llmConfig() != null} canDictate={transcriptionConfig() != null} />
+      <ImportWorkspace
+        owners={owners}
+        aiEnabled={llmConfig() != null}
+        canDictate={transcriptionConfig() != null}
+        installLinks={{ chrome: process.env.EXTENSION_CHROME_URL || null, safari: process.env.EXTENSION_SAFARI_URL || null }}
+      />
     </div>
   );
 }

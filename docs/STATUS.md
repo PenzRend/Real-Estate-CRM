@@ -111,6 +111,34 @@ Branch `feat/mvp-foundation`.
   (`sendNewEmail`: logs email + interaction, 2-day follow-up task), open in
   Gmail / copy, or "Csak feladat". Tested: draft, task-only, revoke. Not yet
   tested: actually sending an offer (same path as the tested reply send).
+- Extension install card on the import page
+  (`src/components/listings/extension-install.tsx`): hidden once the
+  extension runs on the page (it keeps checking, so a fresh install is noticed
+  without reloading). Detects the browser: Chrome/Edge get "Hozzáadás a
+  Chrome-hoz" when `EXTENSION_CHROME_URL` (Chrome Web Store listing) is set,
+  else "Bővítmény letöltése" (`/api/extension/download`, a zip of `extension/`
+  rewritten to this CRM's address: bridge match and default CRM URL) with
+  three steps; Safari/iOS get "Letöltés az App Store-ból" when
+  `EXTENSION_SAFARI_URL` is set, else a "coming soon" note. Tested: the
+  download (9 files, Windows extracts it, address rewritten), both card
+  states rendered. Not done: publishing to the Chrome Web Store and building
+  the Safari app (needs a Mac with Xcode and an Apple Developer account).
+- Viewings (`viewings` table, `src/lib/viewings/*`, `src/components/viewings/*`):
+  "Megtekintés foglalása" on a client or listing, and "Megtekintés" on each
+  email in the away summary (highlighted when the AI read a viewing request;
+  times the sender proposed become one-click choices, a new inquirer is saved
+  as a client, the listing comes from the email or the last interaction).
+  Optional Google Calendar event in the agent's primary calendar (separate
+  `calendar.events` permission, `mailboxes.can_calendar`; reminders 1 day and
+  1 hour before; optional invite to the client sent by Google). Viewings
+  booked before the permission are added when it is granted. Move and cancel
+  update the event. After the end time, "Hogy sikerült?" asks for the
+  reaction (typed or dictated): timeline entry, client–listing relation,
+  follow-up task (high: tomorrow, medium: 2 days, no-show: today), and a clear
+  "no" stops suggesting the listing. Dashboard shows the next two weeks and
+  what waits for feedback. Tested: booking from a client and from an email,
+  feedback. Not yet tested: the Calendar part (needs the user's Google
+  consent and the Google Calendar API enabled in the Cloud project).
 - Quick status change (`property-status-picker.tsx`): the status badge on the
   listing page and in the property list opens a menu of statuses; the change
   shows at once and saves in the background (`setPropertyStatusAction`). The

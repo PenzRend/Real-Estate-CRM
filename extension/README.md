@@ -6,6 +6,9 @@ through the CRM's review screen. Nothing is saved until you press
 
 ## Install (pilot, developer mode)
 
+The CRM's import page has an **Importáló bővítmény** card: **Bővítmény letöltése**
+gives a zip already set to that CRM's address. Unzip it, then:
+
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).
 2. Click **Load unpacked** and choose this `extension` folder. After pulling
    changes, click the reload icon on the extension's card.
