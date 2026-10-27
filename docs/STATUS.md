@@ -272,9 +272,11 @@ Branch `feat/mvp-foundation`.
   client (cascades: interactions, tasks, viewings, matches, listing links;
   owned listings keep, owner nulled) and every member's copy of emails to or
   from them; the user's own Google Calendar events of upcoming viewings are
-  removed after the erasure. Migration `20261027200000_erase_client.sql` must
-  be applied by hand in the Supabase SQL editor (the MCP declines migrations
-  with DELETE); until then the dialog says erasure is not switched on.
+  removed after the erasure. Migration `20261027200000_erase_client.sql` was
+  applied through the Supabase SQL editor (the MCP declines migrations with
+  DELETE) and recorded in schema_migrations. Tested end to end on a
+  throwaway client: client, call, task and an address-matched email erased,
+  other records untouched.
 
 ## Known gaps / next
 
