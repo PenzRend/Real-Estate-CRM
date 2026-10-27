@@ -165,7 +165,7 @@ async function SettingsContent() {
             title="Gmail és Google Naptár"
             status={
               mailbox ? (
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-normal">
                   {mailbox.email_address}
                   {mailbox.status === "active" ? <Badge tone="success">Összekapcsolva</Badge> : <Badge tone="warning">Újra kell kapcsolni</Badge>}
                 </span>

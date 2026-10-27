@@ -156,7 +156,7 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
         <>
           <MailboxBar email={mailbox.email_address} status={mailbox.status} lastSyncedAt={mailbox.last_synced_at} lastError={mailbox.last_error} />
 
-          <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+          <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
             {tabs.map((t) => (
               <Link
                 key={t.key}

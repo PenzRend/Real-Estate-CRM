@@ -106,9 +106,9 @@ export function PropertyDetailView({
           ].map((s, i) => (
             <div
               key={s.label}
-              className={`p-5 ${i % 2 === 1 ? "border-l border-border" : ""} ${i >= 2 ? "border-t border-border lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}
+              className={`min-w-0 p-4 sm:p-5 ${i % 2 === 1 ? "border-l border-border" : ""} ${i >= 2 ? "border-t border-border lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}
             >
-              <div className="text-[22px] leading-tight font-medium tracking-[-0.03em] text-ink tabular-nums sm:text-[26px]">{s.value}</div>
+              <div className="text-[15px] leading-tight font-medium tracking-[-0.03em] text-ink tabular-nums min-[360px]:text-[17px] sm:text-[26px]">{s.value}</div>
               <div className="mt-2 text-sm text-muted">{s.label}</div>
             </div>
           ))}
@@ -117,7 +117,7 @@ export function PropertyDetailView({
 
       {media}
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           {viewings}
 

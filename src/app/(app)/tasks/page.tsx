@@ -34,7 +34,7 @@ async function TasksContent({ searchParams }: Pick<PageProps<"/tasks">, "searchP
       {/* The sidebar's "Új feladat" link lands here with ?new=1. */}
       <NewTaskForm clients={clients} autoFocus={params.new === "1"} />
 
-      <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+      <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
         {views.map((v) => (
           <Link
             key={v.key}

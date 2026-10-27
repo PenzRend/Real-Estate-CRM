@@ -8,7 +8,7 @@ export function PageSkeleton() {
         <div className="h-4 w-96 max-w-full rounded bg-surface" />
       </div>
       <div className="h-32 rounded-2xl bg-surface" />
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="h-64 rounded-2xl bg-surface xl:col-span-2" />
         <div className="h-64 rounded-2xl bg-surface" />
       </div>

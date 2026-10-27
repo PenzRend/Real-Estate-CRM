@@ -80,7 +80,7 @@ export function CaptureWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
-      <div role="tablist" aria-label="Rögzítés módja" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+      <div role="tablist" aria-label="Rögzítés módja" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
         {[
           { key: "ai" as const, label: "Gyors rögzítés AI-val", icon: Sparkles },
           { key: "manual" as const, label: "Kézi rögzítés", icon: PenLine },

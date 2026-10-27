@@ -177,7 +177,7 @@ export function CaptureReview({
         </div>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-6">
           {/* Requirements */}
           <Card>

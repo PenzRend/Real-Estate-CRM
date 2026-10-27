@@ -32,7 +32,7 @@ export function DashboardView({ data, now, away, viewings }: { data: DashboardDa
 
       {away}
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           {viewings}
 
@@ -111,7 +111,7 @@ export function DashboardView({ data, now, away, viewings }: { data: DashboardDa
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="Friss ingatlanok" action={<ArrowLink href="/properties">Összes</ArrowLink>} />
           {data.recentProperties.length ? (

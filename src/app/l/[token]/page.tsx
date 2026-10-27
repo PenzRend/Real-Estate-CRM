@@ -123,7 +123,7 @@ async function SharedListingContent({ params }: Pick<PageProps<"/l/[token]">, "p
 
         <SharedGallery items={l.media} />
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_340px]">
           <div className="flex flex-col gap-10">
             <section className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-8">
               <div>
