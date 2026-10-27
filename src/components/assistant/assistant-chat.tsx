@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Building2, CheckSquare, Loader2, Mail, MessageSquareText, RotateCcw, Sparkles, UserRound } from "lucide-react";
+import { ArrowUp, Building2, CheckSquare, Compass, Loader2, Mail, MessageSquareText, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { askAssistantAction } from "@/app/(app)/assistant/actions";
@@ -15,8 +15,8 @@ type Message = { role: "user"; content: string } | { role: "assistant"; content:
 const EXAMPLES = [
   "Kiket kell ma utánkövetnem?",
   "Mely feladataim jártak le?",
-  "Mi történt az elmúlt héten?",
   "Mely aktív ingatlanok illenek a vevőimhez?",
+  "Hol tudok megtekintést foglalni?",
 ];
 
 const icons: Record<SourceType, typeof UserRound> = {
@@ -25,6 +25,7 @@ const icons: Record<SourceType, typeof UserRound> = {
   task: CheckSquare,
   interaction: MessageSquareText,
   email: Mail,
+  page: Compass,
 };
 
 function Cite({ source, n }: { source: Source | undefined; n: number }) {
@@ -99,7 +100,8 @@ function Answer({ content, sources }: { content: string; sources: Source[] }) {
   );
 }
 
-export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
+/** The chat. `compact` fits it into the corner panel: own scroll area, smaller welcome. */
+export function AssistantChat({ aiEnabled, compact = false }: { aiEnabled: boolean; compact?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -129,22 +131,31 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70dvh] max-w-3xl flex-col">
+    <div className={compact ? "flex min-h-0 flex-1 flex-col" : "mx-auto flex min-h-[70dvh] max-w-3xl flex-col"}>
       {messages.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <Eyebrow>AI-asszisztens</Eyebrow>
-          <h1 className="mt-5 text-[34px] leading-tight sm:text-[44px] sm:tracking-[-0.05em]">Kérdezz az ügyfeleidről</h1>
-          <p className="mt-3 max-w-md text-muted">
-            Csak a saját munkaterületed adataiból válaszol, és minden állítás mellé odateszi a forrást.
+        <div className={cn("flex flex-1 flex-col items-center justify-center text-center", compact && "overflow-y-auto px-5 py-6")}>
+          {compact ? (
+            <h2 className="text-xl leading-tight">Miben segíthetek?</h2>
+          ) : (
+            <>
+              <Eyebrow>AI-asszisztens</Eyebrow>
+              <h1 className="mt-5 text-[34px] leading-tight sm:text-[44px] sm:tracking-[-0.05em]">Kérdezz bármit</h1>
+            </>
+          )}
+          <p className={cn("mt-3 max-w-md text-muted", compact && "text-sm")}>
+            Az ügyfeleidről, ingatlanaidról és feladataidról, vagy arról, hol mit találsz a Flavióban. Minden állítás mellé odateszi a forrást.
           </p>
           {aiEnabled && (
-            <div className="mt-10 grid w-full gap-2 sm:grid-cols-2">
+            <div className={cn("grid w-full gap-2", compact ? "mt-6" : "mt-10 sm:grid-cols-2")}>
               {EXAMPLES.map((q) => (
                 <button
                   key={q}
                   type="button"
                   onClick={() => ask(q)}
-                  className="rounded-2xl border border-border p-4 text-left text-sm text-text transition-colors hover:border-border-strong hover:bg-surface"
+                  className={cn(
+                    "rounded-2xl border border-border text-left text-sm text-text transition-colors hover:border-border-strong hover:bg-surface",
+                    compact ? "px-4 py-3" : "p-4",
+                  )}
                 >
                   {q}
                 </button>
@@ -153,7 +164,7 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
           )}
         </div>
       ) : (
-        <div className="flex flex-1 flex-col gap-6 pb-6">
+        <div className={cn("flex flex-1 flex-col gap-6 pb-6", compact && "gap-5 overflow-y-auto px-4 pt-3")}>
           <div className="flex justify-end">
             <button
               type="button"
@@ -195,14 +206,14 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
       )}
 
       <form
-        className="sticky bottom-4 mt-6"
+        className={compact ? "border-t border-border p-3" : "sticky bottom-4 mt-6"}
         onSubmit={(e) => {
           e.preventDefault();
           ask(input);
         }}
       >
         {error && <p role="alert" className="mb-2 text-center text-sm text-danger">{error}</p>}
-        <div className="flex items-end gap-2 rounded-3xl border border-border-strong bg-background p-2 pl-5 shadow-float focus-within:border-ink">
+        <div className={cn("flex items-end gap-2 rounded-3xl border border-border-strong bg-background p-2 pl-5 focus-within:border-ink", !compact && "shadow-float")}>
           <Sparkles className="mb-3 size-4 shrink-0 text-accent" />
           <textarea
             value={input}
@@ -215,7 +226,7 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
             }}
             rows={1}
             disabled={!aiEnabled}
-            placeholder={aiEnabled ? "Kérdezz bármit az ügyfeleidről, ingatlanaidról, feladataidról…" : "Az AI most nem érhető el."}
+            placeholder={aiEnabled ? (compact ? "Kérdezz bármit…" : "Kérdezz bármit az ügyfeleidről, ingatlanaidról, feladataidról…") : "Az AI most nem érhető el."}
             aria-label="Kérdés az AI-asszisztensnek"
             className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-ink placeholder:text-subtle focus:outline-none"
           />
@@ -228,9 +239,11 @@ export function AssistantChat({ aiEnabled }: { aiEnabled: boolean }) {
             <ArrowUp className="size-4" />
           </button>
         </div>
-        <p className="mt-2 text-center text-xs text-muted">
-          Csak olvas: nem küld levelet és nem módosít adatot. A beszélgetést nem mentjük.
-        </p>
+        {!compact && (
+          <p className="mt-2 text-center text-xs text-muted">
+            Csak olvas: nem küld levelet és nem módosít adatot. A beszélgetést nem mentjük.
+          </p>
+        )}
       </form>
     </div>
   );

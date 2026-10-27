@@ -8,6 +8,7 @@ import { getPropertyDetail, listProperties } from "@/lib/db/properties";
 import { startOfZonedDay } from "@/lib/i18n/timezone";
 import { extrasForDisplay } from "@/lib/properties/extras";
 import { searchTerm } from "@/lib/search";
+import { appGuide } from "./app-guide";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabels, type Match } from "@/lib/matching/match";
 import {
@@ -41,7 +42,7 @@ export function explainMatch(m: Match) {
 // run as the signed-in user (RLS) inside their workspace. Every record a tool
 // returns gets a source reference ("S3") the answer can cite.
 
-export type SourceType = "client" | "property" | "task" | "interaction" | "email";
+export type SourceType = "client" | "property" | "task" | "interaction" | "email" | "page";
 export type Source = { ref: string; type: SourceType; id: string; label: string; href: string };
 
 export class SourceRegistry {
@@ -106,6 +107,7 @@ export const toolSchemas = {
   find_matches: z
     .object({ client_id: UUID.optional(), property_id: UUID.optional() })
     .refine((v) => Boolean(v.client_id) !== Boolean(v.property_id), "Give exactly one of client_id or property_id."),
+  get_app_help: z.object({}),
 } as const;
 
 export type ToolName = keyof typeof toolSchemas;
@@ -119,6 +121,7 @@ export const toolDescriptions: Record<ToolName, string> = {
   recent_interactions: "Logged calls, emails, meetings and viewings in the last N days, optionally for one client.",
   search_emails: "The user's imported emails (client emails and portal inquiries) by subject or sender, optionally by status (new = waiting to be processed).",
   find_matches: "Rule-based matches with reasons: listings for a client, or clients for a listing.",
+  get_app_help: "Where things are in Flavio and how to do them: every screen with its buttons. Use for 'where/how can I…' questions and when pointing the agent to a feature.",
 };
 
 type Ctx = { user: CurrentUser; sources: SourceRegistry; now: Date };
@@ -370,6 +373,12 @@ async function findMatches(ctx: Ctx, a: z.infer<typeof toolSchemas.find_matches>
   };
 }
 
+async function appHelp(ctx: Ctx) {
+  return {
+    screens: appGuide.map((g) => ({ ref: ctx.sources.add("page", g.id, g.screen, g.href), screen: g.screen, how: g.how })),
+  };
+}
+
 const handlers: { [K in ToolName]: (ctx: Ctx, args: z.infer<(typeof toolSchemas)[K]>) => Promise<unknown> } = {
   search_clients: searchClients,
   get_client: getClient,
@@ -379,6 +388,7 @@ const handlers: { [K in ToolName]: (ctx: Ctx, args: z.infer<(typeof toolSchemas)
   recent_interactions: recentInteractions,
   search_emails: searchEmails,
   find_matches: findMatches,
+  get_app_help: appHelp,
 };
 
 /** Validates the model's arguments and runs one tool. Errors become a message for the model, never an exception. */
