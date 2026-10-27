@@ -4,8 +4,9 @@ import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib
 
 // Pages reachable without a session ("/" is the landing page; matched exactly;
 // "/l/…" are listing pages shared with clients). Everything else requires sign-in.
-// "/invite/…" is a team invitation; it works signed in or out.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/invite", "/adatvedelem", "/api/health"];
+// "/invite/…" is a team invitation; it works signed in or out. "/api/calendar/…"
+// is a calendar subscription, read by calendar apps that carry no session.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/invite", "/api/calendar", "/adatvedelem", "/api/health"];
 // Signed-in users have no reason to see these.
 const GUEST_ONLY_PATHS = ["/", "/login", "/signup", "/forgot-password"];
 

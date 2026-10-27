@@ -257,6 +257,16 @@ Branch `feat/mvp-foundation`.
   inline strings, bold frozen header); checked with Python's zipfile and an
   XML parser, and against the live workspace in the browser.
 
+- Calendar subscription (Beállítások → Kapcsolatok): a secret .ics link
+  (`/api/calendar/<token>.ics`, public path, hash stored in `calendar_feeds`)
+  lists the agent's viewings (booked by them or in their calendar, from 60
+  days back; cancelled ones as CANCELLED) for Apple Calendar (webcal://),
+  Outlook and Google Calendar "from URL". A new link replaces the old; the
+  feed is empty-404 once the agent leaves the workspace. Migrations
+  `20261027193425_calendar_feeds`, `20261027193531_calendar_feed_exists`.
+  Checked signed out in the browser (valid VCALENDAR, CRLF, unknown → 404);
+  not yet subscribed from a real iPhone (needs the public URL once live).
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

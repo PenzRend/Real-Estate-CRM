@@ -127,7 +127,7 @@ const features = [
   {
     icon: CalendarDays,
     title: "Megtekintés, naptárral együtt",
-    text: "Időpont a levélből vagy az ügyfél lapjáról: bekerül a Google Naptáradba emlékeztetővel, utána egy kattintással rögzíted, hogy tetszett-e.",
+    text: "Időpont a levélből vagy az ügyfél lapjáról: bekerül a Google Naptáradba, és feliratkozással az iPhone-od vagy az Outlookod naptárába is. Utána egy kattintással rögzíted, hogy tetszett-e.",
   },
   {
     icon: Share2,
@@ -150,7 +150,6 @@ const steps = [
 const roadmap = [
   { icon: PhoneCall, title: "Automatikus hívásrögzítés", text: "Androidos alkalmazás: a hívás után magától átirat és összefoglaló." },
   { icon: Inbox, title: "Outlook-postafiók", text: "A Gmail mellett Microsoft-fiókok bekötése." },
-  { icon: CalendarDays, title: "Apple Naptár", text: "A megtekintések a Google Naptár mellett iPhone-on és Macen is maguktól megjelennek." },
 ];
 
 const faqs = [
@@ -419,7 +418,7 @@ export default function LandingPage() {
             </div>
             <p className="max-w-sm text-muted">Ezeken dolgozunk most. Ha most kezded, elsőként kapod meg őket.</p>
           </div>
-          <ul className="mt-12 grid gap-4 md:grid-cols-3">
+          <ul className="mt-12 grid gap-4 md:grid-cols-2">
             {roadmap.map((r) => (
               <li key={r.title} className="rounded-3xl border border-dashed border-border-strong p-7">
                 <div className="flex items-center justify-between">

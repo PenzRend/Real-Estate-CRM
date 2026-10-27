@@ -40,7 +40,7 @@ export const appGuide: GuideEntry[] = [
     id: "viewings",
     screen: "Megtekintés foglalása",
     href: "/clients",
-    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With Google Calendar connected it also goes into the calendar. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
+    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With Google Calendar connected it also goes into the calendar; for Apple Calendar (iPhone/Mac) or Outlook, subscribe once in Beállítások → Kapcsolatok. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
   },
   {
     id: "matches",
@@ -70,7 +70,7 @@ export const appGuide: GuideEntry[] = [
     id: "settings",
     screen: "Beállítások",
     href: "/settings",
-    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; Gmail and Google Calendar connection and the browser extension ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
+    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; Gmail and Google Calendar connection, the browser extension, and a calendar subscription link that puts viewings into Apple Calendar on iPhone/Mac, Outlook or other calendar apps ('Apple Naptár, Outlook és más naptárak' → 'Feliratkozási link létrehozása') ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
   },
   { id: "feedback", screen: "Visszajelzés", href: "/dashboard", how: "Report a bug or idea to the Flavio team: 'Visszajelzés' at the bottom of the side menu." },
 ];

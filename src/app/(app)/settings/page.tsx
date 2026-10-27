@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import { CalendarFeed } from "@/components/settings/calendar-feed";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -13,6 +14,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
+import { hasCalendarFeed } from "@/lib/calendar/feed";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { googleConfig } from "@/lib/mail/google";
 import { getMailbox } from "@/lib/mail/sync";
@@ -137,7 +139,7 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const mailbox = googleConfig() && isMailCryptoConfigured() ? await getMailbox(user) : null;
+  const [mailbox, feedActive] = await Promise.all([googleConfig() && isMailCryptoConfigured() ? getMailbox(user) : null, hasCalendarFeed(user)]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -181,6 +183,7 @@ async function SettingsContent() {
             href="/properties/import"
             cta="Telepítés"
           />
+          <CalendarFeed active={feedActive} />
         </FormSection>
 
         <FormSection number="04" title="Adatok" description="Az összes ügyfél, ingatlan, feladat, előzmény és megtekintés egy Excel-fájlban.">

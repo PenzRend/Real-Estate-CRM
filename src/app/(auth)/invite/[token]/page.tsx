@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { JoinForm } from "@/components/auth/join-form";
 import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
+import { SECRET_TOKEN } from "@/lib/secret-token";
 import { invitationPreview } from "@/lib/team";
 
 export const metadata: Metadata = { title: "Meghívó" };
@@ -20,7 +21,7 @@ async function Invite({ params }: { params: PageProps<"/invite/[token]">["params
   // The session check compares token expiry with the clock: request time only.
   await connection();
   const supabase = await createClient();
-  const [invite, { data: auth }] = await Promise.all([/^[\w-]{20,100}$/.test(token) ? invitationPreview(token) : null, supabase.auth.getClaims()]);
+  const [invite, { data: auth }] = await Promise.all([SECRET_TOKEN.test(token) ? invitationPreview(token) : null, supabase.auth.getClaims()]);
   const here = `/invite/${token}`;
 
   if (!invite || invite.status !== "open") {

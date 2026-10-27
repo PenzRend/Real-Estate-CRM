@@ -1,7 +1,7 @@
 import "server-only";
-import { createHash, randomBytes } from "node:crypto";
 import type { CurrentUser } from "@/lib/auth";
 import { appOrigin } from "@/lib/origin";
+import { hashSecretToken as hashInviteToken } from "@/lib/secret-token";
 import { createClient } from "@/lib/supabase/server";
 
 export type Role = CurrentUser["organization"]["role"];
@@ -9,14 +9,7 @@ export const roleLabels: Record<Role, string> = { owner: "Tulajdonos", admin: "A
 
 export const INVITE_DAYS = 14;
 
-/** A new invite token for the link; only its hash goes to the database. */
-export function newInviteToken() {
-  return randomBytes(32).toString("base64url");
-}
-
-export function hashInviteToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
-}
+export { hashSecretToken as hashInviteToken, newSecretToken as newInviteToken } from "@/lib/secret-token";
 
 export async function inviteLink(token: string) {
   return `${await appOrigin()}/invite/${token}`;
