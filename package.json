@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "extension:pack": "node --experimental-strip-types --no-warnings scripts/pack-extension.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

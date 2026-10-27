@@ -13,7 +13,7 @@ export async function GET() {
   const origin = cleanOrigin(await appOrigin());
   if (!origin) return new NextResponse("Unknown CRM address", { status: 500 });
   const dir = path.join(process.cwd(), "extension");
-  const files = Object.fromEntries(await Promise.all(EXTENSION_FILES.map(async (f) => [f, await readFile(path.join(dir, f), "utf8")] as const)));
+  const files = Object.fromEntries(await Promise.all(EXTENSION_FILES.map(async (f) => [f, new Uint8Array(await readFile(path.join(dir, f)))] as const)));
   const body = extensionZip(files, origin);
   return new NextResponse(body as BodyInit, {
     headers: {

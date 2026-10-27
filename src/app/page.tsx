@@ -467,6 +467,7 @@ export default function LandingPage() {
           <a href="#funkciok" className="hover:text-ink">Funkciók</a>
           <a href="#gyik" className="hover:text-ink">GYIK</a>
           <Link href="/login" className="hover:text-ink">Belépés</Link>
+          <Link href="/adatvedelem" className="hover:text-ink">Adatvédelem</Link>
         </nav>
         <p>© Ingatlan CRM</p>
       </footer>

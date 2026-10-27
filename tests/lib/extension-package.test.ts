@@ -27,26 +27,28 @@ describe("zip", () => {
 
 describe("extension package", () => {
   const files = {
-    "manifest.json": JSON.stringify({
+    "manifest.json": enc.encode(JSON.stringify({
       content_scripts: [
         { matches: ["https://ingatlan.com/*"], js: ["collect.js"] },
         { matches: ["http://localhost:3000/*"], js: ["bridge.js"] },
       ],
-    }),
-    "popup.js": 'const DEFAULT_CRM = "http://localhost:3000";',
+    })),
+    "popup.js": enc.encode('const DEFAULT_CRM = "http://localhost:3000";'),
+    "icons/icon16.png": new Uint8Array([137, 80, 78, 71, 0, 255]),
   };
+  const dec = new TextDecoder();
 
   it("points the bridge script and the default CRM address at the downloading CRM", () => {
     const out = tailor(files, "https://crm.example.hu");
-    const manifest = JSON.parse(out["manifest.json"]);
+    const manifest = JSON.parse(dec.decode(out["manifest.json"]));
     expect(manifest.content_scripts[0].matches).toEqual(["https://ingatlan.com/*"]);
     expect(manifest.content_scripts[1].matches).toEqual(["https://crm.example.hu/*"]);
-    expect(out["popup.js"]).toBe('const DEFAULT_CRM = "https://crm.example.hu";');
+    expect(dec.decode(out["popup.js"])).toBe('const DEFAULT_CRM = "https://crm.example.hu";');
   });
 
   it("keeps the development address when downloaded from it", () => {
     const out = tailor(files, "http://localhost:3000");
-    expect(JSON.parse(out["manifest.json"]).content_scripts[1].matches).toEqual(["http://localhost:3000/*"]);
+    expect(JSON.parse(dec.decode(out["manifest.json"])).content_scripts[1].matches).toEqual(["http://localhost:3000/*"]);
   });
 
   it("accepts only http(s) origins", () => {
@@ -59,5 +61,15 @@ describe("extension package", () => {
     const text = new TextDecoder().decode(extensionZip(files, "https://crm.example.hu"));
     expect(text).toContain("ingatlan-crm-bovitmeny/manifest.json");
     expect(text).toContain("ingatlan-crm-bovitmeny/popup.js");
+  });
+
+  it("passes binary files through untouched", () => {
+    expect(tailor(files, "https://crm.example.hu")["icons/icon16.png"]).toEqual(files["icons/icon16.png"]);
+  });
+
+  it("puts files at the root for a store upload", () => {
+    const text = new TextDecoder().decode(extensionZip(files, "https://crm.example.hu", { folder: null }));
+    expect(text).not.toContain("ingatlan-crm-bovitmeny/");
+    expect(text).toContain("manifest.json");
   });
 });
