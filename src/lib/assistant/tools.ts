@@ -6,6 +6,7 @@ import { getClientDetail, listClients } from "@/lib/db/clients";
 import { matchesForClient, matchesForProperty } from "@/lib/db/matches";
 import { getPropertyDetail, listProperties } from "@/lib/db/properties";
 import { startOfZonedDay } from "@/lib/i18n/timezone";
+import { extrasForDisplay } from "@/lib/properties/extras";
 import { searchTerm } from "@/lib/search";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabels, type Match } from "@/lib/matching/match";
@@ -113,7 +114,7 @@ export const toolDescriptions: Record<ToolName, string> = {
   search_clients: "Find clients (buyers, sellers, owners, investors, tenants). Returns up to 20 with status, budget, wished locations, follow-up and last contact. Without filters returns the most recently updated active clients.",
   get_client: "Full record of one client: contact, requirements, notes, recent conversations, open tasks, and matching listings.",
   search_properties: "Find listings by text, status, type, sale/rent, price range (millions HUF) or minimum rooms. Returns up to 20.",
-  get_property: "Full record of one listing: price, size, location, features, owner, conversations, open tasks and matching clients.",
+  get_property: "Full record of one listing: price, size, location, features (a feature not listed is unknown, not absent), owner, conversations, open tasks and matching clients.",
   list_tasks: "Tasks and follow-ups: today, overdue, upcoming (including undated) or completed.",
   recent_interactions: "Logged calls, emails, meetings and viewings in the last N days, optionally for one client.",
   search_emails: "The user's imported emails (client emails and portal inquiries) by subject or sender, optionally by status (new = waiting to be processed).",
@@ -232,7 +233,9 @@ async function getProperty(ctx: Ctx, a: z.infer<typeof toolSchemas.get_property>
     area_sqm: p.area_sqm,
     rooms: p.room_count,
     bedrooms: p.bedroom_count,
-    features: { balcony: p.has_balcony, garden: p.has_garden, parking: p.has_parking },
+    // Unticked boxes mean "not recorded", so only what is known goes to the model.
+    features_present: [p.has_balcony && "erkély", p.has_garden && "kert", p.has_parking && "parkolás"].filter(Boolean),
+    details: Object.fromEntries(extrasForDisplay(p.features).map((e) => [e.label, e.value])),
     condition: p.condition,
     description: p.description?.slice(0, 1500) ?? null,
     owner: p.owner ? { ref: ctx.sources.add("client", p.owner.id, p.owner.name, `/clients/${p.owner.id}`), name: p.owner.name } : null,

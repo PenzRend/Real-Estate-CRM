@@ -5,6 +5,8 @@ import { z } from "zod";
 import { SourceRegistry, runTool } from "@/lib/assistant/tools";
 import type { CurrentUser } from "@/lib/auth";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
+import { listViewingsFor } from "@/lib/viewings/data";
+import { spokenTime } from "@/lib/viewings/logic";
 import { llmConfig } from "./config";
 import { AiError, callChatCompletions } from "./extract";
 
@@ -36,7 +38,7 @@ Rules:
 - Write in Hungarian. Use formal address (Ön) unless the sender clearly uses informal (te) address; then use informal address throughout. Never mix the two in one email (no "Szia" with "kérem, jelezze").
 - Use only facts from the email and the CRM DATA. Never invent prices, availability, addresses, meeting places, dates, viewing times, phone numbers, costs, logistics or listing details.
 - Where the agent must decide or add something, put a short placeholder in square brackets, e.g. [időpont], [telefonszám], [további részletek].
-- If the email is about a listing in CRM DATA, you may state its facts exactly as given. If a client's matching listings are given, you may briefly mention the strongest one or two as options, without overselling.
+- If the email is about a listing in CRM DATA, you may state its facts exactly as given. A feature not in features_present or details is unknown: use a placeholder (e.g. [parkolás]) rather than saying yes or no. If a client's matching listings are given, you may briefly mention the strongest one or two as options, without overselling.
 - Keep the body short: a greeting line, 2–6 sentences, a closing and the agent's name exactly as given in AGENT (never a placeholder for it), with a blank line between the greeting, the paragraphs and the closing. No subject line or headers inside the body. No markdown.
 - Don't commit the agent to any time the sender did not propose themselves.
 - Never promise attachments, documents or anything the agent has not offered.
@@ -44,7 +46,8 @@ Rules:
 - summary: one sentence on who wrote and what they want. next_step: one short imperative sentence addressing the agent informally (te), e.g. "Egyeztess megtekintési időpontot." – never "Erősítse meg…".
 - If no reply is needed (automated notice, newsletter, a simple thank-you), set needs_reply to false and subject and body to null.
 - viewing: requested is true when the sender wants to see a property or agrees to a viewing. times lists only concrete times the sender proposed (a day and an hour), resolved against TODAY: "kedden 17-kor" is the next Tuesday at 17:00, "holnap délután 4" is tomorrow 16:00. A day without an hour, or a vague "valamikor jövő héten", gives no time. name and phone: only the sender's own, as written (portal inquiries include them in the text); never the agent's.
-- When the sender proposed a time, the reply may confirm that exact time; when they proposed several, use the placeholder [időpont] for the agent to choose.`;
+- When the sender proposed a time, the reply may confirm that exact time; when they proposed several, use the placeholder [időpont] for the agent to choose.
+- CRM DATA's viewings_booked_for_this_sender are appointments the agent has already booked with this sender (their own, not someone else's). Then the reply confirms that time and place as given (e.g. "Várom szombaton, október 31-én 10:00-kor a … címen.") and asks for no other time.`;
 
 export type DraftInput = {
   email: { fromName: string | null; fromEmail: string | null; subject: string | null; portal: string | null; receivedAt: string; body: string };
@@ -63,10 +66,11 @@ const json = (s: string) => {
 /** The CRM facts a reply may use, gathered with the assistant's read-only tools (RLS applies). */
 async function crmFacts(user: CurrentUser, input: DraftInput, now: Date) {
   const ctx = { user, now, sources: new SourceRegistry() };
-  const [client, matches, property] = await Promise.all([
+  const [client, matches, property, viewings] = await Promise.all([
     input.clientId ? runTool(ctx, "get_client", { client_id: input.clientId }) : null,
     input.clientId ? runTool(ctx, "find_matches", { client_id: input.clientId }) : null,
     input.propertyId ? runTool(ctx, "get_property", { property_id: input.propertyId }) : null,
+    input.clientId ? listViewingsFor(user, { clientId: input.clientId }) : [],
   ]);
   const m = matches ? json(matches) : null;
   return {
@@ -74,6 +78,10 @@ async function crmFacts(user: CurrentUser, input: DraftInput, now: Date) {
     // Only the best few, so the reply stays focused.
     client_matching_listings: Array.isArray(m?.listings) ? (m.listings as unknown[]).slice(0, 3) : null,
     listing_mentioned_in_email: property ? json(property) : null,
+    // Upcoming viewings already booked with this client, so the reply confirms rather than re-asks.
+    viewings_booked_for_this_sender: viewings
+      .filter((v) => v.status === "scheduled" && new Date(v.startsAt) > now)
+      .map((v) => ({ time: spokenTime(v.startsAt), listing: v.property.name, place: v.location })),
   };
 }
 
