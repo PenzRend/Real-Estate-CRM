@@ -28,7 +28,7 @@ import { cn } from "@/lib/cn";
 export const metadata: Metadata = {
   title: { absolute: "Flavio – AI-asszisztens ingatlanosoknak" },
   description:
-    "Mondd el a hívást, az AI kitölti az ügyféladatot. Párosítás indoklással, utánkövetés, Gmail-integráció és forrásokkal válaszoló AI-asszisztens – magyarul.",
+    "Mondd el a hívást, az AI kitölti az ügyféladatot. Párosítás indoklással, utánkövetés, Gmail- és Outlook-integráció és forrásokkal válaszoló AI-asszisztens – magyarul.",
 };
 
 const SIGNUP = "/signup";
@@ -112,7 +112,7 @@ const features = [
   {
     icon: Inbox,
     title: "A portálos megkeresések maguktól jönnek",
-    text: "Kösd be a Gmailt: az ügyfeleid levelei és az ingatlanportálos érdeklődések bekerülnek, a hírleveleket és árfigyelőket kiszűrjük. Egy kattintás, és új ügyfél.",
+    text: "Kösd be a Gmailt vagy az Outlookot: az ügyfeleid levelei és az ingatlanportálos érdeklődések bekerülnek, a hírleveleket és árfigyelőket kiszűrjük. Egy kattintás, és új ügyfél.",
   },
   {
     icon: MessageSquareQuote,
@@ -127,7 +127,7 @@ const features = [
   {
     icon: CalendarDays,
     title: "Megtekintés, naptárral együtt",
-    text: "Időpont a levélből vagy az ügyfél lapjáról: bekerül a Google Naptáradba, és feliratkozással az iPhone-od vagy az Outlookod naptárába is. Utána egy kattintással rögzíted, hogy tetszett-e.",
+    text: "Időpont a levélből vagy az ügyfél lapjáról: bekerül a Google- vagy Outlook-naptáradba, és feliratkozással az iPhone-od naptárába is. Utána egy kattintással rögzíted, hogy tetszett-e.",
   },
   {
     icon: Share2,
@@ -149,7 +149,6 @@ const steps = [
 
 const roadmap = [
   { icon: PhoneCall, title: "Automatikus hívásrögzítés", text: "Androidos alkalmazás: a hívás után magától átirat és összefoglaló." },
-  { icon: Inbox, title: "Outlook-postafiók", text: "A Gmail mellett Microsoft-fiókok bekötése." },
 ];
 
 const faqs = [
@@ -418,7 +417,7 @@ export default function LandingPage() {
             </div>
             <p className="max-w-sm text-muted">Ezeken dolgozunk most. Ha most kezded, elsőként kapod meg őket.</p>
           </div>
-          <ul className="mt-12 grid gap-4 md:grid-cols-2">
+          <ul className="mt-12 grid max-w-xl gap-4">
             {roadmap.map((r) => (
               <li key={r.title} className="rounded-3xl border border-dashed border-border-strong p-7">
                 <div className="flex items-center justify-between">

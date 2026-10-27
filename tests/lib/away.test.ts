@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awayHeadline, awaySince, findMentionedProperty, gmailComposeUrl, nextVisit, replyRecipient, replySubject } from "@/lib/away/logic";
+import { awayHeadline, awaySince, findMentionedProperty, composeUrl, nextVisit, replyRecipient, replySubject } from "@/lib/away/logic";
 
 const now = new Date("2026-10-26T18:00:00Z");
 const minsAgo = (m: number) => new Date(now.getTime() - m * 60_000).toISOString();
@@ -62,8 +62,14 @@ describe("helpers", () => {
     expect(replySubject(null)).toBe("Válasz");
   });
 
+  it("opens Outlook compose prefilled, without sending", () => {
+    const url = new URL(composeUrl("outlook", { account: "agent@example.test", to: "eva@example.test", subject: "Re: Lakás", body: "Kedves Éva,\n[időpont]" }));
+    expect(url.origin + url.pathname).toBe("https://outlook.office.com/mail/deeplink/compose");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ subject: "Re: Lakás", body: "Kedves Éva,\n[időpont]", to: "eva@example.test" });
+  });
+
   it("opens Gmail compose prefilled, without sending", () => {
-    const url = new URL(gmailComposeUrl({ account: "agent@example.test", to: "eva@example.test", subject: "Re: Lakás", body: "Kedves Éva,\n[időpont]" }));
+    const url = new URL(composeUrl("gmail", { account: "agent@example.test", to: "eva@example.test", subject: "Re: Lakás", body: "Kedves Éva,\n[időpont]" }));
     expect(url.origin + url.pathname).toBe("https://mail.google.com/mail/");
     expect(Object.fromEntries(url.searchParams)).toEqual({
       view: "cm",

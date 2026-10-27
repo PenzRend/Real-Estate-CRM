@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             <li>Ügyfelek: név, elérhetőség, keresési igények, jegyzetek, megtekintések és visszajelzések, teendők.</li>
             <li>Ingatlanok: a hirdetés adatai, fotók és videólinkek, tulajdonosi adatok, ha az ingatlanos felviszi őket.</li>
             <li>Diktált jegyzetek: a hangfelvételből szöveg lesz; a hangfelvételt nem tároljuk.</li>
-            <li>E-mailek és naptár, ha az ingatlanos összekapcsolja a Google-fiókját (lásd lent).</li>
+            <li>E-mailek és naptár, ha az ingatlanos összekapcsolja a Google- vagy Microsoft-fiókját (lásd lent).</li>
           </ul>
         </Section>
 
@@ -89,6 +89,15 @@ export default function PrivacyPage() {
             </a>{" "}
             előírásainak, a „Limited Use” követelményekkel együtt: csak a fenti funkciókhoz használjuk, nem adjuk el, nem használjuk hirdetésre, és nem
             tanítunk rajtuk általános AI-modelleket.
+          </p>
+        </Section>
+
+        <Section title="Microsoft-fiók (Outlook és naptár)">
+          <p>
+            Ugyanazokra a célokra és ugyanazokkal a külön engedélyekkel, mint a Google-fióknál: levelek olvasása, küldés csak a küldés gombra, és csak a
+            Flavióban foglalt megtekintések naptáreseményei. Az összekapcsolás bármikor megszüntethető a Flavio Levelek oldalán (Leválasztás), a Flavio
+            alkalmazás engedélye pedig a Microsoft-fiók beállításaiban is visszavonható. A Microsoft Graphból kapott adatokat csak ezekhez a funkciókhoz
+            használjuk, nem adjuk el, nem használjuk hirdetésre, és nem tanítunk rajtuk általános AI-modelleket.
           </p>
         </Section>
 
@@ -117,7 +126,7 @@ export default function PrivacyPage() {
               kitöltés, összefoglaló, válaszvázlat, diktálás – megkapja az ehhez szükséges szöveget. Az eredményt az ingatlanos ellenőrzi, mielőtt bármi mentődne
               vagy elmenne.
             </li>
-            <li>Google: csak összekapcsolt fiók esetén, a fenti célokra.</li>
+            <li>Google és Microsoft: csak összekapcsolt fiók esetén, a fenti célokra.</li>
           </ul>
           <p>Adatot nem adunk el, és hirdetési célra nem használunk.</p>
         </Section>

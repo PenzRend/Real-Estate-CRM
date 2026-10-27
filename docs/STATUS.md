@@ -278,11 +278,25 @@ Branch `feat/mvp-foundation`.
   throwaway client: client, call, task and an address-matched email erased,
   other records untouched.
 
+- Outlook / Microsoft 365 mailboxes next to Gmail (`src/lib/mail/microsoft.ts`,
+  `/api/mail/microsoft/*`): Microsoft identity platform (common tenant, PKCE),
+  Graph with immutable ids. Reading (Mail.Read) is the base grant; sending
+  (Mail.Send) and the calendar (Calendars.ReadWrite) are asked for when first
+  needed, through `/api/mail/connect`, which picks the connected provider.
+  Sync, replies (createReply in the original conversation), offers and
+  viewing events (Graph events, invitations by Outlook) all go through the
+  provider; rotated refresh tokens are stored. Screens name the connected
+  provider. Setup: docs/OUTLOOK_SETUP.md, env `MICROSOFT_CLIENT_ID` /
+  `MICROSOFT_CLIENT_SECRET`. Migration `20261027210000_outlook_mailboxes.sql`
+  (widens `mailboxes.provider`) still has to be run in the Supabase SQL
+  editor. Tested with a simulated Graph; not yet against a real Microsoft
+  account (needs the app registration).
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).
 - Unused index `properties_title_trgm_idx` (superseded) can be dropped.
-- Next: Android call capture app; Outlook mailbox; a real inquiry email through Feldolgozás.
+- Next: Android call capture app; a real inquiry email through Feldolgozás.
 - Dev tip: don't run `next build` while `next dev` is running; it crashed the dev server once.

@@ -53,8 +53,8 @@ export function EraseClientButton({ clientId, name }: { clientId: string; name: 
               <li>a vele váltott levelek másolata, a csapat minden tagjánál</li>
             </ul>
             <p className="mt-2">
-              A tulajdonában lévő ingatlanok megmaradnak, tulajdonos nélkül. A közelgő megtekintések a Google Naptárból is lekerülnek; a Gmail-fiókban lévő eredeti
-              leveleket ott kell törölni.
+              A tulajdonában lévő ingatlanok megmaradnak, tulajdonos nélkül. A közelgő megtekintések a naptáradból is lekerülnek; a postafiókodban (Gmail, Outlook) lévő
+              eredeti leveleket ott kell törölni.
             </p>
           </div>
           <Field label={`Megerősítéshez írd be: ${name}`} htmlFor="erase-name">

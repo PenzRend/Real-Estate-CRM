@@ -1,4 +1,5 @@
 import "server-only";
+import type { MailProvider } from "@/lib/mail/provider";
 import type { CurrentUser } from "@/lib/auth";
 import { findMentionedProperty } from "@/lib/away/logic";
 import type { Option } from "@/lib/db/activity";
@@ -25,7 +26,7 @@ export type BookingPrep = {
   times: string[];
   /** The times came from the client's email. */
   timesFromEmail: boolean;
-  calendar: { connected: boolean; allowed: boolean; email: string | null };
+  calendar: { connected: boolean; allowed: boolean; email: string | null; provider: MailProvider | null };
 };
 
 type AiViewing = { requested?: boolean; times?: unknown; name?: unknown; phone?: unknown };
@@ -109,6 +110,7 @@ export async function prepareBooking(user: CurrentUser, p: { clientId?: string |
       connected: Boolean(mailbox && mailbox.status !== "revoked"),
       allowed: Boolean(mailbox && mailbox.status !== "revoked" && mailbox.can_calendar),
       email: mailbox?.email_address ?? null,
+      provider: mailbox?.provider ?? null,
     },
   };
 }

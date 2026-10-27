@@ -1,5 +1,6 @@
+import type { MailProvider } from "@/lib/mail/provider";
 // Pure rules behind "Mi történt, amíg távol voltál": the away window, who a
-// reply goes to, which listing an email is about, and the Gmail compose link.
+// reply goes to, which listing an email is about, and the compose link (Gmail or Outlook).
 
 /** Gaps shorter than this count as the same working session. */
 export const SESSION_GAP_MS = 30 * 60_000;
@@ -70,7 +71,12 @@ export function replySubject(subject: string | null) {
 }
 
 /** Opens Gmail's compose window, prefilled, in the connected account. Nothing is sent. */
-export function gmailComposeUrl(d: { account: string | null; to: string | null; subject: string; body: string }) {
+export function composeUrl(provider: MailProvider, d: { account: string | null; to: string | null; subject: string; body: string }) {
+  if (provider === "outlook") {
+    const p = new URLSearchParams({ subject: d.subject, body: d.body });
+    if (d.to) p.set("to", d.to);
+    return `https://outlook.office.com/mail/deeplink/compose?${p.toString()}`;
+  }
   const p = new URLSearchParams({ view: "cm", fs: "1", su: d.subject, body: d.body });
   if (d.to) p.set("to", d.to);
   if (d.account) p.set("authuser", d.account);

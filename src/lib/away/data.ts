@@ -1,4 +1,5 @@
 import "server-only";
+import type { MailProvider } from "@/lib/mail/provider";
 import { draftReply } from "@/lib/ai/reply-draft";
 import type { CurrentUser } from "@/lib/auth";
 import { listPropertyOptions } from "@/lib/db/activity";
@@ -43,7 +44,7 @@ export type AwayItem = {
 export type AwaySummary = {
   since: string;
   firstVisit: boolean;
-  mailbox: { email: string; lastSyncedAt: string | null; status: string; canSend: boolean } | null;
+  mailbox: { email: string; provider: MailProvider; lastSyncedAt: string | null; status: string; canSend: boolean } | null;
   headline: string | null;
   items: AwayItem[];
   /** Waiting emails beyond the ones shown, in Levelek. */
@@ -139,7 +140,7 @@ export async function getAwaySummary(user: CurrentUser, now: Date): Promise<Away
     since,
     firstVisit: !visit,
     mailbox: mailbox
-      ? { email: mailbox.email_address, lastSyncedAt: mailbox.last_synced_at, status: mailbox.status, canSend: mailbox.can_send }
+      ? { email: mailbox.email_address, provider: mailbox.provider, lastSyncedAt: mailbox.last_synced_at, status: mailbox.status, canSend: mailbox.can_send }
       : null,
     headline: awayHeadline({
       inquiries: arrived.filter((r) => r.portal).length,

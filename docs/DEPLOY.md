@@ -104,6 +104,7 @@ They usually take effect within an hour.
 | `AI_MODEL` | | the model name |
 | `TRANSCRIBE_BASE_URL`, `TRANSCRIBE_API_KEY`, `TRANSCRIBE_MODEL` | | speech-to-text for dictation |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | the Google OAuth client (step 6) |
+| `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | | the Microsoft app registration for Outlook (step 6b) |
 | `MAIL_TOKEN_KEY` | | a **new** random key for production. Generate it with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `EXTENSION_CHROME_URL`, `EXTENSION_SAFARI_URL` | | store links, once the extension is published |
 
@@ -127,6 +128,17 @@ In Google Cloud Console, in the project of the OAuth client:
    100). In testing mode the connection lasts 7 days; see
    [GMAIL_SETUP.md](GMAIL_SETUP.md).
 
+## 6b. Microsoft (Outlook and its calendar)
+
+In the Microsoft Entra admin center, in the Flavio app registration (see
+[OUTLOOK_SETUP.md](OUTLOOK_SETUP.md)):
+
+1. **Authentication → Web → Redirect URIs**: add
+   `https://flavio.hu/api/mail/microsoft/callback`.
+2. **Branding & properties**: home page `https://flavio.hu`, privacy statement
+   `https://flavio.hu/adatvedelem`.
+3. Note the client secret's expiry date; renew it before it runs out.
+
 ## 7. Check it
 
 1. `https://flavio.hu/api/health` returns `{"ok":true}`.
@@ -135,7 +147,7 @@ In Google Cloud Console, in the project of the OAuth client:
 3. In the production project's SQL editor, run
    `supabase/checks/workspace-isolation.sql`. The last line must be
    `RESULT: 0 failures`. Nothing is saved; it always rolls back.
-4. Connect Gmail on the Levelek page.
+4. Connect Gmail or Outlook on the Levelek page.
 5. Build the extension for the store with
    `npm run extension:pack -- https://flavio.hu`; see
    [chrome-web-store.md](chrome-web-store.md). Pilot agents can also use

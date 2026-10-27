@@ -7,17 +7,20 @@ import { disconnectMailAction, syncMailAction } from "@/app/(app)/inbox/actions"
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { formatDateTime } from "@/lib/i18n/format";
+import { connectPaths, providerLabels, type MailProvider } from "@/lib/mail/provider";
 
 const STALE_MS = 15 * 60_000;
 
 /** Connected mailbox: status, manual sync, and a background sync when the inbox is opened with stale data. */
 export function MailboxBar({
   email,
+  provider,
   status,
   lastSyncedAt,
   lastError,
 }: {
   email: string;
+  provider: MailProvider;
   status: "active" | "revoked" | "error";
   lastSyncedAt: string | null;
   lastError: string | null;
@@ -61,7 +64,9 @@ export function MailboxBar({
           <Mail className="size-4" />
         </span>
         <div className="text-sm">
-          <p className="font-medium text-ink">{email}</p>
+          <p className="font-medium text-ink">
+            {email} <span className="font-normal text-muted">· {providerLabels[provider]}</span>
+          </p>
           <p className={status === "active" ? "text-xs text-muted" : "text-xs text-danger"}>
             {status === "revoked"
               ? "A hozzáférés megszűnt – kapcsold össze újra."
@@ -80,7 +85,7 @@ export function MailboxBar({
       </div>
       <div className="flex flex-wrap gap-2">
         {status === "revoked" ? (
-          <a href="/api/mail/google/connect" className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover">
+          <a href={connectPaths[provider]} className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover">
             Újracsatlakozás
           </a>
         ) : (
@@ -95,8 +100,8 @@ export function MailboxBar({
               <Unplug /> Leválasztás
             </>
           }
-          title="Gmail leválasztása"
-          description="A CRM-nek a Google-nél is megszűnik a hozzáférése, és a még fel nem dolgozott importált levelek törlődnek. A már rögzített beszélgetések megmaradnak."
+          title={`${providerLabels[provider]} leválasztása`}
+          description={`A Flavio hozzáférése megszűnik${provider === "outlook" ? " (a Microsoft-fiókod beállításaiban az alkalmazás engedélyét is visszavonhatod)" : ", a Google-nél is"}, és a még fel nem dolgozott importált levelek törlődnek. A már rögzített beszélgetések megmaradnak.`}
           confirmLabel="Leválasztás"
           tone="danger"
         />

@@ -6,11 +6,11 @@ import { MailAccessRevoked } from "@/lib/mail/google";
 import { mailboxWithToken } from "@/lib/mail/sync";
 import { appOrigin } from "@/lib/origin";
 import { createClient } from "@/lib/supabase/server";
-import { CalendarApiDisabled, CalendarNotAllowed, cancelEvent, createEvent, moveEvent } from "./calendar";
+import { CalendarApiDisabled, CalendarNotAllowed, cancelEvent, createEvent, moveEvent, type CalendarAccess } from "./calendar";
 import { followUpFor, outcomeLabels, relationFor, type CalendarOutcome, type Interest, type Outcome, type ViewingStatus } from "./logic";
 
 // Viewings: booked by an agent, optionally mirrored in the booking agent's
-// Google Calendar, and closed with feedback that lands on the client's
+// own calendar (Google or Outlook), and closed with feedback that lands on the client's
 // timeline with the right follow-up. Shared within the workspace (RLS).
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,7 +29,7 @@ export type Viewing = {
   feedbackAt: string | null;
   client: { id: string; name: string; email: string | null; phone: string | null };
   property: { id: string; name: string; address: string | null };
-  /** In someone's Google Calendar; `mine` when it is the current user's. */
+  /** In someone's calendar (Google or Outlook); `mine` when it is the current user's. */
   calendar: { link: string | null; mine: boolean } | null;
 };
 
@@ -125,18 +125,18 @@ async function getRow(user: CurrentUser, id: string): Promise<Row | null> {
 }
 
 // ---------------------------------------------------------------------------
-// Google Calendar
+// Calendar (Google or Outlook)
 // ---------------------------------------------------------------------------
 
 export type { CalendarOutcome };
 
-/** The user's Google access with the Calendar permission, or why there is none. */
-async function calendarAccess(user: CurrentUser): Promise<{ token: string } | { reason: CalendarOutcome }> {
+/** The user's calendar access (Google or Outlook) with the calendar permission, or why there is none. */
+async function calendarAccess(user: CurrentUser): Promise<CalendarAccess | { reason: CalendarOutcome }> {
   try {
     const access = await mailboxWithToken(user);
     if (!access) return { reason: "needs_permission" };
     if (!access.mailbox.can_calendar) return { reason: "needs_permission" };
-    return { token: access.token };
+    return { provider: access.mailbox.provider, token: access.token };
   } catch (error) {
     // Never throw: the viewing is already saved, and an error screen invites a duplicate retry.
     return { reason: await calendarFailure(user, error) };
@@ -157,13 +157,13 @@ async function calendarFailure(user: CurrentUser, error: unknown): Promise<Calen
 
 const endOf = (startsAt: string, minutes: number) => new Date(new Date(startsAt).getTime() + minutes * 60_000).toISOString();
 
-/** Puts one viewing in the user's Google Calendar (with reminders), optionally inviting the client. */
-async function pushToCalendar(user: CurrentUser, row: Row, invite: boolean, token?: string): Promise<CalendarOutcome> {
-  let accessToken = token;
-  if (!accessToken) {
+/** Puts one viewing in the user's calendar (with reminders), optionally inviting the client. */
+async function pushToCalendar(user: CurrentUser, row: Row, invite: boolean, given?: CalendarAccess): Promise<CalendarOutcome> {
+  let cal = given;
+  if (!cal) {
     const access = await calendarAccess(user);
     if ("reason" in access) return access.reason;
-    accessToken = access.token;
+    cal = access;
   }
   const [v] = await hydrate(user, [row]);
   const origin = await appOrigin();
@@ -181,7 +181,7 @@ async function pushToCalendar(user: CurrentUser, row: Row, invite: boolean, toke
     .filter((l): l is string => typeof l === "string")
     .join("\n");
   try {
-    const event = await createEvent(accessToken, {
+    const event = await createEvent(cal, {
       summary: `Megtekintés: ${v.client.name} – ${v.property.name}`.slice(0, 250),
       description,
       location: row.location,
@@ -233,7 +233,7 @@ export async function syncPendingToCalendar(user: CurrentUser, now: Date): Promi
   if ("reason" in access) return { added: 0, problem: access.reason };
   let added = 0;
   for (const row of rows) {
-    const r = await pushToCalendar(user, row, false, access.token);
+    const r = await pushToCalendar(user, row, false, access);
     if (r !== "added") return { added, problem: r };
     added++;
   }
@@ -374,7 +374,7 @@ export async function updateViewing(user: CurrentUser, id: string, input: MoveIn
   const access = await calendarAccess(user);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
-    await moveEvent(access.token, row.calendar_event_id, { startsAt, endsAt: endOf(startsAt, input.durationMinutes), location: input.location });
+    await moveEvent(access, row.calendar_event_id, { startsAt, endsAt: endOf(startsAt, input.durationMinutes), location: input.location });
     return { ok: true, calendar: "updated" };
   } catch (e) {
     return { ok: true, calendar: await calendarFailure(user, e) };
@@ -400,14 +400,14 @@ export async function cancelViewing(user: CurrentUser, id: string): Promise<{ ok
   const access = await calendarAccess(user);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
-    await cancelEvent(access.token, row.calendar_event_id);
+    await cancelEvent(access, row.calendar_event_id);
     return { ok: true, calendar: "updated" };
   } catch (e) {
     return { ok: true, calendar: await calendarFailure(user, e) };
   }
 }
 
-/** The user's Google Calendar events of upcoming viewings, read before those viewings are erased. */
+/** The user's calendar events of upcoming viewings, read before those viewings are erased. */
 export async function upcomingCalendarEvents(user: CurrentUser, clientId: string, now: Date) {
   const supabase = await createClient();
   const { data } = await supabase
@@ -427,7 +427,7 @@ export async function removeCalendarEvents(user: CurrentUser, eventIds: string[]
   if (!eventIds.length) return;
   const access = await calendarAccess(user);
   if ("reason" in access) return;
-  for (const id of eventIds) await cancelEvent(access.token, id).catch(() => null);
+  for (const id of eventIds) await cancelEvent(access, id).catch(() => null);
 }
 
 // ---------------------------------------------------------------------------

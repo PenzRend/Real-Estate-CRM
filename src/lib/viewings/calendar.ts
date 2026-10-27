@@ -1,9 +1,15 @@
 import "server-only";
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
 import { MailAccessRevoked } from "@/lib/mail/google";
+import { graph, GraphNotAllowed } from "@/lib/mail/microsoft";
+import type { MailProvider } from "@/lib/mail/provider";
 
-// The few Google Calendar calls viewings need, in the agent's primary
-// calendar: create, move and cancel the event the CRM created.
+// The few calendar calls viewings need, in the agent's own calendar (Google
+// Calendar or Outlook, whichever mailbox they connected): create, move and
+// cancel the event the CRM created.
+
+/** The connected provider and an access token with the calendar permission. */
+export type CalendarAccess = { provider: MailProvider; token: string };
 
 export class CalendarNotAllowed extends Error {}
 /** The Calendar API is not switched on in the Google Cloud project. */
@@ -55,15 +61,53 @@ function eventBody(e: EventInput) {
   };
 }
 
-export async function createEvent(accessToken: string, e: EventInput) {
-  const r = await call<{ id: string; htmlLink: string }>(`${BASE}?sendUpdates=${e.attendee ? "all" : "none"}`, accessToken, { method: "POST", body: eventBody(e) });
+// Outlook (Microsoft Graph): times go as UTC wall-clock, invitations and
+// updates to attendees are sent by Outlook itself.
+const utc = (iso: string) => ({ dateTime: new Date(iso).toISOString().replace("Z", ""), timeZone: "UTC" });
+
+async function outlook<T>(path: string, token: string, init: { method?: string; body?: unknown } = {}) {
+  try {
+    return await graph<T>(path, token, init);
+  } catch (error) {
+    if (error instanceof GraphNotAllowed) throw new CalendarNotAllowed("Outlook calendar refused (missing permission)");
+    throw error;
+  }
+}
+
+export async function createEvent(cal: CalendarAccess, e: EventInput): Promise<{ id: string; htmlLink: string }> {
+  if (cal.provider === "outlook") {
+    const r = await outlook<{ id: string; webLink: string }>("events", cal.token, {
+      method: "POST",
+      body: {
+        subject: e.summary,
+        body: { contentType: "text", content: e.description },
+        start: utc(e.startsAt),
+        end: utc(e.endsAt),
+        ...(e.location ? { location: { displayName: e.location } } : {}),
+        attendees: e.attendee ? [{ emailAddress: { address: e.attendee.email, name: e.attendee.name }, type: "required" }] : [],
+        isReminderOn: true,
+        reminderMinutesBeforeStart: 60,
+        // Outlook ignores a repeated create with the same id: no duplicate on a retry.
+        transactionId: e.viewingId,
+      },
+    });
+    if (!r) throw new Error("Outlook returned no event");
+    return { id: r.id, htmlLink: r.webLink };
+  }
+  const r = await call<{ id: string; htmlLink: string }>(`${BASE}?sendUpdates=${e.attendee ? "all" : "none"}`, cal.token, { method: "POST", body: eventBody(e) });
   if (!r) throw new Error("Google Calendar returned no event");
   return r;
 }
 
 /** Moves the event; invited guests get the update. Null when the event no longer exists. */
-export async function moveEvent(accessToken: string, eventId: string, p: { startsAt: string; endsAt: string; location: string | null }) {
-  return call<{ id: string; htmlLink: string }>(`${BASE}/${encodeURIComponent(eventId)}?sendUpdates=all`, accessToken, {
+export async function moveEvent(cal: CalendarAccess, eventId: string, p: { startsAt: string; endsAt: string; location: string | null }) {
+  if (cal.provider === "outlook") {
+    return outlook<{ id: string }>(`events/${encodeURIComponent(eventId)}`, cal.token, {
+      method: "PATCH",
+      body: { start: utc(p.startsAt), end: utc(p.endsAt), ...(p.location ? { location: { displayName: p.location } } : {}) },
+    });
+  }
+  return call<{ id: string; htmlLink: string }>(`${BASE}/${encodeURIComponent(eventId)}?sendUpdates=all`, cal.token, {
     method: "PATCH",
     body: {
       start: { dateTime: p.startsAt, timeZone: DEFAULT_TIMEZONE },
@@ -74,6 +118,17 @@ export async function moveEvent(accessToken: string, eventId: string, p: { start
 }
 
 /** Removes the event; invited guests get the cancellation. */
-export async function cancelEvent(accessToken: string, eventId: string) {
-  await call(`${BASE}/${encodeURIComponent(eventId)}?sendUpdates=all`, accessToken, { method: "DELETE" });
+export async function cancelEvent(cal: CalendarAccess, eventId: string) {
+  if (cal.provider === "outlook") {
+    const path = `events/${encodeURIComponent(eventId)}`;
+    try {
+      // A meeting with the client: "cancel" tells them. An event without guests can't be cancelled, only deleted.
+      await outlook(`${path}/cancel`, cal.token, { method: "POST", body: { comment: "" } });
+    } catch (error) {
+      if (error instanceof CalendarNotAllowed || error instanceof MailAccessRevoked) throw error;
+      await outlook(path, cal.token, { method: "DELETE" });
+    }
+    return;
+  }
+  await call(`${BASE}/${encodeURIComponent(eventId)}?sendUpdates=all`, cal.token, { method: "DELETE" });
 }

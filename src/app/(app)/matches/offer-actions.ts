@@ -1,5 +1,6 @@
 "use server";
 
+import type { MailProvider } from "@/lib/mail/provider";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { AiError } from "@/lib/ai/extract";
@@ -24,8 +25,8 @@ export type OfferPrep =
       link: string;
       clientName: string;
       propertyTitle: string;
-      /** Gmail is connected; canSend: it may send from here. */
-      mailbox: { email: string; canSend: boolean } | null;
+      /** A mailbox is connected; canSend: it may send from here. */
+      mailbox: { email: string; provider: MailProvider; canSend: boolean } | null;
     }
   | { ok: false; error: string };
 
@@ -56,7 +57,7 @@ export async function prepareOfferAction(propertyId: string, clientId: string): 
       link: share.url,
       clientName: n.clientName,
       propertyTitle: n.propertyTitle,
-      mailbox: mailbox && mailbox.status !== "revoked" ? { email: mailbox.email_address, canSend: mailbox.can_send } : null,
+      mailbox: mailbox && mailbox.status !== "revoked" ? { email: mailbox.email_address, provider: mailbox.provider, canSend: mailbox.can_send } : null,
     };
   } catch (error) {
     if (error instanceof AiError) {

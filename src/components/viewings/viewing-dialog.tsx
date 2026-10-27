@@ -154,7 +154,7 @@ export function ViewingDialog(
             {calendarNote && <p className={done.calendar === "added" || done.calendar === "updated" ? "text-sm text-text" : "text-sm text-warning"}>{calendarNote}</p>}
             {done.calendar === "needs_permission" && (
               <a href={enableCalendarHref(pathname)} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink underline-offset-2 hover:underline">
-                <CalendarPlus className="size-4" /> Google Naptár engedélyezése
+                <CalendarPlus className="size-4" /> Naptár engedélyezése
               </a>
             )}
             <p className="text-xs text-muted">A megtekintés után itt kérdezünk rá, hogyan sikerült, és a válasz az ügyfél idővonalára kerül.</p>
@@ -302,8 +302,8 @@ export function ViewingDialog(
                   <label className="flex items-start gap-2 text-sm text-text">
                     <input type="checkbox" checked={toCalendar} onChange={(e) => setToCalendar(e.target.checked)} className="mt-0.5 size-4 accent-[var(--primary)]" />
                     <span>
-                      Hozzáadás a Google Naptáradhoz{prep.calendar.email && <span className="text-muted"> ({prep.calendar.email})</span>}, emlékeztetővel előtte egy nappal és egy órával
-                      {!prep.calendar.allowed && <span className="block text-xs text-muted">Először egy egyszeri Google-engedélyt kérünk, utána automatikusan bekerül.</span>}
+                      Hozzáadás {prep.calendar.provider === "outlook" ? "az Outlook-naptáradhoz" : "a Google Naptáradhoz"}{prep.calendar.email && <span className="text-muted"> ({prep.calendar.email})</span>}, emlékeztetővel előtte egy nappal és egy órával
+                      {!prep.calendar.allowed && <span className="block text-xs text-muted">Először egy egyszeri engedélyt kérünk, utána automatikusan bekerül.</span>}
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-sm text-text">
@@ -321,7 +321,7 @@ export function ViewingDialog(
                   </label>
                 </div>
               ) : (
-                <p className="text-xs text-muted">Ha bekötöd a Gmailt a Levelek oldalon, a megtekintések a Google Naptáradba is bekerülhetnek.</p>
+                <p className="text-xs text-muted">Ha bekötöd a Gmailt vagy az Outlookot a Levelek oldalon, a megtekintések a naptáradba is bekerülhetnek.</p>
               ))}
 
             {error && (

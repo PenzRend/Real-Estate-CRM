@@ -2,6 +2,7 @@
 // task they leave, and which times the AI may suggest from an email.
 
 import { utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
+import { permissionHref } from "@/lib/mail/provider";
 
 export type ViewingStatus = "scheduled" | "completed" | "no_show" | "cancelled";
 export type Interest = "high" | "medium" | "low" | "none";
@@ -95,17 +96,17 @@ export type CalendarOutcome = "added" | "updated" | "skipped" | "other_calendar"
 
 /** What to tell the agent about the Google Calendar part; null when there is nothing to say. */
 export const calendarMessages: Record<CalendarOutcome, string | null> = {
-  added: "Bekerült a Google Naptáradba, emlékeztetővel előtte egy nappal és egy órával.",
-  updated: "A Google Naptárad is frissült.",
+  added: "Bekerült a naptáradba, emlékeztetővel.",
+  updated: "A naptárad is frissült.",
   skipped: null,
-  other_calendar: "A naptáresemény egy kollégád Google Naptárában van, azt ő tudja frissíteni.",
-  needs_permission: "A Google Naptárhoz engedély kell.",
+  other_calendar: "A naptáresemény egy kollégád naptárában van, azt ő tudja frissíteni.",
+  needs_permission: "A naptárhoz engedély kell.",
   api_disabled: "A Google Naptár-kapcsolat most nem működik, szólj nekünk a Visszajelzés gombbal. A megtekintés mentve van.",
-  revoked: "A Google-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon.",
-  failed: "A Google Naptárba most nem sikerült beírni. A megtekintés mentve van; később próbáld újra.",
+  revoked: "A postafiók-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon.",
+  failed: "A naptárba most nem sikerült beírni. A megtekintés mentve van; később próbáld újra.",
 };
 
-export const enableCalendarHref = (next: string) => `/api/mail/google/connect?calendar=1&next=${encodeURIComponent(next)}`;
+export const enableCalendarHref = (next: string) => permissionHref("calendar", next);
 
 const spoken = new Intl.DateTimeFormat("hu-HU", { month: "long", day: "numeric", weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Budapest" });
 /** For an email to the client: "november 3., kedd 17:00". */

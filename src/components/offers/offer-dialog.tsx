@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { offerTaskAction, prepareOfferAction, sendOfferAction, type OfferPrep } from "@/app/(app)/matches/offer-actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/form";
-import { gmailComposeUrl } from "@/lib/away/logic";
+import { composeUrl } from "@/lib/away/logic";
+import { permissionHref, providerLabels } from "@/lib/mail/provider";
 import { findPlaceholders } from "@/lib/mail/compose";
 
 type Ready = Extract<OfferPrep, { ok: true }>;
@@ -141,7 +142,7 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
           ) : (
             prep?.mailbox && (
               <a
-                href={`/api/mail/google/connect?send=1&next=${encodeURIComponent(pathname)}`}
+                href={permissionHref("send", pathname)}
                 className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover"
               >
                 <ShieldCheck className="size-4" /> Küldés engedélyezése
@@ -151,13 +152,13 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
           {prep && (
             <>
               <a
-                href={gmailComposeUrl({ account: prep.mailbox?.email ?? null, to: to.trim() || null, subject, body })}
+                href={composeUrl(prep.mailbox?.provider ?? "gmail", { account: prep.mailbox?.email ?? null, to: to.trim() || null, subject, body })}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => void keepTask()}
                 className="inline-flex h-10 items-center gap-2 rounded-full border border-border-strong px-4 text-sm font-medium text-ink hover:bg-surface"
               >
-                <ExternalLink className="size-4" /> Gmailben
+                <ExternalLink className="size-4" /> {providerLabels[prep.mailbox?.provider ?? "gmail"]}
               </a>
               <Button variant="secondary" onClick={copy}>
                 {copied ? <Check /> : <Copy />} {copied ? "Másolva" : "Másolás"}

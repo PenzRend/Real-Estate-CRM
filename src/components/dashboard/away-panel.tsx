@@ -8,7 +8,8 @@ import { draftReplyAction, markVisitAction, sendReplyAction, syncIfStaleAction }
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { AwayDraft, AwayItem, AwaySummary } from "@/lib/away/data";
-import { gmailComposeUrl } from "@/lib/away/logic";
+import { composeUrl } from "@/lib/away/logic";
+import { permissionHref, providerLabels } from "@/lib/mail/provider";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/i18n/format";
 import { findPlaceholders } from "@/lib/mail/compose";
@@ -19,7 +20,7 @@ import { actionFailed } from "@/lib/action-failed";
 // Drafts written automatically on arrival, one at a time (provider rate limits).
 const AUTO_DRAFTS = 3;
 const FOLLOW_UP_DAYS = 2;
-const ENABLE_SEND_HREF = "/api/mail/google/connect?send=1&next=/dashboard";
+const ENABLE_SEND_HREF = permissionHref("send", "/dashboard");
 
 type DraftState = { status: "idle" | "loading" | "error"; draft: AwayDraft | null; error?: string };
 type Sent = { at: string; logged: "client" | "property" | null };
@@ -152,7 +153,7 @@ function DraftEditor({
             mailbox && (
               <a
                 href={ENABLE_SEND_HREF}
-                title="Egyszeri Google-engedély. A Flavio csak akkor küld, ha megnyomod a Küldést."
+                title="Egyszeri engedély. A Flavio csak akkor küld, ha megnyomod a Küldést."
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
               >
                 <ShieldCheck className="size-3.5" /> Küldés engedélyezése
@@ -160,12 +161,12 @@ function DraftEditor({
             )
           )}
           <a
-            href={gmailComposeUrl({ account: mailbox?.email ?? null, to: to.trim() || null, subject, body })}
+            href={composeUrl(mailbox?.provider ?? "gmail", { account: mailbox?.email ?? null, to: to.trim() || null, subject, body })}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-surface-strong"
           >
-            <ExternalLink className="size-3.5" /> Megnyitás Gmailben
+            <ExternalLink className="size-3.5" /> Megnyitás: {providerLabels[mailbox?.provider ?? "gmail"]}
           </a>
           <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-surface-strong">
             {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />} {copied ? "Másolva" : "Másolás"}
@@ -336,8 +337,8 @@ function AwayRow({
 
 const notices: Record<string, { tone: "success" | "danger"; text: string }> = {
   send_enabled: { tone: "success", text: "A küldés engedélyezve. A válaszvázlatokat mostantól innen is elküldheted." },
-  send_scope: { tone: "danger", text: "A Google-engedélyezésnél a küldési jog nem lett bepipálva, így a küldés nincs engedélyezve." },
-  denied: { tone: "danger", text: "A Google-engedélyezést megszakítottad." },
+  send_scope: { tone: "danger", text: "Az engedélyezésnél a küldési jog nem lett megadva, így a küldés nincs engedélyezve." },
+  denied: { tone: "danger", text: "Az engedélyezést megszakítottad." },
 };
 
 export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary; aiEnabled: boolean; notice?: string | null }) {
@@ -408,7 +409,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
         {!summary.mailbox && (
           <p className="mt-1 text-sm text-muted">
             <Link href="/inbox" className="font-medium text-ink underline-offset-2 hover:underline">
-              Kösd be a Gmailt
+              Kösd be a postafiókodat
             </Link>
             , és itt látod a beérkezett érdeklődéseket, kész válaszvázlattal.
           </p>

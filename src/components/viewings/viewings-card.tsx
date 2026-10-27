@@ -42,10 +42,10 @@ function CalendarNotice() {
   return (
     <p role="status" className={cn("mx-5 mt-4 rounded-xl px-3 py-2 text-sm", refused ? "bg-danger-soft text-danger" : problem ? "bg-warning-soft text-warning" : "bg-success-soft text-success")}>
       {refused
-        ? "A Google-engedélyezésnél a naptár-hozzáférés nem lett bepipálva, így a naptár nincs engedélyezve."
+        ? "Az engedélyezésnél a naptár-hozzáférés nem lett megadva, így a naptár nincs engedélyezve."
         : problem
           ? `A naptár-engedély megvan, de ${added > 0 ? `csak ${added} megtekintés került be a naptáradba` : "a megtekintések nem kerültek be a naptáradba"}. ${problem}`
-          : `A Google Naptár engedélyezve.${added > 0 ? ` ${added} megtekintés bekerült a naptáradba.` : ""}`}
+          : `A naptár engedélyezve.${added > 0 ? ` ${added} megtekintés bekerült a naptáradba.` : ""}`}
     </p>
   );
 }

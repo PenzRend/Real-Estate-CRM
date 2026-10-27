@@ -15,8 +15,7 @@ import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
-import { isMailCryptoConfigured } from "@/lib/mail/crypto";
-import { googleConfig } from "@/lib/mail/google";
+import { configuredProviders } from "@/lib/mail/configured";
 import { getMailbox } from "@/lib/mail/sync";
 import { canManageTeam, listTeam, listWorkspaces, roleLabels } from "@/lib/team";
 import { leaveWorkspaceAction, removeMemberAction, switchWorkspaceAction } from "./team-actions";
@@ -139,7 +138,7 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const [mailbox, feedActive] = await Promise.all([googleConfig() && isMailCryptoConfigured() ? getMailbox(user) : null, hasCalendarFeed(user)]);
+  const [mailbox, feedActive] = await Promise.all([configuredProviders().length ? getMailbox(user) : null, hasCalendarFeed(user)]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -162,7 +161,7 @@ async function SettingsContent() {
         <FormSection number="03" title="Kapcsolatok" description="Levelek, naptár és hirdetésimport.">
           <Connection
             icon={Mail}
-            title="Gmail és Google Naptár"
+            title={mailbox?.provider === "outlook" ? "Outlook és Outlook-naptár" : mailbox ? "Gmail és Google Naptár" : "E-mail és naptár (Gmail vagy Outlook)"}
             status={
               mailbox ? (
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-normal">

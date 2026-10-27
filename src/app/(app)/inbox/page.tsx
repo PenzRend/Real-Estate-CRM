@@ -11,8 +11,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { listEmails, type EmailItem, type EmailStatus } from "@/lib/db/mail";
 import { formatDateTime } from "@/lib/i18n/format";
-import { isMailCryptoConfigured } from "@/lib/mail/crypto";
-import { googleConfig } from "@/lib/mail/google";
+import { configuredProviders } from "@/lib/mail/configured";
+import { connectPaths, type MailProvider } from "@/lib/mail/provider";
 import { getMailbox } from "@/lib/mail/sync";
 import { ignoreEmailAction, restoreEmailAction } from "./actions";
 import { FormSubmit } from "@/components/ui/form-submit";
@@ -31,12 +31,12 @@ const tabs: { key: EmailStatus; label: string; empty: string }[] = [
 ];
 
 const errors: Record<string, string> = {
-  config: "A Gmail-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal.",
-  denied: "A Google-engedélyezést megszakítottad, így nem jött létre kapcsolat.",
+  config: "A postafiók-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal.",
+  denied: "Az engedélyezést megszakítottad, így nem jött létre kapcsolat.",
   state: "A kapcsolódás lejárt vagy megszakadt. Próbáld újra.",
-  no_refresh: "A Google nem adott tartós hozzáférést. Próbáld újra, és engedélyezd a hozzáférést.",
-  scope: "A levelek olvasásához szükséges engedély hiányzik. Próbáld újra, és pipáld be a Gmail-hozzáférést.",
-  exchange: "A Google-kapcsolat létrehozása nem sikerült. Próbáld újra.",
+  no_refresh: "A szolgáltató nem adott tartós hozzáférést. Próbáld újra, és engedélyezd a hozzáférést.",
+  scope: "A levelek olvasásához szükséges engedély hiányzik. Próbáld újra, és engedélyezd a levelek olvasását.",
+  exchange: "A kapcsolat létrehozása nem sikerült. Próbáld újra.",
   save: "A kapcsolat mentése nem sikerült. Próbáld újra.",
 };
 
@@ -90,14 +90,14 @@ function EmailRow({ e }: { e: EmailItem }) {
   );
 }
 
-function ConnectCard() {
+function ConnectCard({ providers }: { providers: MailProvider[] }) {
   return (
     <Card className="p-6 sm:p-8">
       <div className="flex max-w-2xl flex-col gap-4">
         <span className="grid size-11 place-items-center rounded-xl border border-border bg-surface text-muted shadow-float">
           <Mail className="size-5" />
         </span>
-        <h2 className="text-2xl">Kapcsold össze a Gmail-fiókodat</h2>
+        <h2 className="text-2xl">Kapcsold össze a postafiókodat</h2>
         <p className="text-muted">
           Az ügyfeleiddel váltott levelek és a portálokról (ingatlan.com, Jófogás…) érkező érdeklődések maguktól megjelennek itt. Egy kattintással ügyféllé,
           előzménnyé és feladattá alakíthatod őket.
@@ -113,9 +113,13 @@ function ConnectCard() {
             </li>
           ))}
         </ul>
-        <a href="/api/mail/google/connect" className={buttonClasses("primary", "lg", "w-fit")}>
-          <Mail className="size-4" /> Gmail összekapcsolása
-        </a>
+        <div className="flex flex-wrap gap-2">
+          {providers.map((p, i) => (
+            <a key={p} href={connectPaths[p]} className={buttonClasses(i === 0 ? "primary" : "secondary", "lg")}>
+              <Mail className="size-4" /> {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail"} összekapcsolása
+            </a>
+          ))}
+        </div>
       </div>
     </Card>
   );
@@ -125,7 +129,8 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
   const params = await searchParams;
   const user = await getCurrentUser();
   const tab = tabs.find((t) => t.key === params.view) ?? tabs[0];
-  const configured = Boolean(googleConfig()) && isMailCryptoConfigured();
+  const providers = configuredProviders();
+  const configured = providers.length > 0;
   const mailbox = configured ? await getMailbox(user) : null;
   const emails = mailbox ? await listEmails(user, tab.key) : [];
   const error = typeof params.mail_error === "string" ? errors[params.mail_error] : null;
@@ -136,7 +141,7 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
 
       {params.connected === "1" && (
         <p role="status" className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
-          <CheckCircle2 className="size-4" /> A Gmail-fiók összekapcsolva. Az elmúlt 14 nap releváns leveleit most töltjük be.
+          <CheckCircle2 className="size-4" /> A postafiók összekapcsolva. Az elmúlt 14 nap releváns leveleit most töltjük be.
         </p>
       )}
       {error && (
@@ -148,13 +153,13 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
       {!configured ? (
         <div className="flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-soft px-5 py-4 text-sm text-warning">
           <PlugZap className="mt-0.5 size-4 shrink-0" />
-          <p>A Gmail-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal, és beállítjuk.</p>
+          <p>A postafiók-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal, és beállítjuk.</p>
         </div>
       ) : !mailbox ? (
-        <ConnectCard />
+        <ConnectCard providers={providers} />
       ) : (
         <>
-          <MailboxBar email={mailbox.email_address} status={mailbox.status} lastSyncedAt={mailbox.last_synced_at} lastError={mailbox.last_error} />
+          <MailboxBar email={mailbox.email_address} provider={mailbox.provider} status={mailbox.status} lastSyncedAt={mailbox.last_synced_at} lastError={mailbox.last_error} />
 
           <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
             {tabs.map((t) => (

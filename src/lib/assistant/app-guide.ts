@@ -8,7 +8,7 @@ export const appGuide: GuideEntry[] = [
     id: "dashboard",
     screen: "Áttekintés",
     href: "/dashboard",
-    how: "Start screen. 'Mai feladatok' (today's and overdue tasks), 'Javaslatok', recent activity, newest listings and clients. At the top, 'Mi történt, amíg távol voltál' summarises new emails; there each email has a 'Válaszvázlat' (AI reply draft) that can be edited and sent with 'Küldés' once Gmail sending is allowed.",
+    how: "Start screen. 'Mai feladatok' (today's and overdue tasks), 'Javaslatok', recent activity, newest listings and clients. At the top, 'Mi történt, amíg távol voltál' summarises new emails; there each email has a 'Válaszvázlat' (AI reply draft) that can be edited and sent with 'Küldés' once sending from the connected Gmail or Outlook mailbox is allowed.",
   },
   {
     id: "capture",
@@ -40,7 +40,7 @@ export const appGuide: GuideEntry[] = [
     id: "viewings",
     screen: "Megtekintés foglalása",
     href: "/clients",
-    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With Google Calendar connected it also goes into the calendar; for Apple Calendar (iPhone/Mac) or Outlook, subscribe once in Beállítások → Kapcsolatok. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
+    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With a Gmail or Outlook mailbox connected and its calendar allowed, it also goes into that calendar (Google Calendar or the Outlook calendar); for Apple Calendar (iPhone/Mac), subscribe once in Beállítások → Kapcsolatok. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
   },
   {
     id: "matches",
@@ -58,7 +58,7 @@ export const appGuide: GuideEntry[] = [
     id: "inbox",
     screen: "Levelek",
     href: "/inbox",
-    how: "Emails from clients and portal inquiries from the connected Gmail. Tabs 'Feldolgozandó', 'Feldolgozott', 'Elrejtett'. Processing an email works like 'Rögzítés'; 'Elrejtés' hides it. 'Szinkronizálás' fetches new mail; connecting Gmail starts here too.",
+    how: "Emails from clients and portal inquiries from the connected Gmail or Outlook (Microsoft 365) mailbox. Tabs 'Feldolgozandó', 'Feldolgozott', 'Elrejtett'. Processing an email works like 'Rögzítés'; 'Elrejtés' hides it. 'Szinkronizálás' fetches new mail; connecting a mailbox ('Gmail összekapcsolása' or 'Outlook / Microsoft 365 összekapcsolása') starts here too.",
   },
   {
     id: "assistant",
@@ -70,7 +70,7 @@ export const appGuide: GuideEntry[] = [
     id: "settings",
     screen: "Beállítások",
     href: "/settings",
-    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; Gmail and Google Calendar connection, the browser extension, and a calendar subscription link that puts viewings into Apple Calendar on iPhone/Mac, Outlook or other calendar apps ('Apple Naptár, Outlook és más naptárak' → 'Feliratkozási link létrehozása') ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
+    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; the connected mailbox and calendar (Gmail or Outlook), the browser extension, and a calendar subscription link that puts viewings into Apple Calendar on iPhone/Mac, Outlook or other calendar apps ('Apple Naptár, Outlook és más naptárak' → 'Feliratkozási link létrehozása') ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
   },
   { id: "feedback", screen: "Visszajelzés", href: "/dashboard", how: "Report a bug or idea to the Flavio team: 'Visszajelzés' at the bottom of the side menu." },
 ];

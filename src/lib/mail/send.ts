@@ -5,11 +5,13 @@ import { listPropertyOptions } from "@/lib/db/activity";
 import { createClient } from "@/lib/supabase/server";
 import { buildReplyMime, encodeHeader, findPlaceholders, parseRecipients, toBase64Url } from "./compose";
 import { gmail, gmailSend, MailAccessRevoked, MailSendNotAllowed } from "./google";
-import { mailboxWithToken } from "./sync";
+import { outlookSend } from "./microsoft";
+import { withArticle, type MailProvider } from "./provider";
+import { accessEndedMessage, mailboxWithToken } from "./sync";
 
 // Sends a reply the user wrote (usually from an AI draft) through their own
-// Gmail account, in the original thread, and records it in the CRM. Only ever
-// called from an explicit "Küldés" click.
+// Gmail or Outlook account, in the original conversation, and records it in
+// the CRM. Only ever called from an explicit "Küldés" click.
 
 const DAILY_LIMIT = 100;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,6 +37,50 @@ function checkMessage(input: { to: string; subject: string; body: string }): { o
   return { ok: true, to, subject, body };
 }
 
+type Access = NonNullable<Awaited<ReturnType<typeof mailboxWithToken>>>;
+
+/**
+ * Sends through the connected provider. A reply goes into the original's
+ * conversation: Gmail by its Message-ID headers, Outlook by replying to the
+ * stored message. Without a usable original it goes as a new conversation.
+ */
+async function deliver(
+  access: Access,
+  m: { from: string; to: string[]; subject: string; body: string; reply?: { providerMessageId: string; threadId: string | null } },
+): Promise<{ id: string; threadId: string | null }> {
+  if (access.mailbox.provider === "outlook") {
+    return outlookSend(access.token, { to: m.to, subject: m.subject, body: m.body, replyToId: m.reply?.providerMessageId ?? null });
+  }
+  let thread: { inReplyTo: string | null; references: string | null; threadId: string | null } = { inReplyTo: null, references: null, threadId: null };
+  if (m.reply) {
+    try {
+      const meta = await gmail<{ threadId?: string; payload?: { headers?: { name: string; value: string }[] } }>(
+        `messages/${encodeURIComponent(m.reply.providerMessageId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`,
+        access.token,
+      );
+      const h = (name: string) => meta.payload?.headers?.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value ?? null;
+      thread = { inReplyTo: h("Message-ID"), references: h("References"), threadId: meta.threadId ?? m.reply.threadId };
+    } catch (error) {
+      // Missing original (e.g. test data): sent as a new conversation. Lost access still stops the send.
+      if (error instanceof MailAccessRevoked) throw error;
+    }
+  }
+  const mime = buildReplyMime({ from: m.from, to: m.to, subject: m.subject, body: m.body, inReplyTo: thread.inReplyTo, references: thread.references });
+  return gmailSend(access.token, toBase64Url(mime), thread.inReplyTo ? thread.threadId : null);
+}
+
+/** The user's message for a failed send, after marking a lost send permission. */
+async function sendFailure(access: Access, error: unknown): Promise<Fail> {
+  if (error instanceof MailSendNotAllowed) {
+    const supabase = await createClient();
+    await supabase.from("mailboxes").update({ can_send: false }).eq("id", access.mailbox.id);
+    return { ok: false, error: `${withArticle(access.mailbox.provider, "", true)} nem engedélyezte a küldést. Engedélyezd újra.`, needsPermission: true };
+  }
+  if (error instanceof MailAccessRevoked) return { ok: false, error: accessEndedMessage(access.mailbox.provider) };
+  console.error(`${access.mailbox.provider} send failed`, error instanceof Error ? error.message : error);
+  return { ok: false, error: "A küldés nem sikerült. A levél nem ment el, próbáld újra." };
+}
+
 /** The daily limit, then the user's mailbox with a token and the send permission. */
 async function sendingAccess(user: CurrentUser, now: Date) {
   const supabase = await createClient();
@@ -45,20 +91,27 @@ async function sendingAccess(user: CurrentUser, now: Date) {
   try {
     access = await mailboxWithToken(user);
   } catch (error) {
-    if (error instanceof MailAccessRevoked) return { ok: false as const, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-    console.error("gmail access failed", error instanceof Error ? error.message : error);
-    return { ok: false as const, error: "A Gmail most nem érhető el. A levél nem ment el, próbáld újra pár perc múlva." };
+    const provider = (await currentProvider(user)) ?? "gmail";
+    if (error instanceof MailAccessRevoked) return { ok: false as const, error: accessEndedMessage(provider) };
+    console.error("mail access failed", error instanceof Error ? error.message : error);
+    return { ok: false as const, error: `${withArticle(provider, "", true)} most nem érhető el. A levél nem ment el, próbáld újra pár perc múlva.` };
   }
-  if (!access) return { ok: false as const, error: "Nincs összekapcsolt Gmail-fiók. Kapcsold össze a Levelek oldalon." };
-  if (!access.mailbox.can_send) return { ok: false as const, error: "A küldéshez engedélyezd a Gmail-küldést.", needsPermission: true };
+  if (!access) return { ok: false as const, error: "Nincs összekapcsolt postafiók. Kapcsold össze a Levelek oldalon." };
+  if (!access.mailbox.can_send) return { ok: false as const, error: `A küldéshez engedélyezd ${withArticle(access.mailbox.provider, "-küldést")}.`, needsPermission: true };
   return { ok: true as const, access };
+}
+
+async function currentProvider(user: CurrentUser): Promise<MailProvider | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("mailboxes").select("provider").eq("user_id", user.id).eq("organization_id", user.organization.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  return (data?.provider as MailProvider | undefined) ?? null;
 }
 
 export type NewEmailInput = { to: string; subject: string; body: string; clientId: string; propertyId: string | null; followUpDays: number | null; taskTitle: string };
 
 /**
  * Sends a new email (not a reply), e.g. a listing offer, from the user's own
- * Gmail, and records it: the outgoing email, an interaction on the client
+ * Gmail or Outlook, and records it: the outgoing email, an interaction on the client
  * (and listing), and an optional follow-up task.
  */
 export async function sendNewEmail(user: CurrentUser, input: NewEmailInput, now: Date): Promise<{ ok: true; sentAt: string } | Fail> {
@@ -73,15 +126,9 @@ export async function sendNewEmail(user: CurrentUser, input: NewEmailInput, now:
   const from = user.fullName ? `${encodeHeader(user.fullName)} <${access.mailbox.email_address}>` : access.mailbox.email_address;
   let sent;
   try {
-    sent = await gmailSend(access.token, toBase64Url(buildReplyMime({ from, to: msg.to, subject: msg.subject, body: msg.body })), null);
+    sent = await deliver(access, { from, to: msg.to, subject: msg.subject, body: msg.body });
   } catch (error) {
-    if (error instanceof MailSendNotAllowed) {
-      await supabase.from("mailboxes").update({ can_send: false }).eq("id", access.mailbox.id);
-      return { ok: false, error: "A Gmail nem engedélyezte a küldést. Engedélyezd újra.", needsPermission: true };
-    }
-    if (error instanceof MailAccessRevoked) return { ok: false, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-    console.error("gmail send failed", error instanceof Error ? error.message : error);
-    return { ok: false, error: "A küldés nem sikerült. A levél nem ment el, próbáld újra." };
+    return sendFailure(access, error);
   }
 
   // Sent: record it, but never report failure for bookkeeping hiccups.
@@ -151,32 +198,12 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
   const { access } = gate;
   if (access.mailbox.id !== original.mailbox_id) return { ok: false, error: "Ez a levél nem a jelenlegi postafiókodból jött." };
 
-  // Threading: the original's Message-ID. Missing (e.g. test data) → sent as a new conversation.
-  let thread: { inReplyTo: string | null; references: string | null; threadId: string | null } = { inReplyTo: null, references: null, threadId: null };
-  try {
-    const meta = await gmail<{ threadId?: string; payload?: { headers?: { name: string; value: string }[] } }>(
-      `messages/${encodeURIComponent(original.provider_message_id)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`,
-      access.token,
-    );
-    const h = (name: string) => meta.payload?.headers?.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value ?? null;
-    thread = { inReplyTo: h("Message-ID"), references: h("References"), threadId: meta.threadId ?? original.thread_id };
-  } catch (error) {
-    if (error instanceof MailAccessRevoked) return { ok: false, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-  }
-
   const from = user.fullName ? `${encodeHeader(user.fullName)} <${access.mailbox.email_address}>` : access.mailbox.email_address;
-  const mime = buildReplyMime({ from, to, subject, body, inReplyTo: thread.inReplyTo, references: thread.references });
   let sent;
   try {
-    sent = await gmailSend(access.token, toBase64Url(mime), thread.inReplyTo ? thread.threadId : null);
+    sent = await deliver(access, { from, to, subject, body, reply: { providerMessageId: original.provider_message_id, threadId: original.thread_id } });
   } catch (error) {
-    if (error instanceof MailSendNotAllowed) {
-      await supabase.from("mailboxes").update({ can_send: false }).eq("id", access.mailbox.id);
-      return { ok: false, error: "A Gmail nem engedélyezte a küldést. Engedélyezd újra.", needsPermission: true };
-    }
-    if (error instanceof MailAccessRevoked) return { ok: false, error: "A Gmail-hozzáférés megszűnt. Kapcsold össze újra a Levelek oldalon." };
-    console.error("gmail send failed", error instanceof Error ? error.message : error);
-    return { ok: false, error: "A küldés nem sikerült. A levél nem ment el, próbáld újra." };
+    return sendFailure(access, error);
   }
 
   // From here the email is sent: record it, but never report failure for bookkeeping hiccups.
