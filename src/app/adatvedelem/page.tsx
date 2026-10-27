@@ -8,8 +8,8 @@ import { Logo } from "@/components/app-shell/logo";
 // what the code does; the controller's details come from the environment.
 
 export const metadata: Metadata = {
-  title: { absolute: "Adatkezelési tájékoztató – Ingatlan CRM" },
-  description: "Milyen adatokat kezel az Ingatlan CRM és az importáló böngészőbővítmény, mire használja, és kinek adja át.",
+  title: { absolute: "Adatkezelési tájékoztató – Flavio" },
+  description: "Milyen adatokat kezel a Flavio és az importáló böngészőbővítmény, mire használja, és kinek adja át.",
 };
 
 const UPDATED = "2026. október 27.";
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
 
         <Section title="Kié az adat, ki kezeli?">
           <p>
-            Az Ingatlan CRM ingatlanosoknak készült ügyfélkezelő. Az adatkezelő: {controller}
+            A Flavio ingatlanosoknak készült ügyfélkezelő (CRM). Az adatkezelő: {controller}
             {contact && (
               <>
                 , e-mail:{" "}
@@ -70,10 +70,10 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="Google-fiók (Gmail és Naptár)">
-          <p>Az összekapcsolás önkéntes, és bármikor megszüntethető a CRM Levelek oldalán (Leválasztás) vagy a Google-fiók biztonsági oldalán. Engedélyenként:</p>
+          <p>Az összekapcsolás önkéntes, és bármikor megszüntethető a Flavio Levelek oldalán (Leválasztás) vagy a Google-fiók biztonsági oldalán. Engedélyenként:</p>
           <ul className="list-disc pl-5">
             <li>
-              <b>E-mailek olvasása:</b> a beérkező levelek beolvasása, hogy a CRM az ügyfelekhez rendelje őket, összefoglalja, és válaszvázlatot írjon.
+              <b>E-mailek olvasása:</b> a beérkező levelek beolvasása, hogy a Flavio az ügyfelekhez rendelje őket, összefoglalja, és válaszvázlatot írjon.
             </li>
             <li>
               <b>E-mail küldése:</b> csak akkor küld levelet, amikor az ingatlanos a CRM-ben a küldés gombra nyom.
@@ -93,13 +93,13 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="Az importáló böngészőbővítmény">
-          <p>A bővítmény az ingatlanos saját hirdetéseit hozza át egy hirdetési portálról a CRM-be.</p>
+          <p>A bővítmény az ingatlanos saját hirdetéseit hozza át egy hirdetési portálról a Flavióba.</p>
           <ul className="list-disc pl-5">
             <li>
               Csak akkor olvas egy oldalt, amikor az ingatlanos rákattint a bővítményre, vagy amikor a CRM-ből importálásra nyit meg egy hirdetést. A háttérben,
               ütemezetten vagy más oldalakon nem fut.
             </li>
-            <li>Az oldal szövegét, strukturált adatait, a fotók és videók linkjeit olvassa ki, és közvetlenül a CRM importáló oldalának adja át.</li>
+            <li>Az oldal szövegét, strukturált adatait, a fotók és videók linkjeit olvassa ki, és közvetlenül a Flavio importáló oldalának adja át.</li>
             <li>
               A fotókat csak azokról a képszerverekről tölti le, amelyekhez az ingatlanos engedélyt adott, és a CRM lapjának saját tárolójában tartja őket,
               amíg az ingatlanos el nem menti a hirdetést.
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
         <Section title="Kik dolgoznak az adatokkal?">
           <ul className="list-disc pl-5">
             <li>Supabase: adatbázis, fájltárolás és bejelentkezés.</li>
-            <li>A tárhelyszolgáltató, ahol a CRM fut.</li>
+            <li>A tárhelyszolgáltató, ahol a Flavio fut.</li>
             <li>
               AI-szolgáltató (a beállítástól függően pl. Anthropic vagy egy OpenAI-kompatibilis szolgáltató): az ingatlanos által indított AI-funkciókhoz –
               kitöltés, összefoglaló, válaszvázlat, diktálás – megkapja az ehhez szükséges szöveget. Az eredményt az ingatlanos ellenőrzi, mielőtt bármi mentődne

@@ -10,12 +10,12 @@ every agent then clicks **Levelek → Gmail összekapcsolása**.
 
 1. Open <https://console.cloud.google.com/> and sign in with the Google account
    that will own the app (for example the agency's admin account).
-2. Create a project, e.g. **Ingatlan CRM (dev)**.
+2. Create a project, e.g. **Flavio (dev)**.
 3. **APIs & Services → Library**: search for **Gmail API** and click **Enable**.
 
 ## 2. Consent screen (Google Auth Platform)
 
-1. **Google Auth Platform → Branding**: app name *Ingatlan CRM*, your support
+1. **Google Auth Platform → Branding**: app name *Flavio*, your support
    email, developer contact email.
 2. **Audience**: user type **External**, publishing status **Testing**.
    Under **Test users**, add every Gmail address that will connect during the

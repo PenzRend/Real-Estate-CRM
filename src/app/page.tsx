@@ -24,7 +24,7 @@ import { cn } from "@/lib/cn";
 // Every claim here describes a working feature; unfinished ones say "Hamarosan".
 
 export const metadata: Metadata = {
-  title: { absolute: "Ingatlan CRM – AI-asszisztens ingatlanosoknak" },
+  title: { absolute: "Flavio – AI-asszisztens ingatlanosoknak" },
   description:
     "Mondd el a hívást, az AI kitölti az ügyféladatot. Párosítás indoklással, utánkövetés, Gmail-integráció és forrásokkal válaszoló AI-asszisztens – magyarul.",
 };
@@ -274,7 +274,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="rounded-3xl bg-primary p-7 text-white">
-              <p className="text-sm font-medium text-white/60">Ingatlan CRM-mel</p>
+              <p className="text-sm font-medium text-white/60">Flavióval</p>
               <ul className="mt-4 grid gap-3 text-[15px]">
                 {[
                   "Egy hely minden ügyfélnek, ingatlannak, hívásnak",
@@ -469,7 +469,7 @@ export default function LandingPage() {
           <Link href="/login" className="hover:text-ink">Belépés</Link>
           <Link href="/adatvedelem" className="hover:text-ink">Adatvédelem</Link>
         </nav>
-        <p>© Ingatlan CRM</p>
+        <p>© Flavio</p>
       </footer>
     </div>
   );

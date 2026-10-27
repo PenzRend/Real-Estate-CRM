@@ -28,7 +28,7 @@
   badge.style.cssText =
     "position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;padding:10px 14px;border-radius:12px;background:#1b1b1b;color:#fff;font:13px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25)";
   const show = (text) => {
-    badge.textContent = `Ingatlan CRM: ${text}`;
+    badge.textContent = `Flavio: ${text}`;
     if (!badge.isConnected) document.documentElement.appendChild(badge);
   };
 
@@ -52,7 +52,7 @@
     chrome.runtime
       .sendMessage({ type: "open-crm", fragment: globalThis.__crmEncode(payload), source: payload.url, images: payload.images })
       .then(() => {
-        show(`elküldve a CRM-nek (${payload.images.length} fotó). Az ellenőrzés új lapon nyílik.`);
+        show(`elküldve a Flaviónak (${payload.images.length} fotó). Az ellenőrzés új lapon nyílik.`);
         setTimeout(() => badge.remove(), 6000);
       })
       .catch(() => show("nem sikerült elküldeni. Töltsd újra a bővítményt a chrome://extensions oldalon."));

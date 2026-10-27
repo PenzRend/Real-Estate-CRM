@@ -21,7 +21,7 @@ listing also works in Edge.
 npm run extension:pack -- https://app.example.hu
 ```
 
-This writes `dist/ingatlan-crm-extension-<version>.zip`, with the manifest at
+This writes `dist/flavio-extension-<version>.zip`, with the manifest at
 the zip root and the CRM address built in. For each new upload, raise
 `version` in `extension/manifest.json` first.
 
@@ -29,14 +29,13 @@ the zip root and the CRM address built in. For each new upload, raise
 
 **Store listing**
 
-- Name: `Ingatlan CRM – Importálás` (from the manifest; rename it if the CRM
-  gets a new name).
+- Name: `Flavio – Importálás` (from the manifest).
 - Short description (max. 132 characters): `Saját hirdetéseid átvétele az
-  Ingatlan CRM-be egy kattintással – adatok, fotók, videólinkek –, ellenőrzés
+  Flavióba egy kattintással – adatok, fotók, videólinkek –, ellenőrzés
   után.`
 - Detailed description:
 
-  > Az Ingatlan CRM importáló bővítménye a saját vagy az irodád hirdetéseit
+  > A Flavio importáló bővítménye a saját vagy az irodád hirdetéseit
   > hozza át egy hirdetési portálról a CRM-be.
   >
   > • Egy hirdetés: nyisd meg, kattints a bővítményre, és a CRM megnyitja az
@@ -49,7 +48,7 @@ the zip root and the CRM address built in. For each new upload, raise
   > CRM importálásra nyit meg egy hirdetést. Nem fut a háttérben, nem gyűjt
   > böngészési előzményt, és csak a te CRM-ednek küld adatot.
   >
-  > Használatához Ingatlan CRM-fiók kell.
+  > Használatához Flavio-fiók kell.
 
 - Category: Workflow & Planning (or Productivity). Language: Hungarian.
 - Icon: `extension/icons/icon128.png`.
@@ -61,7 +60,7 @@ the zip root and the CRM address built in. For each new upload, raise
 **Privacy practices**
 
 - Single purpose: `Brings the user's own property listings from a listing
-  portal into their Ingatlan CRM account for review and saving.`
+  portal into their Flavio account for review and saving.`
 - Permission justifications:
   - `activeTab`: reads the listing page the user is on, only when they click
     the extension.

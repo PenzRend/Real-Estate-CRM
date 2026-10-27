@@ -4,6 +4,9 @@ Branch `feat/mvp-foundation`.
 
 ## Done
 
+- Renamed to **Flavio** (domain flavio.hu): app title, logo, landing page,
+  shared listing page, privacy policy, and the extension (name, popup,
+  badge; version 0.3.0; download folder `flavio-bovitmeny`).
 - Foundation, design, Supabase auth (commit `e4f6ce1`).
 - Client management: create, list with search (accent-insensitive name/email,
   phone digits) and filters (status, type, follow-up, budget, location,

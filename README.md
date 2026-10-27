@@ -1,4 +1,4 @@
-# Ingatlan CRM
+# Flavio
 
 AI-assisted CRM for Hungarian real estate agents. Next.js 16 + Supabase (Postgres, Auth, RLS).
 

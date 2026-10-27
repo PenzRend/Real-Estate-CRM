@@ -1,4 +1,4 @@
-# Ingatlan CRM – MVP terv / MVP plan
+# Flavio – MVP terv / MVP plan
 
 Working document for the AI-powered real-estate CRM for Hungarian agents.
 Code, identifiers and this document are in English; the UI is Hungarian.

@@ -198,7 +198,7 @@ async function SharedListingContent({ params }: Pick<PageProps<"/l/[token]">, "p
       </main>
 
       <footer className="mx-auto mt-16 max-w-6xl border-t border-border px-4 py-6 text-xs text-subtle sm:px-6">
-        A hirdetés adatai tájékoztató jellegűek. · Ingatlan CRM
+        A hirdetés adatai tájékoztató jellegűek. · Flavio
       </footer>
 
       {/* Phones: calling or writing is always one tap away. */}

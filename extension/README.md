@@ -1,4 +1,4 @@
-# Ingatlan CRM – Importálás (Chrome extension)
+# Flavio – Importálás (Chrome extension)
 
 Brings your own listings from a property portal into the CRM in one click,
 through the CRM's review screen. Nothing is saved until you press

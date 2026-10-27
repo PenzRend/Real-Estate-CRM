@@ -59,8 +59,8 @@ describe("extension package", () => {
 
   it("puts every file in one folder", () => {
     const text = new TextDecoder().decode(extensionZip(files, "https://crm.example.hu"));
-    expect(text).toContain("ingatlan-crm-bovitmeny/manifest.json");
-    expect(text).toContain("ingatlan-crm-bovitmeny/popup.js");
+    expect(text).toContain("flavio-bovitmeny/manifest.json");
+    expect(text).toContain("flavio-bovitmeny/popup.js");
   });
 
   it("passes binary files through untouched", () => {
@@ -69,7 +69,7 @@ describe("extension package", () => {
 
   it("puts files at the root for a store upload", () => {
     const text = new TextDecoder().decode(extensionZip(files, "https://crm.example.hu", { folder: null }));
-    expect(text).not.toContain("ingatlan-crm-bovitmeny/");
+    expect(text).not.toContain("flavio-bovitmeny/");
     expect(text).toContain("manifest.json");
   });
 });

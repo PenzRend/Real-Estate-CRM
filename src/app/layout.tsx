@@ -8,7 +8,7 @@ const onest = Onest({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Ingatlan CRM", template: "%s · Ingatlan CRM" },
+  title: { default: "Flavio", template: "%s · Flavio" },
   description: "Ügyfelek, ingatlanok és utánkövetés egy helyen, AI-támogatással.",
 };
 

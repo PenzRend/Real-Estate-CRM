@@ -5,7 +5,7 @@ import { zip } from "./zip.ts";
 // sends imports there, with no settings to change after install. Used by the
 // download on the import page and by `npm run extension:pack` for the stores.
 
-export const EXTENSION_FOLDER = "ingatlan-crm-bovitmeny";
+export const EXTENSION_FOLDER = "flavio-bovitmeny";
 export const EXTENSION_FILES = [
   "manifest.json",
   "background.js",

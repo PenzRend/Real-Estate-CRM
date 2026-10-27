@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Ingatlan CRM – Importálás",
-  "description": "Saját hirdetéseid átvétele az Ingatlan CRM-be egy kattintással – adatok, fotók, videólinkek –, ellenőrzés után.",
-  "version": "0.2.3",
+  "name": "Flavio – Importálás",
+  "description": "Saját hirdetéseid átvétele a Flavióba egy kattintással – adatok, fotók, videólinkek –, ellenőrzés után.",
+  "version": "0.3.0",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -10,7 +10,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Importálás a CRM-be",
+    "default_title": "Importálás a Flavióba",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

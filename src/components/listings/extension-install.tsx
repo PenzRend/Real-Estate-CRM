@@ -80,7 +80,7 @@ function ManualSteps({ browser }: { browser: "chrome" | "edge" }) {
           Nyisd meg új lapon: <CopyAddress address={page} /> és kapcsold be jobbra fent a <b>Fejlesztői mód</b>ot.
         </li>
         <li>
-          Kattints a <b>Kicsomagolt bővítmény betöltése</b> gombra, és válaszd ki a kibontott <b>ingatlan-crm-bovitmeny</b> mappát.
+          Kattints a <b>Kicsomagolt bővítmény betöltése</b> gombra, és válaszd ki a kibontott <b>flavio-bovitmeny</b> mappát.
         </li>
       </ol>
       <p className="text-xs text-muted">Ez az oldal magától észreveszi, ha kész – nem kell semmit beállítanod.</p>
@@ -115,7 +115,7 @@ export function ExtensionInstall({ installed, links }: { installed: boolean; lin
         <a href={links.safari} target="_blank" rel="noopener noreferrer" className={linkButton} style={{ alignSelf: "flex-start" }}>
           <Puzzle className="size-4" /> Letöltés az App Store-ból
         </a>
-        <p className="text-xs text-muted">Telepítés után: Safari → Beállítások → Bővítmények → kapcsold be az „Ingatlan CRM – Importálás”-t.</p>
+        <p className="text-xs text-muted">Telepítés után: Safari → Beállítások → Bővítmények → kapcsold be az „Flavio – Importálás”-t.</p>
       </>
     );
   } else if (browser === "safari" || browser === "ios") {

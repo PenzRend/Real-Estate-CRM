@@ -21,21 +21,21 @@ function show(result) {
   $("import").hidden = false;
   $("other").hidden = false;
   if (result.kind === "listing") {
-    $("status").textContent = "Hirdetés ezen az oldalon. A CRM kitölti az adatlapot, te ellenőrzöd és mented.";
+    $("status").textContent = "Hirdetés ezen az oldalon. A Flavio kitölti az adatlapot, te ellenőrzöd és mented.";
     const title = result.text.split("\n").find((l) => l.trim().length > 10)?.slice(0, 120) ?? result.url;
     const extras = [result.images.length ? `${result.images.length} fotó` : null, result.videos.length ? `${result.videos.length} videólink` : null].filter(Boolean).join(", ");
     found.textContent = extras ? `${title} – ${extras}` : title;
     $("own-text").textContent = "Ez a saját vagy az irodám hirdetése.";
-    $("import").textContent = "Importálás a CRM-be";
+    $("import").textContent = "Importálás a Flavióba";
     $("other").textContent = "Inkább az oldalon lévő hirdetések listája";
   } else {
     const n = result.listings.length;
     $("status").textContent = n
-      ? "Ezen az oldalon több hirdetés van. A CRM-ben látod, melyik van már bent, és egyenként importálhatod őket."
+      ? "Ezen az oldalon több hirdetés van. A Flavióban látod, melyik van már bent, és egyenként importálhatod őket."
       : "Ezen az oldalon nem találtam hirdetésre mutató linket.";
     found.textContent = `${n} hirdetés`;
     $("own-text").textContent = "Ezek a saját vagy az irodám hirdetései.";
-    $("import").textContent = "Lista megnyitása a CRM-ben";
+    $("import").textContent = "Lista megnyitása a Flavióban";
     $("other").textContent = "Inkább ezt az oldalt importálom egy hirdetésként";
   }
   update();
@@ -94,7 +94,7 @@ $("import").addEventListener("click", async () => {
     const [{ result: fragment }] = await chrome.scripting.executeScript({ target: { tabId }, func: (p) => globalThis.__crmEncode(p), args: [collected] });
     await chrome.runtime.sendMessage({ type: "open-crm", fragment, source: collected.url, images: collected.kind === "listing" ? collected.images : [] });
   } catch {
-    $("status").innerHTML = '<span class="error">Nem sikerült elküldeni a CRM-nek. Töltsd újra a bővítményt a chrome://extensions oldalon.</span>';
+    $("status").innerHTML = '<span class="error">Nem sikerült elküldeni a Flaviónak. Töltsd újra a bővítményt a chrome://extensions oldalon.</span>';
     $("import").disabled = false;
     return;
   }
