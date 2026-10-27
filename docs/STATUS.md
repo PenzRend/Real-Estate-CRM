@@ -267,6 +267,15 @@ Branch `feat/mvp-foundation`.
   Checked signed out in the browser (valid VCALENDAR, CRLF, unknown → 404);
   not yet subscribed from a real iPhone (needs the public URL once live).
 
+- GDPR erasure: "Végleges törlés" on an archived client (owner/admin only,
+  type the name to confirm). `erase_client` (security definer) deletes the
+  client (cascades: interactions, tasks, viewings, matches, listing links;
+  owned listings keep, owner nulled) and every member's copy of emails to or
+  from them; the user's own Google Calendar events of upcoming viewings are
+  removed after the erasure. Migration `20261027200000_erase_client.sql` must
+  be applied by hand in the Supabase SQL editor (the MCP declines migrations
+  with DELETE); until then the dialog says erasure is not switched on.
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

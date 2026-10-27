@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ClientDetailView } from "@/components/crm/client-detail-view";
+import { EraseClientButton } from "@/components/crm/erase-client";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -39,11 +40,14 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
   };
 
   const archiveAction = client.archivedAt ? (
-    <form action={restoreClientAction.bind(null, client.id)}>
-      <FormSubmit className={buttonClasses("secondary")}>
-        <ArchiveRestore /> Visszaállítás
-      </FormSubmit>
-    </form>
+    <>
+      {user.organization.role !== "member" && <EraseClientButton clientId={client.id} name={client.fullName} />}
+      <form action={restoreClientAction.bind(null, client.id)}>
+        <FormSubmit className={buttonClasses("secondary")}>
+          <ArchiveRestore /> Visszaállítás
+        </FormSubmit>
+      </form>
+    </>
   ) : (
     <ConfirmAction
       action={archiveClientAction.bind(null, client.id)}

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { removeCalendarEvents, upcomingCalendarEvents } from "@/lib/viewings/data";
 import { parseClientForm, type ClientFieldErrors } from "@/lib/validation/client";
 
 export type ClientFormState = {
@@ -89,4 +90,39 @@ export async function archiveClientAction(id: string) {
 export async function restoreClientAction(id: string) {
   await setArchived(id, false);
   redirect(`/clients/${id}`);
+}
+
+export type EraseResult = { ok: false; error: string };
+
+/**
+ * GDPR erasure: the client and their conversations, tasks, viewings and
+ * emails leave Flavio for good. Owner and admins only, archived clients only
+ * (two deliberate steps), and the agent types the name to confirm.
+ */
+export async function eraseClientAction(id: string, confirmName: string): Promise<EraseResult> {
+  const user = await getCurrentUser();
+  if (user.organization.role === "member") return { ok: false, error: "Végleges törlést csak a tulajdonos vagy egy admin végezhet." };
+  const supabase = await createClient();
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, full_name, archived_at")
+    .eq("id", id)
+    .eq("organization_id", user.organization.id)
+    .maybeSingle();
+  if (!client) return { ok: false, error: "Az ügyfél nem található." };
+  if (!client.archived_at) return { ok: false, error: "Előbb archiváld az ügyfelet." };
+  if (confirmName.trim().toLowerCase() !== client.full_name.trim().toLowerCase()) return { ok: false, error: "A beírt név nem egyezik az ügyfél nevével." };
+
+  // Read the Google Calendar events now: once the viewings are erased, their ids are gone.
+  const events = await upcomingCalendarEvents(user, id, new Date());
+
+  const { error } = await supabase.rpc("erase_client", { p_client_id: id });
+  if (error) {
+    console.error("erase client", error.code, error.message);
+    // PGRST202: the database function is not installed yet.
+    if (error.code === "PGRST202") return { ok: false, error: "A végleges törlés még nincs bekapcsolva az adatbázisban. Szólj nekünk." };
+    return { ok: false, error: "A törlés nem sikerült. Próbáld újra." };
+  }
+  await removeCalendarEvents(user, events);
+  redirect("/clients?erased=1");
 }

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ClientFilterBar, ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
@@ -41,7 +41,8 @@ function toQuery(f: ClientFilters): ClientListFilters {
 }
 
 async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "searchParams">) {
-  const filters = readFilters(await searchParams);
+  const params = await searchParams;
+  const filters = readFilters(params);
   const user = await getCurrentUser();
   const now = new Date();
   const { clients, total } = await listClients(user, toQuery(filters), now);
@@ -59,6 +60,11 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
           </ButtonLink>
         }
       />
+      {params.erased === "1" && (
+        <p role="status" className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
+          <CheckCircle2 className="size-4 shrink-0" /> Az ügyfél és minden adata véglegesen törölve.
+        </p>
+      )}
       <ClientFilterBar filters={filters} />
       {total > 0 && (
         <p className="-mb-3 text-sm text-muted" aria-live="polite">

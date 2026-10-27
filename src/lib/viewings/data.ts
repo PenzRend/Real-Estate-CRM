@@ -407,6 +407,29 @@ export async function cancelViewing(user: CurrentUser, id: string): Promise<{ ok
   }
 }
 
+/** The user's Google Calendar events of upcoming viewings, read before those viewings are erased. */
+export async function upcomingCalendarEvents(user: CurrentUser, clientId: string, now: Date) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("viewings")
+    .select("calendar_event_id")
+    .eq("client_id", clientId)
+    .eq("organization_id", user.organization.id)
+    .eq("calendar_user_id", user.id)
+    .eq("status", "scheduled")
+    .gt("starts_at", now.toISOString())
+    .not("calendar_event_id", "is", null);
+  return (data ?? []).map((v) => v.calendar_event_id as string);
+}
+
+/** Removes calendar events after their viewings were erased; best effort, the erasure already happened. */
+export async function removeCalendarEvents(user: CurrentUser, eventIds: string[]) {
+  if (!eventIds.length) return;
+  const access = await calendarAccess(user);
+  if ("reason" in access) return;
+  for (const id of eventIds) await cancelEvent(access.token, id).catch(() => null);
+}
+
 // ---------------------------------------------------------------------------
 // Feedback
 // ---------------------------------------------------------------------------
