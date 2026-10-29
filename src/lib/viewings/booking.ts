@@ -3,7 +3,7 @@ import type { MailProvider } from "@/lib/mail/provider";
 import type { CurrentUser } from "@/lib/auth";
 import { findMentionedProperty } from "@/lib/away/logic";
 import type { Option } from "@/lib/db/activity";
-import { getMailbox } from "@/lib/mail/sync";
+import { listMailboxes } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
 import { cleanProposedTimes, defaultSlot } from "./logic";
 
@@ -34,8 +34,8 @@ type AiViewing = { requested?: boolean; times?: unknown; name?: unknown; phone?:
 export async function prepareBooking(user: CurrentUser, p: { clientId?: string | null; propertyId?: string | null; emailId?: string | null }, now: Date): Promise<BookingPrep> {
   const supabase = await createClient();
   const org = user.organization.id;
-  const [mailbox, propertyRows, clients, email] = await Promise.all([
-    getMailbox(user),
+  const [mailboxes, propertyRows, clients, email] = await Promise.all([
+    listMailboxes(user),
     supabase
       .from("properties")
       .select("id, title, city, district, address, reference_number, status")
@@ -98,6 +98,9 @@ export async function prepareBooking(user: CurrentUser, p: { clientId?: string |
         }
       : null;
 
+  // The calendar new events go in: one that has the permission, else a Google or Outlook account that can be asked for it.
+  const usable = mailboxes.filter((m) => m.status !== "revoked" && m.provider !== "imap");
+  const mailbox = usable.find((m) => m.can_calendar) ?? usable[0] ?? null;
   return {
     client: client ? { id: client.id, name: client.full_name, email: client.email } : null,
     inquirer: inquirer && (inquirer.name || inquirer.email) ? { ...inquirer, name: inquirer.name } : null,
@@ -107,8 +110,8 @@ export async function prepareBooking(user: CurrentUser, p: { clientId?: string |
     times: proposed.length ? proposed : [defaultSlot(now)],
     timesFromEmail: proposed.length > 0,
     calendar: {
-      connected: Boolean(mailbox && mailbox.status !== "revoked"),
-      allowed: Boolean(mailbox && mailbox.status !== "revoked" && mailbox.can_calendar),
+      connected: Boolean(mailbox),
+      allowed: Boolean(mailbox?.can_calendar),
       email: mailbox?.email_address ?? null,
       provider: mailbox?.provider ?? null,
     },

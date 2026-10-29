@@ -6,7 +6,7 @@ import { aiLimitMessage, logAiUsage } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
 import { generateDraft, markVisit, type AwayDraft } from "@/lib/away/data";
 import { sendReply, type SendResult } from "@/lib/mail/send";
-import { getMailbox, syncMailbox } from "@/lib/mail/sync";
+import { syncMailboxes } from "@/lib/mail/sync";
 
 /** Called once the dashboard is on screen, so the next "away" window starts here. */
 export async function markVisitAction() {
@@ -19,11 +19,9 @@ const STALE_MS = 5 * 60_000;
 /** Fetches new mail when the last sync is older than a few minutes. Returns how many emails were stored. */
 export async function syncIfStaleAction(): Promise<number> {
   const user = await getCurrentUser();
-  const mailbox = await getMailbox(user);
-  if (!mailbox || mailbox.status === "revoked") return 0;
-  if (mailbox.last_synced_at && Date.now() - new Date(mailbox.last_synced_at).getTime() < STALE_MS) return 0;
-  const r = await syncMailbox(user);
-  return r.ok ? r.stored : 0;
+  const stale = (m: { last_synced_at: string | null }) => !m.last_synced_at || Date.now() - new Date(m.last_synced_at).getTime() >= STALE_MS;
+  const r = await syncMailboxes(user, stale);
+  return r.stored;
 }
 
 export type DraftActionResult = { ok: true; draft: AwayDraft } | { ok: false; error: string };

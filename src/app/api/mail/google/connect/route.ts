@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { googleAuthUrl, googleConfig, safeNext } from "@/lib/mail/google";
+import { listMailboxes } from "@/lib/mail/sync";
 import { appOrigin } from "@/lib/origin";
 
 const OAUTH_COOKIE = "mail_oauth";
@@ -10,10 +11,11 @@ const OAUTH_COOKIE = "mail_oauth";
 /**
  * Starts "Connect Gmail": PKCE + state in a short-lived, http-only cookie.
  * `?send=1` also asks for the send permission, `?calendar=1` for the
- * Calendar permission (each granted on top of reading).
+ * Calendar permission (each granted on top of reading); `?mailbox=<id>` asks
+ * them for that connected Gmail account.
  */
 export async function GET(request: NextRequest) {
-  await getCurrentUser();
+  const user = await getCurrentUser();
   // Google needs the exact public address (https behind the proxy), so not the request's own URL.
   const origin = await appOrigin();
   if (!googleConfig() || !isMailCryptoConfigured()) {
@@ -27,8 +29,10 @@ export async function GET(request: NextRequest) {
   const send = request.nextUrl.searchParams.get("send") === "1";
   const calendar = request.nextUrl.searchParams.get("calendar") === "1";
   const next = safeNext(request.nextUrl.searchParams.get("next"));
+  const mailboxId = request.nextUrl.searchParams.get("mailbox");
+  const existing = mailboxId ? (await listMailboxes(user).catch(() => [])).find((m) => m.id === mailboxId && m.provider === "gmail") : undefined;
   const response = NextResponse.redirect(
-    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge, send, calendar }),
+    googleAuthUrl({ redirectUri: `${origin}/api/mail/google/callback`, state, codeChallenge: challenge, send, calendar, loginHint: existing?.email_address ?? null }),
   );
   response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, send, calendar, next }), {
     httpOnly: true,

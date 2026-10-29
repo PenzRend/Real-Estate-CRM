@@ -1,5 +1,5 @@
 // Building an outgoing reply: checks that run before anything is sent, and
-// the MIME message Gmail expects. Pure functions, no I/O.
+// the MIME message Gmail and SMTP servers expect. Pure functions, no I/O.
 
 /** Square-bracket gaps the AI left for the agent, e.g. "[időpont]". */
 export function findPlaceholders(text: string): string[] {
@@ -34,8 +34,13 @@ export function buildReplyMime(m: {
   body: string;
   inReplyTo?: string | null;
   references?: string | null;
+  /** Set when sending over SMTP; Gmail adds its own. */
+  messageId?: string | null;
+  date?: Date | null;
 }): string {
   const headers = [
+    ...(m.date ? [`Date: ${m.date.toUTCString().replace("GMT", "+0000")}`] : []),
+    ...(m.messageId && MESSAGE_ID.test(m.messageId) ? [`Message-ID: ${m.messageId}`] : []),
     `From: ${m.from}`,
     `To: ${m.to.join(", ")}`,
     `Subject: ${encodeHeader(m.subject)}`,

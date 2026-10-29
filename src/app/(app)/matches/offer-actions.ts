@@ -8,7 +8,7 @@ import { aiLimitMessage, logAiUsage } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
 import { insertTasks } from "@/lib/db/activity";
 import { sendNewEmail } from "@/lib/mail/send";
-import { getMailbox } from "@/lib/mail/sync";
+import { listMailboxes } from "@/lib/mail/sync";
 import { draftOffer } from "@/lib/offers/draft";
 import { ensureShare } from "@/lib/shares/data";
 import { createClient } from "@/lib/supabase/server";
@@ -25,10 +25,12 @@ export type OfferPrep =
       link: string;
       clientName: string;
       propertyTitle: string;
-      /** A mailbox is connected; canSend: it may send from here. */
-      mailbox: { email: string; provider: MailProvider; canSend: boolean } | null;
+      /** The agent's usable mailboxes, the default one first; canSend: it may send from here. */
+      senders: Sender[];
     }
   | { ok: false; error: string };
+
+export type Sender = { id: string; email: string; provider: MailProvider; canSend: boolean };
 
 async function names(propertyId: string, clientId: string) {
   const supabase = await createClient();
@@ -46,7 +48,7 @@ export async function prepareOfferAction(propertyId: string, clientId: string): 
   const limit = await aiLimitMessage(user);
   if (limit) return { ok: false, error: limit };
   try {
-    const [share, n, mailbox] = await Promise.all([ensureShare(user, propertyId), names(propertyId, clientId), getMailbox(user)]);
+    const [share, n, mailboxes] = await Promise.all([ensureShare(user, propertyId), names(propertyId, clientId), listMailboxes(user)]);
     const draft = await draftOffer(user, propertyId, clientId, share.url, new Date());
     await logAiUsage(user, { status: "success", operation: "next_actions", model: draft.model, inputTokens: draft.inputTokens, outputTokens: draft.outputTokens });
     return {
@@ -57,7 +59,7 @@ export async function prepareOfferAction(propertyId: string, clientId: string): 
       link: share.url,
       clientName: n.clientName,
       propertyTitle: n.propertyTitle,
-      mailbox: mailbox && mailbox.status !== "revoked" ? { email: mailbox.email_address, provider: mailbox.provider, canSend: mailbox.can_send } : null,
+      senders: mailboxes.filter((m) => m.status !== "revoked").map((m) => ({ id: m.id, email: m.email_address, provider: m.provider, canSend: m.can_send })),
     };
   } catch (error) {
     if (error instanceof AiError) {
@@ -77,9 +79,9 @@ async function markOffered(organizationId: string, propertyId: string, clientId:
   if (error) console.error("mark offered failed", error.code);
 }
 
-const sendSchema = z.object({ to: z.string().max(2000), subject: z.string().max(1000), body: z.string().max(20_000) });
+const sendSchema = z.object({ to: z.string().max(2000), subject: z.string().max(1000), body: z.string().max(20_000), mailboxId: z.uuid().nullish() });
 
-/** Sends the reviewed offer from the agent's Gmail; logs it and sets a follow-up. */
+/** Sends the reviewed offer from one of the agent's mailboxes; logs it and sets a follow-up. */
 export async function sendOfferAction(propertyId: string, clientId: string, input: unknown) {
   if (!UUID.test(propertyId) || !UUID.test(clientId)) return { ok: false as const, error: "Ismeretlen ingatlan vagy ügyfél." };
   const user = await getCurrentUser();

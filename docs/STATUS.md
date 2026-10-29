@@ -290,7 +290,34 @@ Branch `feat/mvp-foundation`.
   `MICROSOFT_CLIENT_SECRET`. Migration `20261027210000_outlook_mailboxes.sql`
   (widens `mailboxes.provider`) still has to be run in the Supabase SQL
   editor. Tested with a simulated Graph; not yet against a real Microsoft
-  account (needs the app registration).
+  account (needs the app registration). The migration has since been applied.
+
+- Several mailboxes per agent, and any IMAP/SMTP mailbox (business domains,
+  iCloud, Yahoo, Zoho…) next to Gmail and Outlook. `src/lib/mail/imap*.ts`:
+  server discovery (known providers, MX records — Google Workspace / Microsoft
+  365 are sent to their OAuth sign-in —, Thunderbird autoconfig, then
+  mail.<domain>), both servers checked with the password before saving
+  (`connect-imap.ts`), TLS / STARTTLS only, public addresses only (connects to
+  the checked IP, certificate checked against the host name). The password is
+  encrypted in `refresh_token_enc`. Sync reads Inbox and Sent; messages are
+  keyed by Message-ID, sent mail gets its own Message-ID and a copy is filed
+  in Sent. `mailboxes.is_primary` is the default sender (offers pick a sender
+  when there are several); replies go from the mailbox the email came to;
+  viewings remember the mailbox whose calendar holds their event
+  (`viewings.calendar_mailbox_id`). Inbox lists all mailboxes with
+  "Postafiók hozzáadása", "Alapértelmezett" and per-mailbox "Leválasztás".
+  Migration `20261029123849_mailboxes_and_calendars.sql`. Tested: the connect
+  form and its error path in the browser, discovery/guard units; not yet
+  against a real IMAP mailbox (needs one with an app password).
+
+- Naptár (`/calendar`): week view of the workspace's viewings, the agent's
+  tasks, their Google / Outlook calendars (read through the existing
+  calendar permission; events Flavio created are not shown twice) and any
+  calendar added by iCal/webcal link (`calendar_subscriptions`, link
+  encrypted, fetched from public hosts only, 5 MB / 15 s limits, cached 10
+  minutes; repeating events expanded with ical.js). The calendar feed link
+  for iPhone/Outlook/any app is on the same page. Tested in the browser with
+  the real Google calendar and a public holidays calendar.
 
 ## Known gaps / next
 

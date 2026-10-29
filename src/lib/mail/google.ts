@@ -23,7 +23,7 @@ export function googleConfig() {
   return clientId && clientSecret ? { clientId, clientSecret } : null;
 }
 
-export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string; send?: boolean; calendar?: boolean }) {
+export function googleAuthUrl(p: { redirectUri: string; state: string; codeChallenge: string; send?: boolean; calendar?: boolean; loginHint?: string | null }) {
   const config = googleConfig();
   if (!config) throw new Error("Google OAuth is not configured");
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -33,7 +33,10 @@ export function googleAuthUrl(p: { redirectUri: string; state: string; codeChall
     response_type: "code",
     scope: [...GMAIL_SCOPES, ...(p.send ? [GMAIL_SEND_SCOPE] : []), ...(p.calendar ? [CALENDAR_SCOPE] : [])].join(" "),
     access_type: "offline", // returns a refresh token
-    prompt: "consent", // always return the refresh token, also on reconnect
+    // Always return the refresh token, also on reconnect. A new connection lets the
+    // agent pick the account; adding a permission stays on the connected one.
+    prompt: p.loginHint ? "consent" : "select_account consent",
+    ...(p.loginHint ? { login_hint: p.loginHint } : {}),
     include_granted_scopes: "true",
     state: p.state,
     code_challenge: p.codeChallenge,

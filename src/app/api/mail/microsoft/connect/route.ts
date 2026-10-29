@@ -4,15 +4,16 @@ import { getCurrentUser } from "@/lib/auth";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { safeNext } from "@/lib/mail/google";
 import { microsoftAuthUrl, microsoftConfig, microsoftScopes } from "@/lib/mail/microsoft";
-import { getMailbox } from "@/lib/mail/sync";
+import { listMailboxes } from "@/lib/mail/sync";
 import { appOrigin } from "@/lib/origin";
 
 const OAUTH_COOKIE = "mail_oauth_ms";
 
 /**
  * Starts "Connect Outlook": PKCE + state in a short-lived, http-only cookie.
- * `?send=1` / `?calendar=1` add those permissions; permissions already given
- * are asked for again so the new token keeps them.
+ * `?send=1` / `?calendar=1` add those permissions to the connected account
+ * `?mailbox=<id>`; permissions it already has are asked for again so the new
+ * token keeps them. Without a mailbox the agent picks an account.
  */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
@@ -21,8 +22,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/inbox?mail_error=config", origin));
   }
 
-  const existing = await getMailbox(user).catch(() => null);
-  const outlook = existing?.provider === "outlook" ? existing : null;
+  const mailboxId = request.nextUrl.searchParams.get("mailbox");
+  const outlook = mailboxId ? ((await listMailboxes(user).catch(() => [])).find((m) => m.id === mailboxId && m.provider === "outlook") ?? null) : null;
   const send = request.nextUrl.searchParams.get("send") === "1" || Boolean(outlook?.can_send);
   const calendar = request.nextUrl.searchParams.get("calendar") === "1" || Boolean(outlook?.can_calendar);
   const next = safeNext(request.nextUrl.searchParams.get("next"));

@@ -4,7 +4,7 @@ import { draftReply } from "@/lib/ai/reply-draft";
 import type { CurrentUser } from "@/lib/auth";
 import { listPropertyOptions } from "@/lib/db/activity";
 import { PORTALS } from "@/lib/mail/relevance";
-import { getMailbox } from "@/lib/mail/sync";
+import { listMailboxes } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
 import type { Ref } from "@/lib/types/view-models";
 import { cleanProposedTimes } from "@/lib/viewings/logic";
@@ -26,6 +26,7 @@ export type AwayDraft = {
 
 export type AwayItem = {
   id: string;
+  mailboxId: string;
   fromName: string | null;
   fromEmail: string | null;
   subject: string | null;
@@ -41,10 +42,15 @@ export type AwayItem = {
   isNew: boolean;
 };
 
+export type AwayMailbox = { id: string; email: string; provider: MailProvider; lastSyncedAt: string | null; status: string; canSend: boolean };
+
 export type AwaySummary = {
   since: string;
   firstVisit: boolean;
-  mailbox: { email: string; provider: MailProvider; lastSyncedAt: string | null; status: string; canSend: boolean } | null;
+  /** The default mailbox (null: none connected yet). */
+  mailbox: AwayMailbox | null;
+  /** All of the agent's mailboxes; each item names the one it arrived in. */
+  mailboxes: AwayMailbox[];
   headline: string | null;
   items: AwayItem[];
   /** Waiting emails beyond the ones shown, in Levelek. */
@@ -57,6 +63,7 @@ const ITEM_LIMIT = 6;
 
 type Row = {
   id: string;
+  mailbox_id: string;
   from_name: string | null;
   from_email: string | null;
   subject: string | null;
@@ -99,11 +106,11 @@ export async function getAwaySummary(user: CurrentUser, now: Date): Promise<Away
   const supabase = await createClient();
   const visit = await getVisit(user);
   const since = awaySince(visit, now).toISOString();
-  const [mailbox, emails, tasks] = await Promise.all([
-    getMailbox(user),
+  const [mailboxes, emails, tasks] = await Promise.all([
+    listMailboxes(user),
     supabase
       .from("emails")
-      .select(`id, from_name, from_email, subject, snippet, received_at, portal, client_id, ${DRAFT_COLUMNS}`)
+      .select(`id, mailbox_id, from_name, from_email, subject, snippet, received_at, portal, client_id, ${DRAFT_COLUMNS}`)
       .eq("user_id", user.id)
       // Everything still waiting, plus what was answered from here during this
       // window (so the "sent" confirmation stays visible).
@@ -135,13 +142,20 @@ export async function getAwaySummary(user: CurrentUser, now: Date): Promise<Away
   const rank = (r: Row) => (fresh(r) ? 0 : 3) + (r.portal ? 0 : r.client_id ? 1 : 2);
   const sorted = [...rows].sort((a, b) => rank(a) - rank(b) || b.received_at.localeCompare(a.received_at));
   const arrived = rows.filter(fresh);
+  const awayMailboxes: AwayMailbox[] = mailboxes.map((m) => ({
+    id: m.id,
+    email: m.email_address,
+    provider: m.provider,
+    lastSyncedAt: m.last_synced_at,
+    status: m.status,
+    canSend: m.can_send && m.status !== "revoked",
+  }));
 
   return {
     since,
     firstVisit: !visit,
-    mailbox: mailbox
-      ? { email: mailbox.email_address, provider: mailbox.provider, lastSyncedAt: mailbox.last_synced_at, status: mailbox.status, canSend: mailbox.can_send }
-      : null,
+    mailbox: awayMailboxes[0] ?? null,
+    mailboxes: awayMailboxes,
     headline: awayHeadline({
       inquiries: arrived.filter((r) => r.portal).length,
       clientEmails: arrived.filter((r) => !r.portal && r.client_id).length,
@@ -150,6 +164,7 @@ export async function getAwaySummary(user: CurrentUser, now: Date): Promise<Away
     }),
     items: sorted.slice(0, ITEM_LIMIT).map((r) => ({
       id: r.id,
+      mailboxId: r.mailbox_id,
       fromName: r.from_name,
       fromEmail: r.from_email,
       subject: r.subject,
@@ -187,15 +202,15 @@ export async function generateDraft(user: CurrentUser, emailId: string, now: Dat
   const supabase = await createClient();
   const { data: e } = await supabase
     .from("emails")
-    .select("id, from_name, from_email, reply_to_email, subject, snippet, body_text, received_at, portal, client_id")
+    .select("id, mailbox_id, from_name, from_email, reply_to_email, subject, snippet, body_text, received_at, portal, client_id")
     .eq("id", emailId)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!e) return { ok: false, error: "Ismeretlen levél." };
 
   const body = e.body_text || e.snippet || "";
-  const [mailbox, properties, client] = await Promise.all([
-    getMailbox(user),
+  const [mailboxes, properties, client] = await Promise.all([
+    listMailboxes(user),
     listPropertyOptions(user),
     e.client_id ? supabase.from("clients").select("email").eq("id", e.client_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
@@ -221,7 +236,7 @@ export async function generateDraft(user: CurrentUser, emailId: string, now: Dat
           portal: e.portal,
           clientEmail: (client.data as { email: string | null } | null)?.email ?? null,
           body,
-          mailboxEmail: mailbox?.email_address ?? null,
+          mailboxEmail: mailboxes.find((m) => m.id === e.mailbox_id)?.email_address ?? null,
           portalDomains: PORTALS.map((p) => p.domain),
         })
       : null,

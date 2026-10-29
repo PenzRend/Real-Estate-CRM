@@ -4,6 +4,7 @@ import { encryptToken } from "@/lib/mail/crypto";
 import { safeNext } from "@/lib/mail/google";
 import { exchangeMicrosoftCode, grantedScopes, outlookProfile } from "@/lib/mail/microsoft";
 import { appOrigin } from "@/lib/origin";
+import { isFirstMailbox } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
 import { syncPendingToCalendar } from "@/lib/viewings/data";
 
@@ -45,12 +46,14 @@ export async function GET(request: NextRequest) {
     if (saved.calendar && !canCalendar) return back(origin, "mail_error=calendar_scope", safeNext(saved.next ?? null));
     const email = await outlookProfile(tokens.access_token);
 
+    const first = await isFirstMailbox(user);
     const supabase = await createClient();
     const { error } = await supabase.from("mailboxes").upsert(
       {
         organization_id: user.organization.id,
         user_id: user.id,
         provider: "outlook",
+        ...(first ? { is_primary: true } : {}),
         email_address: email,
         refresh_token_enc: encryptToken(tokens.refresh_token),
         access_token_enc: encryptToken(tokens.access_token),

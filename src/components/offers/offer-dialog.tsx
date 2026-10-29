@@ -5,17 +5,17 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { offerTaskAction, prepareOfferAction, sendOfferAction, type OfferPrep } from "@/app/(app)/matches/offer-actions";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/form";
+import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { composeUrl } from "@/lib/away/logic";
-import { permissionHref, providerLabels } from "@/lib/mail/provider";
+import { mailboxLabel, permissionHref, providerLabels } from "@/lib/mail/provider";
 import { findPlaceholders } from "@/lib/mail/compose";
 
 type Ready = Extract<OfferPrep, { ok: true }>;
 
 /**
  * "Ajánlom": the AI drafts a personal offer to the client with the listing's
- * share link; the agent edits it, then sends it from Gmail, opens it in
- * Gmail, copies it, or just keeps a task. Every way leaves a trace in the CRM.
+ * share link; the agent edits it, then sends it from one of their mailboxes,
+ * opens it in their mail, copies it, or just keeps a task. Every way leaves a trace in the CRM.
  */
 export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propertyId: string; clientId: string; onDone: (how: "sent" | "task") => void; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -27,6 +27,7 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState<"send" | "task" | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fromId, setFromId] = useState<string | null>(null);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -36,6 +37,7 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
         if (cancelled) return;
         if (!r.ok) return setError(r.error);
         setPrep(r);
+        setFromId(r.senders[0]?.id ?? null);
         setTo(r.to);
         setSubject(r.subject);
         setBody(r.body);
@@ -46,13 +48,14 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
     };
   }, [propertyId, clientId]);
 
+  const mailbox = prep?.senders.find((s) => s.id === fromId) ?? prep?.senders[0] ?? null;
   const gaps = findPlaceholders(`${subject}\n${body}`);
   const ready = Boolean(to.trim() && subject.trim() && body.trim()) && gaps.length === 0;
 
   async function send() {
     setBusy("send");
     setError(null);
-    const r = await sendOfferAction(propertyId, clientId, { to, subject, body }).catch(() => ({ ok: false as const, error: "A küldés nem sikerült. Próbáld újra." }));
+    const r = await sendOfferAction(propertyId, clientId, { to, subject, body, mailboxId: mailbox?.id ?? null }).catch(() => ({ ok: false as const, error: "A küldés nem sikerült. Próbáld újra." }));
     setBusy(null);
     if (!r.ok) return setError(r.error);
     onDone("sent");
@@ -115,6 +118,17 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
                 hirdetésoldal
               </a>
             </p>
+            {prep.senders.length > 1 && (
+              <Field label="Küldő" htmlFor="offer-from">
+                <Select id="offer-from" value={mailbox?.id ?? ""} onChange={(e) => setFromId(e.target.value)} className={field}>
+                  {prep.senders.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.email} · {mailboxLabel(s.provider, s.email)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
             <Field label="Címzett" htmlFor="offer-to" hint={prep.to ? undefined : "Az ügyfélnek nincs e-mail-címe a CRM-ben."}>
               <Input id="offer-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} className={field} />
             </Field>
@@ -135,14 +149,14 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          {prep?.mailbox?.canSend ? (
+          {mailbox?.canSend ? (
             <Button onClick={send} disabled={!ready || busy != null} title={ready ? undefined : "Add meg a címzettet, és töltsd ki a hiányzó részeket."}>
-              {busy === "send" ? <Loader2 className="animate-spin" /> : <Send />} Küldés {prep.mailbox.email && <span className="font-normal opacity-70">({prep.mailbox.email})</span>}
+              {busy === "send" ? <Loader2 className="animate-spin" /> : <Send />} Küldés {prep && prep.senders.length < 2 && <span className="font-normal opacity-70">({mailbox.email})</span>}
             </Button>
           ) : (
-            prep?.mailbox && (
+            mailbox && (
               <a
-                href={permissionHref("send", pathname)}
+                href={permissionHref("send", pathname, mailbox.id)}
                 className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-white hover:bg-primary-hover"
               >
                 <ShieldCheck className="size-4" /> Küldés engedélyezése
@@ -152,13 +166,13 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
           {prep && (
             <>
               <a
-                href={composeUrl(prep.mailbox?.provider ?? "gmail", { account: prep.mailbox?.email ?? null, to: to.trim() || null, subject, body })}
+                href={composeUrl(mailbox?.provider ?? "gmail", { account: mailbox?.email ?? null, to: to.trim() || null, subject, body })}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => void keepTask()}
                 className="inline-flex h-10 items-center gap-2 rounded-full border border-border-strong px-4 text-sm font-medium text-ink hover:bg-surface"
               >
-                <ExternalLink className="size-4" /> {providerLabels[prep.mailbox?.provider ?? "gmail"]}
+                <ExternalLink className="size-4" /> {mailbox?.provider === "imap" ? "Levelezőprogram" : providerLabels[mailbox?.provider ?? "gmail"]}
               </a>
               <Button variant="secondary" onClick={copy}>
                 {copied ? <Check /> : <Copy />} {copied ? "Másolva" : "Másolás"}
@@ -169,7 +183,7 @@ export function OfferDialog({ propertyId, clientId, onDone, onClose }: { propert
             <ClipboardList className="size-3.5" /> Csak feladat
           </button>
         </div>
-        {prep?.mailbox?.canSend && <p className="text-xs text-muted">Küldés után az e-mail az ügyfél idővonalára kerül, és {2} nap múlva emlékeztetünk az utánkövetésre.</p>}
+        {mailbox?.canSend && <p className="text-xs text-muted">Küldés után az e-mail az ügyfél idővonalára kerül, és {2} nap múlva emlékeztetünk az utánkövetésre.</p>}
       </div>
     </dialog>
   );

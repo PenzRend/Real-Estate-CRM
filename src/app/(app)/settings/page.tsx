@@ -15,8 +15,9 @@ import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
-import { configuredProviders } from "@/lib/mail/configured";
-import { getMailbox } from "@/lib/mail/sync";
+import { isMailCryptoConfigured } from "@/lib/mail/crypto";
+import { mailboxLabel } from "@/lib/mail/provider";
+import { listMailboxes } from "@/lib/mail/sync";
 import { canManageTeam, listTeam, listWorkspaces, roleLabels } from "@/lib/team";
 import { leaveWorkspaceAction, removeMemberAction, switchWorkspaceAction } from "./team-actions";
 
@@ -138,7 +139,7 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const [mailbox, feedActive] = await Promise.all([configuredProviders().length ? getMailbox(user) : null, hasCalendarFeed(user)]);
+  const [mailboxes, feedActive] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user)]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -161,19 +162,24 @@ async function SettingsContent() {
         <FormSection number="03" title="Kapcsolatok" description="Levelek, naptár és hirdetésimport.">
           <Connection
             icon={Mail}
-            title={mailbox?.provider === "outlook" ? "Outlook és Outlook-naptár" : mailbox ? "Gmail és Google Naptár" : "E-mail és naptár (Gmail vagy Outlook)"}
+            title={mailboxes.length > 1 ? `${mailboxes.length} postafiók` : "E-mail (Gmail, Outlook, céges, iCloud…)"}
             status={
-              mailbox ? (
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-normal">
-                  {mailbox.email_address}
-                  {mailbox.status === "active" ? <Badge tone="success">Összekapcsolva</Badge> : <Badge tone="warning">Újra kell kapcsolni</Badge>}
+              mailboxes.length ? (
+                <span className="flex flex-col gap-1 whitespace-normal">
+                  {mailboxes.map((m) => (
+                    <span key={m.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="break-all">{m.email_address}</span>
+                      <span className="text-subtle">· {mailboxLabel(m.provider, m.email_address)}</span>
+                      {m.status !== "active" && <Badge tone="warning">{m.status === "revoked" ? "Újra kell kapcsolni" : "Hiba"}</Badge>}
+                    </span>
+                  ))}
                 </span>
               ) : (
                 "Nincs összekapcsolva"
               )
             }
             href="/inbox"
-            cta={mailbox ? "Levelek" : "Összekapcsolás"}
+            cta={mailboxes.length ? "Kezelés" : "Összekapcsolás"}
           />
           <Connection
             icon={Puzzle}

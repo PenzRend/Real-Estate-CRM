@@ -58,7 +58,13 @@ export const appGuide: GuideEntry[] = [
     id: "inbox",
     screen: "Levelek",
     href: "/inbox",
-    how: "Emails from clients and portal inquiries from the connected Gmail or Outlook (Microsoft 365) mailbox. Tabs 'Feldolgozandó', 'Feldolgozott', 'Elrejtett'. Processing an email works like 'Rögzítés'; 'Elrejtés' hides it. 'Szinkronizálás' fetches new mail; connecting a mailbox ('Gmail összekapcsolása' or 'Outlook / Microsoft 365 összekapcsolása') starts here too.",
+    how: "Emails from clients and portal inquiries from all connected mailboxes, in one list. Several mailboxes can be connected: Gmail / Google Workspace, Outlook / Microsoft 365, and any other mailbox by IMAP/SMTP – a business address on its own domain, iCloud, Yahoo, Zoho ('Céges, iCloud vagy más': email address and password, an app password for iCloud or with two-step sign-in; server settings are found automatically and can be edited under 'Szerverbeállítások'). Add more with 'Postafiók hozzáadása'; 'Alapértelmezett' picks the mailbox new emails and offers are sent from (replies always go from the mailbox the email came to); 'Leválasztás' removes one. Tabs 'Feldolgozandó', 'Feldolgozott', 'Elrejtett'. Processing an email works like 'Rögzítés'; 'Elrejtés' hides it. 'Szinkronizálás' fetches new mail from every mailbox.",
+  },
+  {
+    id: "calendar",
+    screen: "Naptár",
+    href: "/calendar",
+    how: "A week view ('Ma', previous/next week) with the workspace's viewings, the agent's own tasks, the events of their connected Google or Outlook calendars (after allowing the calendar), and any other calendar added by its iCal/webcal link ('Naptár hozzáadása linkkel': iCloud public calendar link, Google 'Titkos cím iCal formátumban', Outlook published ICS link; only the agent sees them). The other way round, 'A Flavio a többi naptáradban' creates a subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app.",
   },
   {
     id: "assistant",

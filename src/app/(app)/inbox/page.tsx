@@ -2,6 +2,7 @@ import { CheckCircle2, CircleAlert, EyeOff, Inbox, Mail, PlugZap, ShieldCheck, S
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ImapConnectForm } from "@/components/mail/imap-connect-form";
 import { MailboxBar } from "@/components/mail/mailbox-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -13,7 +14,8 @@ import { listEmails, type EmailItem, type EmailStatus } from "@/lib/db/mail";
 import { formatDateTime } from "@/lib/i18n/format";
 import { configuredProviders } from "@/lib/mail/configured";
 import { connectPaths, type MailProvider } from "@/lib/mail/provider";
-import { getMailbox } from "@/lib/mail/sync";
+import { isMailCryptoConfigured } from "@/lib/mail/crypto";
+import { listMailboxes } from "@/lib/mail/sync";
 import { ignoreEmailAction, restoreEmailAction } from "./actions";
 import { FormSubmit } from "@/components/ui/form-submit";
 import { buttonClasses } from "@/components/ui/button";
@@ -91,6 +93,7 @@ function EmailRow({ e }: { e: EmailItem }) {
 }
 
 function ConnectCard({ providers }: { providers: MailProvider[] }) {
+  const other = providers.length === 0;
   return (
     <Card className="p-6 sm:p-8">
       <div className="flex max-w-2xl flex-col gap-4">
@@ -116,10 +119,14 @@ function ConnectCard({ providers }: { providers: MailProvider[] }) {
         <div className="flex flex-wrap gap-2">
           {providers.map((p, i) => (
             <a key={p} href={connectPaths[p]} className={buttonClasses(i === 0 ? "primary" : "secondary", "lg")}>
-              <Mail className="size-4" /> {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail"} összekapcsolása
+              <Mail className="size-4" /> {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail / Google Workspace"}
             </a>
           ))}
+          <Link href="/inbox?add=imap" className={buttonClasses(other ? "primary" : "secondary", "lg")}>
+            <Mail className="size-4" /> Céges, iCloud vagy más
+          </Link>
         </div>
+        <p className="text-xs text-muted">Több postafiókot is összekapcsolhatsz – például a céges és a saját címedet –, a levelek egy helyen jelennek meg.</p>
       </div>
     </Card>
   );
@@ -129,10 +136,12 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
   const params = await searchParams;
   const user = await getCurrentUser();
   const tab = tabs.find((t) => t.key === params.view) ?? tabs[0];
+  // Gmail and Outlook need their sign-in app; any mailbox needs the encryption key.
   const providers = configuredProviders();
-  const configured = providers.length > 0;
-  const mailbox = configured ? await getMailbox(user) : null;
-  const emails = mailbox ? await listEmails(user, tab.key) : [];
+  const configured = isMailCryptoConfigured();
+  const mailboxes = configured ? await listMailboxes(user) : [];
+  const adding = configured && params.add === "imap";
+  const emails = mailboxes.length ? await listEmails(user, tab.key) : [];
   const error = typeof params.mail_error === "string" ? errors[params.mail_error] : null;
 
   return (
@@ -155,11 +164,24 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
           <PlugZap className="mt-0.5 size-4 shrink-0" />
           <p>A postafiók-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal, és beállítjuk.</p>
         </div>
-      ) : !mailbox ? (
+      ) : adding ? (
+        <ImapConnectForm email={typeof params.email === "string" ? params.email : undefined} cancelHref="/inbox" />
+      ) : !mailboxes.length ? (
         <ConnectCard providers={providers} />
       ) : (
         <>
-          <MailboxBar email={mailbox.email_address} provider={mailbox.provider} status={mailbox.status} lastSyncedAt={mailbox.last_synced_at} lastError={mailbox.last_error} />
+          <MailboxBar
+            providers={providers}
+            mailboxes={mailboxes.map((m) => ({
+              id: m.id,
+              email: m.email_address,
+              provider: m.provider,
+              status: m.status,
+              lastSyncedAt: m.last_synced_at,
+              lastError: m.last_error,
+              isPrimary: m.is_primary,
+            }))}
+          />
 
           <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
             {tabs.map((t) => (

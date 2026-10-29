@@ -1,14 +1,18 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { setEmailStatus } from "@/lib/db/mail";
-import { disconnectMailbox, syncMailbox, type SyncResult } from "@/lib/mail/sync";
+import { connectImapMailbox, type ImapConnectState } from "@/lib/mail/connect-imap";
+import { disconnectMailbox, setPrimaryMailbox, syncMailboxes, type SyncResult } from "@/lib/mail/sync";
 
-/** The caller refreshes the list itself, so its result message stays on screen. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Syncs all mailboxes. The caller refreshes the list itself, so its result message stays on screen. */
 export async function syncMailAction(): Promise<SyncResult> {
   const user = await getCurrentUser();
-  return syncMailbox(user);
+  return syncMailboxes(user);
 }
 
 export async function ignoreEmailAction(id: string) {
@@ -23,8 +27,24 @@ export async function restoreEmailAction(id: string) {
   refresh();
 }
 
-export async function disconnectMailAction() {
+export async function disconnectMailAction(mailboxId: string) {
+  if (!UUID.test(mailboxId)) return;
   const user = await getCurrentUser();
-  await disconnectMailbox(user);
+  await disconnectMailbox(user, mailboxId);
   refresh();
+}
+
+export async function setPrimaryMailboxAction(mailboxId: string) {
+  if (!UUID.test(mailboxId)) return;
+  const user = await getCurrentUser();
+  await setPrimaryMailbox(user, mailboxId);
+  refresh();
+}
+
+/** "Other mailbox" form: checks the servers, saves, and back to the inbox. */
+export async function connectImapAction(_prev: ImapConnectState, form: FormData): Promise<ImapConnectState> {
+  const user = await getCurrentUser();
+  const r = await connectImapMailbox(user, form);
+  if (r.ok) redirect("/inbox?connected=1");
+  return r;
 }

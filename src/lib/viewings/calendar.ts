@@ -1,5 +1,6 @@
 import "server-only";
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
+import { zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { MailAccessRevoked } from "@/lib/mail/google";
 import { graph, GraphNotAllowed } from "@/lib/mail/microsoft";
 import type { MailProvider } from "@/lib/mail/provider";
@@ -8,8 +9,8 @@ import type { MailProvider } from "@/lib/mail/provider";
 // Calendar or Outlook, whichever mailbox they connected): create, move and
 // cancel the event the CRM created.
 
-/** The connected provider and an access token with the calendar permission. */
-export type CalendarAccess = { provider: MailProvider; token: string };
+/** The mailbox whose calendar is used, its provider, and an access token with the calendar permission. */
+export type CalendarAccess = { mailboxId: string; provider: MailProvider; token: string };
 
 export class CalendarNotAllowed extends Error {}
 /** The Calendar API is not switched on in the Google Cloud project. */
@@ -131,4 +132,59 @@ export async function cancelEvent(cal: CalendarAccess, eventId: string) {
     return;
   }
   await call(`${BASE}/${encodeURIComponent(eventId)}?sendUpdates=all`, cal.token, { method: "DELETE" });
+}
+
+/** An event read from the agent's own calendar, for the Flavio calendar view. */
+export type ReadEvent = { id: string; title: string; start: string; end: string; allDay: boolean; location: string | null; link: string | null; fromFlavio: boolean };
+
+/** All-day events are placed at local midnight, like the calendar view expects. */
+const dayStart = (date: string) => zonedLocalToUtc(`${date}T00:00`) ?? `${date}T00:00:00.000Z`;
+
+/** The events between two instants, repeating ones expanded; cancelled ones left out. */
+export async function listEvents(cal: CalendarAccess, from: Date, to: Date): Promise<ReadEvent[]> {
+  if (cal.provider === "outlook") {
+    type GraphTime = { dateTime: string; timeZone: string };
+    type GraphEvent = { id: string; subject?: string; start: GraphTime; end: GraphTime; isAllDay?: boolean; isCancelled?: boolean; location?: { displayName?: string }; webLink?: string; transactionId?: string | null };
+    const q = new URLSearchParams({
+      startDateTime: from.toISOString(),
+      endDateTime: to.toISOString(),
+      $top: "250",
+      $select: "id,subject,start,end,isAllDay,isCancelled,location,webLink,transactionId",
+    });
+    const r = await outlook<{ value: GraphEvent[] }>(`calendarView?${q.toString()}`, cal.token);
+    // Times come as UTC wall clock (no Prefer time zone); all-day events as midnight of their dates.
+    const iso = (t: GraphTime, allDay: boolean) => (allDay ? dayStart(t.dateTime.slice(0, 10)) : new Date(`${t.dateTime.slice(0, 19)}Z`).toISOString());
+    return (r?.value ?? [])
+      .filter((e) => !e.isCancelled)
+      .map((e) => ({
+        id: e.id,
+        title: e.subject || "(nincs cím)",
+        start: iso(e.start, Boolean(e.isAllDay)),
+        end: iso(e.end, Boolean(e.isAllDay)),
+        allDay: Boolean(e.isAllDay),
+        location: e.location?.displayName || null,
+        link: e.webLink ?? null,
+        fromFlavio: Boolean(e.transactionId && /^[0-9a-f-]{36}$/i.test(e.transactionId)),
+      }));
+  }
+  type GoogleTime = { date?: string; dateTime?: string };
+  type GoogleEvent = { id: string; status?: string; summary?: string; start: GoogleTime; end: GoogleTime; location?: string; htmlLink?: string; extendedProperties?: { private?: Record<string, string> } };
+  const q = new URLSearchParams({ timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: "true", orderBy: "startTime", maxResults: "250" });
+  const r = await call<{ items?: GoogleEvent[] }>(`${BASE}?${q.toString()}`, cal.token, { method: "GET" });
+  return (r?.items ?? [])
+    .filter((e) => e.status !== "cancelled" && (e.start.dateTime || e.start.date))
+    .map((e) => {
+      const allDay = !e.start.dateTime;
+      const iso = (t: GoogleTime) => (t.dateTime ? new Date(t.dateTime).toISOString() : dayStart(t.date!));
+      return {
+        id: e.id,
+        title: e.summary || "(nincs cím)",
+        start: iso(e.start),
+        end: iso(e.end),
+        allDay,
+        location: e.location || null,
+        link: e.htmlLink ?? null,
+        fromFlavio: Boolean(e.extendedProperties?.private?.crmViewingId),
+      };
+    });
 }

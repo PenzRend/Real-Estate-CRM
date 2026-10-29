@@ -15,7 +15,7 @@ import { followUpFor, outcomeLabels, relationFor, type CalendarOutcome, type Int
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COLUMNS =
-  "id, client_id, property_id, starts_at, duration_minutes, location, notes, status, interest, feedback, feedback_at, calendar_user_id, calendar_event_id, calendar_link, created_by";
+  "id, client_id, property_id, starts_at, duration_minutes, location, notes, status, interest, feedback, feedback_at, calendar_user_id, calendar_mailbox_id, calendar_event_id, calendar_link, created_by";
 
 export type Viewing = {
   id: string;
@@ -46,6 +46,7 @@ type Row = {
   feedback: string | null;
   feedback_at: string | null;
   calendar_user_id: string | null;
+  calendar_mailbox_id: string | null;
   calendar_event_id: string | null;
   calendar_link: string | null;
   created_by: string | null;
@@ -130,23 +131,28 @@ async function getRow(user: CurrentUser, id: string): Promise<Row | null> {
 
 export type { CalendarOutcome };
 
-/** The user's calendar access (Google or Outlook) with the calendar permission, or why there is none. */
-async function calendarAccess(user: CurrentUser): Promise<CalendarAccess | { reason: CalendarOutcome }> {
+/**
+ * The user's calendar access (Google or Outlook) with the calendar permission,
+ * or why there is none: the given mailbox's (where an event already is), else
+ * the one Flavio puts new events in.
+ */
+async function calendarAccess(user: CurrentUser, mailboxId?: string | null): Promise<CalendarAccess | { reason: CalendarOutcome }> {
   try {
-    const access = await mailboxWithToken(user);
-    if (!access) return { reason: "needs_permission" };
+    const access = await mailboxWithToken(user, mailboxId ?? "calendar");
+    if (!access || access.mailbox.provider === "imap") return { reason: "needs_permission" };
     if (!access.mailbox.can_calendar) return { reason: "needs_permission" };
-    return { provider: access.mailbox.provider, token: access.token };
+    return { mailboxId: access.mailbox.id, provider: access.mailbox.provider, token: access.token };
   } catch (error) {
     // Never throw: the viewing is already saved, and an error screen invites a duplicate retry.
     return { reason: await calendarFailure(user, error) };
   }
 }
 
-async function calendarFailure(user: CurrentUser, error: unknown): Promise<CalendarOutcome> {
+async function calendarFailure(user: CurrentUser, error: unknown, mailboxId?: string): Promise<CalendarOutcome> {
   if (error instanceof CalendarNotAllowed) {
     const supabase = await createClient();
-    await supabase.from("mailboxes").update({ can_calendar: false }).eq("user_id", user.id);
+    const q = supabase.from("mailboxes").update({ can_calendar: false }).eq("user_id", user.id);
+    await (mailboxId ? q.eq("id", mailboxId) : q);
     return "needs_permission";
   }
   if (error instanceof CalendarApiDisabled) return "api_disabled";
@@ -193,13 +199,13 @@ async function pushToCalendar(user: CurrentUser, row: Row, invite: boolean, give
     const supabase = await createClient();
     const { error } = await supabase
       .from("viewings")
-      .update({ calendar_user_id: user.id, calendar_event_id: event.id, calendar_link: event.htmlLink })
+      .update({ calendar_user_id: user.id, calendar_mailbox_id: cal.mailboxId, calendar_event_id: event.id, calendar_link: event.htmlLink })
       .eq("id", row.id)
       .eq("organization_id", user.organization.id);
     if (error) console.error("viewing calendar save failed", error.code);
     return "added";
   } catch (error) {
-    return calendarFailure(user, error);
+    return calendarFailure(user, error, cal.mailboxId);
   }
 }
 
@@ -371,13 +377,13 @@ export async function updateViewing(user: CurrentUser, id: string, input: MoveIn
 
   if (!row.calendar_event_id) return { ok: true, calendar: "skipped" };
   if (row.calendar_user_id !== user.id) return { ok: true, calendar: "other_calendar" };
-  const access = await calendarAccess(user);
+  const access = await calendarAccess(user, row.calendar_mailbox_id);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
     await moveEvent(access, row.calendar_event_id, { startsAt, endsAt: endOf(startsAt, input.durationMinutes), location: input.location });
     return { ok: true, calendar: "updated" };
   } catch (e) {
-    return { ok: true, calendar: await calendarFailure(user, e) };
+    return { ok: true, calendar: await calendarFailure(user, e, access.mailboxId) };
   }
 }
 
@@ -397,13 +403,13 @@ export async function cancelViewing(user: CurrentUser, id: string): Promise<{ ok
   if (!updated?.length) return { ok: true, calendar: "skipped" };
   if (!row.calendar_event_id) return { ok: true, calendar: "skipped" };
   if (row.calendar_user_id !== user.id) return { ok: true, calendar: "other_calendar" };
-  const access = await calendarAccess(user);
+  const access = await calendarAccess(user, row.calendar_mailbox_id);
   if ("reason" in access) return { ok: true, calendar: access.reason };
   try {
     await cancelEvent(access, row.calendar_event_id);
     return { ok: true, calendar: "updated" };
   } catch (e) {
-    return { ok: true, calendar: await calendarFailure(user, e) };
+    return { ok: true, calendar: await calendarFailure(user, e, access.mailboxId) };
   }
 }
 
@@ -412,22 +418,23 @@ export async function upcomingCalendarEvents(user: CurrentUser, clientId: string
   const supabase = await createClient();
   const { data } = await supabase
     .from("viewings")
-    .select("calendar_event_id")
+    .select("calendar_event_id, calendar_mailbox_id")
     .eq("client_id", clientId)
     .eq("organization_id", user.organization.id)
     .eq("calendar_user_id", user.id)
     .eq("status", "scheduled")
     .gt("starts_at", now.toISOString())
     .not("calendar_event_id", "is", null);
-  return (data ?? []).map((v) => v.calendar_event_id as string);
+  return (data ?? []).map((v) => ({ eventId: v.calendar_event_id as string, mailboxId: v.calendar_mailbox_id as string | null }));
 }
 
 /** Removes calendar events after their viewings were erased; best effort, the erasure already happened. */
-export async function removeCalendarEvents(user: CurrentUser, eventIds: string[]) {
-  if (!eventIds.length) return;
-  const access = await calendarAccess(user);
-  if ("reason" in access) return;
-  for (const id of eventIds) await cancelEvent(access, id).catch(() => null);
+export async function removeCalendarEvents(user: CurrentUser, events: { eventId: string; mailboxId: string | null }[]) {
+  for (const mailboxId of new Set(events.map((e) => e.mailboxId))) {
+    const access = await calendarAccess(user, mailboxId);
+    if ("reason" in access) continue;
+    for (const e of events.filter((x) => x.mailboxId === mailboxId)) await cancelEvent(access, e.eventId).catch(() => null);
+  }
 }
 
 // ---------------------------------------------------------------------------

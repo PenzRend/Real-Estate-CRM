@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { encryptToken } from "@/lib/mail/crypto";
 import { CALENDAR_SCOPE, exchangeCode, gmail, GMAIL_SEND_SCOPE, safeNext } from "@/lib/mail/google";
 import { appOrigin } from "@/lib/origin";
+import { isFirstMailbox } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
 import { syncPendingToCalendar } from "@/lib/viewings/data";
 
@@ -46,12 +47,14 @@ export async function GET(request: NextRequest) {
     if (saved.calendar && !canCalendar) return back(origin, "mail_error=calendar_scope", safeNext(saved.next ?? null));
     const profile = await gmail<{ emailAddress: string }>("profile", tokens.access_token);
 
+    const first = await isFirstMailbox(user);
     const supabase = await createClient();
     const { error } = await supabase.from("mailboxes").upsert(
       {
         organization_id: user.organization.id,
         user_id: user.id,
         provider: "gmail",
+        ...(first ? { is_primary: true } : {}),
         email_address: profile.emailAddress.toLowerCase(),
         refresh_token_enc: encryptToken(tokens.refresh_token),
         access_token_enc: encryptToken(tokens.access_token),

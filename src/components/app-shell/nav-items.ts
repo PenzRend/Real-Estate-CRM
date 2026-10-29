@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarDays,
   CheckSquare,
   Inbox,
   LayoutGrid,
@@ -14,6 +15,7 @@ export const navItems: Array<{ href: string; label: string; icon: LucideIcon }> 
   { href: "/clients", label: "Ügyfelek", icon: Users },
   { href: "/properties", label: "Ingatlanok", icon: Building2 },
   { href: "/tasks", label: "Feladatok", icon: CheckSquare },
+  { href: "/calendar", label: "Naptár", icon: CalendarDays },
   { href: "/inbox", label: "Levelek", icon: Inbox },
   { href: "/assistant", label: "AI-asszisztens", icon: Sparkles },
   { href: "/settings", label: "Beállítások", icon: Settings },

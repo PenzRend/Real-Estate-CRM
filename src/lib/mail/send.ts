@@ -1,16 +1,18 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import type { CurrentUser } from "@/lib/auth";
 import { findMentionedProperty } from "@/lib/away/logic";
 import { listPropertyOptions } from "@/lib/db/activity";
 import { createClient } from "@/lib/supabase/server";
 import { buildReplyMime, encodeHeader, findPlaceholders, parseRecipients, toBase64Url } from "./compose";
 import { gmail, gmailSend, MailAccessRevoked, MailSendNotAllowed } from "./google";
+import { imapSend } from "./imap";
 import { outlookSend } from "./microsoft";
 import { withArticle, type MailProvider } from "./provider";
-import { accessEndedMessage, mailboxWithToken } from "./sync";
+import { accessEndedMessage, getMailbox, mailboxWithToken } from "./sync";
 
 // Sends a reply the user wrote (usually from an AI draft) through their own
-// Gmail or Outlook account, in the original conversation, and records it in
+// Gmail, Outlook or IMAP mailbox, in the original conversation, and records it in
 // the CRM. Only ever called from an explicit "Küldés" click.
 
 const DAILY_LIMIT = 100;
@@ -42,7 +44,8 @@ type Access = NonNullable<Awaited<ReturnType<typeof mailboxWithToken>>>;
 /**
  * Sends through the connected provider. A reply goes into the original's
  * conversation: Gmail by its Message-ID headers, Outlook by replying to the
- * stored message. Without a usable original it goes as a new conversation.
+ * stored message, IMAP mailboxes by In-Reply-To (their stored id is the
+ * Message-ID). Without a usable original it goes as a new conversation.
  */
 async function deliver(
   access: Access,
@@ -50,6 +53,25 @@ async function deliver(
 ): Promise<{ id: string; threadId: string | null }> {
   if (access.mailbox.provider === "outlook") {
     return outlookSend(access.token, { to: m.to, subject: m.subject, body: m.body, replyToId: m.reply?.providerMessageId ?? null });
+  }
+  if (access.mailbox.provider === "imap") {
+    const settings = access.mailbox.server_settings;
+    if (!settings) throw new Error("IMAP mailbox without server settings");
+    const address = access.mailbox.email_address;
+    const messageId = `<${randomBytes(16).toString("hex")}@${address.slice(address.lastIndexOf("@") + 1)}>`;
+    const mime = buildReplyMime({
+      from: m.from,
+      to: m.to,
+      subject: m.subject,
+      body: m.body,
+      inReplyTo: m.reply?.providerMessageId ?? null,
+      references: m.reply?.threadId ?? null,
+      messageId,
+      date: new Date(),
+    });
+    await imapSend(settings, access.token, { from: address, to: m.to, mime });
+    // Stored under its Message-ID, so the copy in Sent is recognised at the next sync.
+    return { id: messageId, threadId: m.reply?.providerMessageId ?? null };
   }
   let thread: { inReplyTo: string | null; references: string | null; threadId: string | null } = { inReplyTo: null, references: null, threadId: null };
   if (m.reply) {
@@ -81,15 +103,15 @@ async function sendFailure(access: Access, error: unknown): Promise<Fail> {
   return { ok: false, error: "A küldés nem sikerült. A levél nem ment el, próbáld újra." };
 }
 
-/** The daily limit, then the user's mailbox with a token and the send permission. */
-async function sendingAccess(user: CurrentUser, now: Date) {
+/** The daily limit, then the mailbox (the given one, else the default) with a token and the send permission. */
+async function sendingAccess(user: CurrentUser, now: Date, mailboxId?: string | null) {
   const supabase = await createClient();
   const dayAgo = new Date(now.getTime() - 24 * 3600_000).toISOString();
   const { count } = await supabase.from("emails").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("sent_from_crm", true).gte("created_at", dayAgo);
   if ((count ?? 0) >= DAILY_LIMIT) return { ok: false as const, error: "Elérted a napi küldési keretet. Holnap újra küldhetsz." };
   let access;
   try {
-    access = await mailboxWithToken(user);
+    access = await mailboxWithToken(user, mailboxId ?? undefined);
   } catch (error) {
     const provider = (await currentProvider(user)) ?? "gmail";
     if (error instanceof MailAccessRevoked) return { ok: false as const, error: accessEndedMessage(provider) };
@@ -102,23 +124,32 @@ async function sendingAccess(user: CurrentUser, now: Date) {
 }
 
 async function currentProvider(user: CurrentUser): Promise<MailProvider | null> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("mailboxes").select("provider").eq("user_id", user.id).eq("organization_id", user.organization.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  return (data?.provider as MailProvider | undefined) ?? null;
+  return (await getMailbox(user).catch(() => null))?.provider ?? null;
 }
 
-export type NewEmailInput = { to: string; subject: string; body: string; clientId: string; propertyId: string | null; followUpDays: number | null; taskTitle: string };
+export type NewEmailInput = {
+  to: string;
+  subject: string;
+  body: string;
+  clientId: string;
+  propertyId: string | null;
+  followUpDays: number | null;
+  taskTitle: string;
+  /** The mailbox to send from; the default one when not given. */
+  mailboxId?: string | null;
+};
 
 /**
- * Sends a new email (not a reply), e.g. a listing offer, from the user's own
- * Gmail or Outlook, and records it: the outgoing email, an interaction on the client
+ * Sends a new email (not a reply), e.g. a listing offer, from one of the user's
+ * own mailboxes, and records it: the outgoing email, an interaction on the client
  * (and listing), and an optional follow-up task.
  */
 export async function sendNewEmail(user: CurrentUser, input: NewEmailInput, now: Date): Promise<{ ok: true; sentAt: string } | Fail> {
   if (!UUID.test(input.clientId) || (input.propertyId && !UUID.test(input.propertyId))) return { ok: false, error: "Ismeretlen ügyfél vagy ingatlan." };
+  if (input.mailboxId && !UUID.test(input.mailboxId)) return { ok: false, error: "Ismeretlen postafiók." };
   const msg = checkMessage(input);
   if (!msg.ok) return msg;
-  const gate = await sendingAccess(user, now);
+  const gate = await sendingAccess(user, now, input.mailboxId);
   if (!gate.ok) return gate;
   const { access } = gate;
   const supabase = await createClient();
@@ -193,10 +224,10 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
     .maybeSingle();
   if (!original) return { ok: false, error: "Ismeretlen levél." };
 
-  const gate = await sendingAccess(user, now);
+  // A reply goes from the mailbox the email came to.
+  const gate = await sendingAccess(user, now, original.mailbox_id);
   if (!gate.ok) return gate;
   const { access } = gate;
-  if (access.mailbox.id !== original.mailbox_id) return { ok: false, error: "Ez a levél nem a jelenlegi postafiókodból jött." };
 
   const from = user.fullName ? `${encodeHeader(user.fullName)} <${access.mailbox.email_address}>` : access.mailbox.email_address;
   let sent;

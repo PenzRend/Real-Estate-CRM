@@ -72,6 +72,11 @@ export function replySubject(subject: string | null) {
 
 /** Opens Gmail's compose window, prefilled, in the connected account. Nothing is sent. */
 export function composeUrl(provider: MailProvider, d: { account: string | null; to: string | null; subject: string; body: string }) {
+  if (provider === "imap") {
+    // No web mail to open: the agent's own mail program, prefilled.
+    const p = new URLSearchParams({ subject: d.subject, body: d.body });
+    return `mailto:${d.to ? encodeURIComponent(d.to).replace(/%40/g, "@").replace(/%2C/gi, ",") : ""}?${p.toString().replace(/\+/g, "%20")}`;
+  }
   if (provider === "outlook") {
     const p = new URLSearchParams({ subject: d.subject, body: d.body });
     if (d.to) p.set("to", d.to);

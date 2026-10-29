@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             <li>Ügyfelek: név, elérhetőség, keresési igények, jegyzetek, megtekintések és visszajelzések, teendők.</li>
             <li>Ingatlanok: a hirdetés adatai, fotók és videólinkek, tulajdonosi adatok, ha az ingatlanos felviszi őket.</li>
             <li>Diktált jegyzetek: a hangfelvételből szöveg lesz; a hangfelvételt nem tároljuk.</li>
-            <li>E-mailek és naptár, ha az ingatlanos összekapcsolja a Google- vagy Microsoft-fiókját (lásd lent).</li>
+            <li>E-mailek és naptár, ha az ingatlanos összekapcsolja a Google- vagy Microsoft-fiókját, vagy más postafiókot, illetve naptárlinket ad meg (lásd lent).</li>
           </ul>
         </Section>
 
@@ -101,6 +101,19 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Más postafiókok (céges, iCloud…) és naptárlinkek">
+          <p>
+            Más postafiókot (pl. saját domaines céges címet vagy iCloudot) az ingatlanos a címével és egy jelszóval (jellemzően alkalmazásjelszóval) köt be. A
+            jelszót titkosítva tároljuk, és csak a levelek lekéréséhez (IMAP), illetve az ingatlanos kattintására történő küldéshez (SMTP) használjuk; a
+            Flavióból elküldött levél másolata a postafiók Elküldött mappájába kerül. A levelekből ugyanúgy csak a relevánsakat tároljuk, mint a Google- és
+            Microsoft-fióknál. Leválasztáskor a jelszót töröljük.
+          </p>
+          <p>
+            Ha az ingatlanos egy naptár iCal-linkjét adja meg (pl. iCloud, Google, Outlook), a linket titkosítva tároljuk, és a naptár eseményeit csak neki
+            jelenítjük meg a Flavio naptárában; az eseményeket nem mentjük el. A link bármikor eltávolítható.
+          </p>
+        </Section>
+
         <Section title="Az importáló böngészőbővítmény">
           <p>A bővítmény az ingatlanos saját hirdetéseit hozza át egy hirdetési portálról a Flavióba.</p>
           <ul className="list-disc pl-5">
@@ -127,6 +140,7 @@ export default function PrivacyPage() {
               vagy elmenne.
             </li>
             <li>Google és Microsoft: csak összekapcsolt fiók esetén, a fenti célokra.</li>
+            <li>Az ingatlanos saját levelezési szolgáltatója (céges tárhely, iCloud…): csak bekötött postafiók esetén, a levelek lekéréséhez és küldéséhez.</li>
           </ul>
           <p>Adatot nem adunk el, és hirdetési célra nem használunk.</p>
         </Section>

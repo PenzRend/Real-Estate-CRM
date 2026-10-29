@@ -20,7 +20,6 @@ import { actionFailed } from "@/lib/action-failed";
 // Drafts written automatically on arrival, one at a time (provider rate limits).
 const AUTO_DRAFTS = 3;
 const FOLLOW_UP_DAYS = 2;
-const ENABLE_SEND_HREF = permissionHref("send", "/dashboard");
 
 type DraftState = { status: "idle" | "loading" | "error"; draft: AwayDraft | null; error?: string };
 type Sent = { at: string; logged: "client" | "property" | null };
@@ -152,7 +151,7 @@ function DraftEditor({
           ) : (
             mailbox && (
               <a
-                href={ENABLE_SEND_HREF}
+                href={permissionHref("send", "/dashboard", mailbox.id)}
                 title="Egyszeri engedély. A Flavio csak akkor küld, ha megnyomod a Küldést."
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
               >
@@ -166,7 +165,7 @@ function DraftEditor({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-surface-strong"
           >
-            <ExternalLink className="size-3.5" /> Megnyitás: {providerLabels[mailbox?.provider ?? "gmail"]}
+            <ExternalLink className="size-3.5" /> Megnyitás: {mailbox?.provider === "imap" ? "levelezőprogram" : providerLabels[mailbox?.provider ?? "gmail"]}
           </a>
           <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-background px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-surface-strong">
             {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />} {copied ? "Másolva" : "Másolás"}
@@ -422,7 +421,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
               key={item.id}
               item={item}
               state={states[item.id] ?? { status: "idle", draft: item.draft }}
-              mailbox={summary.mailbox}
+              mailbox={summary.mailboxes.find((m) => m.id === item.mailboxId) ?? summary.mailbox}
               aiEnabled={aiEnabled}
               onDraft={() => void draft(item.id)}
               onBooked={(b) => confirmTime(item.id, b)}
