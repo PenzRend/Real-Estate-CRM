@@ -1,5 +1,6 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -82,14 +83,15 @@ async function setArchived(id: string, archived: boolean) {
   if (error) throw new Error(`Failed to ${archived ? "archive" : "restore"} client: ${error.code}`);
 }
 
+/** Archives or restores in place: the page refreshes, and the toast offers to undo. */
 export async function archiveClientAction(id: string) {
   await setArchived(id, true);
-  redirect(`/clients/${id}`);
+  refresh();
 }
 
 export async function restoreClientAction(id: string) {
   await setArchived(id, false);
-  redirect(`/clients/${id}`);
+  refresh();
 }
 
 export type EraseResult = { ok: false; error: string };

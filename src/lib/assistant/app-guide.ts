@@ -49,6 +49,12 @@ export const appGuide: GuideEntry[] = [
     how: "On a client's page 'Illő ingatlanok', on a listing's page 'Illő ügyfelek': rule-based matches with reasons. 'Ajánlom' creates a task to offer it and can open 'Ajánlat küldése' (an email draft to the client). A match can be hidden and restored.",
   },
   {
+    id: "search",
+    screen: "Keresés (Ctrl+K)",
+    href: "/dashboard",
+    how: "Ctrl+K (⌘K on a Mac), or 'Keresés' in the menu (the magnifier on a phone): type a few letters of a client's name, email or phone number (accents and spaces optional), a listing's title, address or reference, a deal, an email subject or sender, or a task – Enter opens it. It also jumps to any screen and to 'Új ügyfél', 'Új ingatlan', 'Új ügylet', 'Új feladat', 'Hirdetés importálása', 'Rögzítés'. Archiving a client or listing and hiding an email happen at once, with 'Visszavonás' in the note at the bottom for a few seconds.",
+  },
+  {
     id: "deals",
     screen: "Ügyletek",
     href: "/deals",

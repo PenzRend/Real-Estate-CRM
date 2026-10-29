@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Menu, Mic, Plus, X } from "lucide-react";
+import { Loader2, Menu, Mic, Plus, Search, X } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { openSearch } from "./command-palette";
 import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
 import { navItems } from "./nav-items";
@@ -73,6 +74,24 @@ function CaptureButton({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/** Opens Ctrl+K search: anything by name, address, phone, reference. */
+function SearchButton({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate?.();
+        openSearch();
+      }}
+      className="flex h-10 items-center gap-2.5 rounded-full border border-border px-3.5 text-sm text-muted transition-colors hover:border-border-strong hover:text-ink"
+    >
+      <Search className="size-4" />
+      <span className="flex-1 text-left">Keresés</span>
+      <kbd className="hidden rounded border border-border px-1 text-[10px] text-subtle lg:inline">Ctrl K</kbd>
+    </button>
+  );
+}
+
 function QuickAdd({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="rounded-2xl border border-border p-3">
@@ -106,6 +125,7 @@ export function Sidebar({ account }: { account: ReactNode }) {
       </div>
       <div className="flex flex-col gap-4">
         <CaptureButton />
+        <SearchButton />
         <NavLinks />
       </div>
       <div className="mt-auto flex flex-col gap-3">
@@ -132,6 +152,9 @@ export function MobileNav({ account }: { account: ReactNode }) {
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
         <Logo />
         <div className="flex items-center gap-2">
+          <button type="button" onClick={openSearch} className="grid size-9 place-items-center rounded-full border border-border text-ink" aria-label="Keresés">
+            <Search className="size-4" />
+          </button>
           <Link
             href="/interactions/new"
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-medium text-white"

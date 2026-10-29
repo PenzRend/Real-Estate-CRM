@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { AssistantBubble } from "@/components/assistant/assistant-bubble";
 import { AccountMenu, AccountMenuSkeleton } from "@/components/app-shell/account-menu";
+import { CommandPalette } from "@/components/app-shell/command-palette";
+import { Toaster } from "@/components/ui/toaster";
 import { NavigationProgress } from "@/components/app-shell/navigation-progress";
 import { SetupNotice } from "@/components/app-shell/setup-notice";
 import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
@@ -32,6 +34,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense>
         <AssistantBubble aiEnabled={llmConfig() != null} />
       </Suspense>
+      <CommandPalette />
+      <Toaster />
     </div>
   );
 }

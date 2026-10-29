@@ -7,6 +7,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormSubmit } from "@/components/ui/form-submit";
 import { ListSuspense } from "@/components/ui/list-suspense";
+import { UndoableButton } from "@/components/ui/undoable-button";
 import { EmptyState } from "@/components/ui/page";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 import { listEmails, type EmailItem } from "@/lib/db/mail";
@@ -60,11 +61,16 @@ function EmailRow({ e }: { e: EmailItem }) {
             <Link href={`/interactions/new?email=${e.id}`} className={buttonClasses("primary", "xs")}>
               <Sparkles /> Feldolgozás
             </Link>
-            <form action={ignoreEmailAction.bind(null, e.id)}>
-              <FormSubmit className={buttonClasses("ghost", "xs", "text-muted hover:text-ink")}>
-                <EyeOff /> Elrejtés
-              </FormSubmit>
-            </form>
+            <UndoableButton
+              action={ignoreEmailAction.bind(null, e.id)}
+              undo={restoreEmailAction.bind(null, e.id)}
+              done="Elrejtve – az Elrejtett fülön megtalálod."
+              variant="ghost"
+              size="xs"
+              className="text-muted hover:text-ink"
+            >
+              <EyeOff /> Elrejtés
+            </UndoableButton>
           </>
         )}
         {e.status === "processed" && e.client && (

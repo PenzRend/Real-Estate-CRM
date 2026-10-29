@@ -5,7 +5,7 @@ import { PropertyDetailView } from "@/components/crm/property-detail-view";
 import { PropertyMedia } from "@/components/media/property-media";
 import { ShareButton } from "@/components/shares/share-button";
 import { buttonClasses } from "@/components/ui/button";
-import { ConfirmAction } from "@/components/ui/confirm-action";
+import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { recordTitle } from "@/lib/db/titles";
@@ -62,17 +62,9 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   ) : (
     <>
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
-      <ConfirmAction
-        action={archivePropertyAction.bind(null, property.id)}
-        trigger={
-          <>
-            <Archive /> Archiválás
-          </>
-        }
-        title={`${property.title} archiválása`}
-        description="Az ingatlan kikerül a listákból, de minden adata megmarad. Bármikor visszaállíthatod."
-        confirmLabel="Archiválás"
-      />
+      <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">
+        <Archive /> Archiválás
+      </UndoableButton>
     </>
   );
 

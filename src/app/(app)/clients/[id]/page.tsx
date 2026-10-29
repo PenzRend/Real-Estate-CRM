@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ClientDetailView } from "@/components/crm/client-detail-view";
 import { EraseClientButton } from "@/components/crm/erase-client";
 import { buttonClasses } from "@/components/ui/button";
-import { ConfirmAction } from "@/components/ui/confirm-action";
+import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { recordTitle } from "@/lib/db/titles";
@@ -51,17 +51,9 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       </form>
     </>
   ) : (
-    <ConfirmAction
-      action={archiveClientAction.bind(null, client.id)}
-      trigger={
-        <>
-          <Archive /> Archiválás
-        </>
-      }
-      title={`${client.fullName} archiválása`}
-      description="Az ügyfél kikerül a listákból és az utánkövetésekből, de minden adata megmarad. Bármikor visszaállíthatod."
-      confirmLabel="Archiválás"
-    />
+    <UndoableButton action={archiveClientAction.bind(null, client.id)} undo={restoreClientAction.bind(null, client.id)} done={`${client.fullName} archiválva – kikerült a listákból, minden adata megmaradt.`}>
+      <Archive /> Archiválás
+    </UndoableButton>
   );
   const actions = (
     <>

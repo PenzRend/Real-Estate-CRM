@@ -106,14 +106,15 @@ async function setArchived(id: string, archived: boolean) {
   if (error) throw new Error(`Failed to ${archived ? "archive" : "restore"} property: ${error.code}`);
 }
 
+/** Archives or restores in place: the page refreshes, and the toast offers to undo. */
 export async function archivePropertyAction(id: string) {
   await setArchived(id, true);
-  redirect(`/properties/${id}`);
+  refresh();
 }
 
 export async function restorePropertyAction(id: string) {
   await setArchived(id, false);
-  redirect(`/properties/${id}`);
+  refresh();
 }
 
 /** Quick status change from the listing page or the property list. */

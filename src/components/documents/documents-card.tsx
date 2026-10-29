@@ -29,6 +29,7 @@ function Item({ item, propertyId, organizationId }: { item: ChecklistItem; prope
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -88,8 +89,17 @@ function Item({ item, propertyId, organizationId }: { item: ChecklistItem; prope
                     <span className="truncate text-ink">{f.fileName}</span>
                   )}
                   <span className="shrink-0 text-subtle">{formatDate(f.createdAt)}</span>
-                  <button type="button" disabled={busy} onClick={() => start(() => deleteDocumentAction(f.id))} className="shrink-0 text-subtle hover:text-danger" aria-label={`${f.fileName} törlése`}>
+                  {/* The file itself is deleted, so it takes a second click. */}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => (confirming === f.id ? start(() => deleteDocumentAction(f.id)) : setConfirming(f.id))}
+                    onBlur={() => setConfirming(null)}
+                    className={cn("inline-flex shrink-0 items-center gap-1", confirming === f.id ? "font-medium text-danger" : "text-subtle hover:text-danger")}
+                    aria-label={confirming === f.id ? `${f.fileName} végleges törlése` : `${f.fileName} törlése`}
+                  >
                     <Trash2 className="size-3.5" />
+                    {confirming === f.id && "Törlöd?"}
                   </button>
                 </li>
               ))}
