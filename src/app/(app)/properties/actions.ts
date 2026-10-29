@@ -56,7 +56,8 @@ export async function createPropertyAction(_: PropertyFormState, formData: FormD
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
   }
 
-  redirect(`/properties/${data.id}`);
+  // "new": the listing's page offers it to the matching buyers at once.
+  redirect(`/properties/${data.id}?new=1`);
 }
 
 export async function updatePropertyAction(

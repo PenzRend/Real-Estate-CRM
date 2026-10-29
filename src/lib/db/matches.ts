@@ -104,8 +104,12 @@ export async function matchesForClient(user: CurrentUser, clientId: string): Pro
     .sort((a, b) => compareMatches(a.match, b.match));
 }
 
-/** Active clients a listing fits, best first. Dismissed ones are left out. */
-export async function matchesForProperty(user: CurrentUser, propertyId: string): Promise<ClientMatch[]> {
+/**
+ * Active clients a listing fits, best first. Dismissed ones are left out.
+ * Only active listings are offered; `preview` counts them for a draft too
+ * (so a new listing can say who it would suit).
+ */
+export async function matchesForProperty(user: CurrentUser, propertyId: string, { preview = false } = {}): Promise<ClientMatch[]> {
   if (!UUID.test(propertyId)) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -117,8 +121,8 @@ export async function matchesForProperty(user: CurrentUser, propertyId: string):
   if (error) throw new Error(`Failed to load property: ${error.message}`);
   if (!data) return [];
   const property = toMatchProperty(data as MatchProperty & { created_at: string });
-  // Draft or sold listings are not offered to anyone.
-  if (property.status !== "active") return [];
+  // Draft or sold listings are not offered to anyone (a draft can be previewed).
+  if (property.status !== "active" && !(preview && property.status === "draft")) return [];
 
   const [clients, decided] = await Promise.all([activeClients(user), decisions(user, { propertyId })]);
   return clients

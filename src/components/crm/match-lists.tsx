@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/page";
 import type { ClientMatch, PropertyMatch } from "@/lib/db/matches";
 import { formatArea, formatPriceShort } from "@/lib/i18n/format";
 import { clientTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
+import { BulkOffer } from "@/components/offers/bulk-offer";
 import { MatchActions, MatchCategoryBadge, MatchChecks } from "./match-parts";
 
 const LIMIT = 8;
@@ -62,10 +63,25 @@ export function PropertyMatchesCard({ clientId, matches, hasRequirements }: { cl
 }
 
 /** Clients this listing fits, for the property page. */
-export function ClientMatchesCard({ propertyId, matches, active }: { propertyId: string; matches: ClientMatch[]; active: boolean }) {
+export function ClientMatchesCard({
+  propertyId,
+  matches,
+  active,
+  justAdded = false,
+  draftMatches = 0,
+}: {
+  propertyId: string;
+  matches: ClientMatch[];
+  active: boolean;
+  justAdded?: boolean;
+  /** For a draft: how many clients it would suit once active. */
+  draftMatches?: number;
+}) {
+  // Buyers not yet offered this listing (and not dismissed): the bulk offer's candidates.
+  const candidates = matches.filter((m) => !m.decision).map((m) => ({ id: m.client.id, name: m.client.full_name, category: m.match.category }));
   return (
     <Card>
-      <CardHeader title="Illő ügyfelek" count={matches.length} />
+      <CardHeader title="Illő ügyfelek" count={matches.length} action={active && candidates.length > 0 ? <BulkOffer propertyId={propertyId} candidates={candidates} autoOpen={justAdded} /> : undefined} />
       {matches.length ? (
         <ul className="divide-y divide-border">
           {matches.slice(0, LIMIT).map(({ client: c, match, decision }) => (
@@ -92,8 +108,14 @@ export function ClientMatchesCard({ propertyId, matches, active }: { propertyId:
       ) : (
         <EmptyState
           icon={Search}
-          title={active ? "Nincs illő aktív ügyfél" : "Csak aktív ingatlanhoz keresünk ügyfelet"}
-          description={active ? "Az ügyfelek keresési igényei alapján nézzük: ár, helyszín, típus." : "Állítsd a státuszt Aktívra, és megmutatjuk, kinek ajánlhatod."}
+          title={active ? "Nincs illő aktív ügyfél" : draftMatches ? `${draftMatches} ügyfeledre illik` : "Csak aktív ingatlanhoz keresünk ügyfelet"}
+          description={
+            active
+              ? "Az ügyfelek keresési igényei alapján nézzük: ár, helyszín, típus."
+              : draftMatches
+                ? "Állítsd a státuszt Aktívra (fent, a címke), és egy kattintással mindegyiküknek elküldheted, személyre szabott levélben."
+                : "Állítsd a státuszt Aktívra, és megmutatjuk, kinek ajánlhatod."
+          }
         />
       )}
       {matches.length > 0 && <Explainer />}

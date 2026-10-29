@@ -27,8 +27,10 @@ export async function generateMetadata({ params }: PageProps<"/properties/[id]">
   return { title: await recordTitle("properties", (await params).id, "Ingatlan") };
 }
 
-async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
-  const { id } = await params;
+async function PropertyContent({ params, searchParams }: Pick<PageProps<"/properties/[id]">, "params" | "searchParams">) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  // Just created or imported: the matching buyers are offered it straight away.
+  const justAdded = query.new === "1";
   const user = await getCurrentUser();
   const [property, matches, media, share, contact, viewings, deals, target, reports] = await Promise.all([
     getPropertyDetail(user, id),
@@ -42,6 +44,7 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
     listReports(user, id),
   ]);
   if (!property) notFound();
+  const draftMatches = property.status === "draft" ? (await matchesForProperty(user, id, { preview: true })).length : 0;
 
   const actions = property.archived_at ? (
     <form action={restorePropertyAction.bind(null, property.id)}>
@@ -70,7 +73,7 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
     <PropertyDetailView
       property={property}
       actions={actions}
-      matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} />}
+      matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} justAdded={justAdded} draftMatches={draftMatches} />}
       viewings={
         <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />
       }
@@ -90,10 +93,10 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
   );
 }
 
-export default function PropertyPage({ params }: PageProps<"/properties/[id]">) {
+export default function PropertyPage({ params, searchParams }: PageProps<"/properties/[id]">) {
   return (
     <PageSuspense>
-      <PropertyContent params={params} />
+      <PropertyContent params={params} searchParams={searchParams} />
     </PageSuspense>
   );
 }
