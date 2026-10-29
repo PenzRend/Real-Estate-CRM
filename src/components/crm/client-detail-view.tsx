@@ -1,5 +1,6 @@
 import { Archive, CalendarClock, ChevronLeft, Mail, Mic, Pencil, Phone, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { ContactBar } from "./contact-bar";
 import type { ReactNode } from "react";
 import { Badge, ClientStatusBadge } from "@/components/ui/badge";
 import { ArrowLink, ButtonLink } from "@/components/ui/button";
@@ -96,6 +97,8 @@ export function ClientDetailView({
             </ButtonLink>
           </div>
         </div>
+
+        {!archivedAt && <ContactBar clientId={client.id} phone={client.phone} email={client.email} />}
 
         <Panel className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
           {[

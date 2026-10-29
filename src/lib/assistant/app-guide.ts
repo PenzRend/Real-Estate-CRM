@@ -20,7 +20,7 @@ export const appGuide: GuideEntry[] = [
     id: "clients",
     screen: "Ügyfelek",
     href: "/clients",
-    how: "Client list with search and filters (status, follow-up, budget, location). Open a client for contact details, 'Keresési igények', 'Előzmények', tasks, viewings and 'Illő ingatlanok'. 'Szerkesztés' edits; 'Archiválás' archives (restorable).",
+    how: "Client list with search and filters (status, follow-up, budget, location). Open a client for contact details, one-tap 'Hívás', 'SMS', 'WhatsApp', 'Viber' and 'E-mail' buttons (after a call, 'Hogy ment?' logs it in one tap: 'Megbeszéltük', 'Nem vette fel', 'Visszahív / később', 'Foglalt volt', with an optional note and follow-up task), 'Keresési igények', 'Előzmények', tasks, deals, viewings and 'Illő ingatlanok'. 'Szerkesztés' edits; 'Archiválás' archives (restorable).",
   },
   { id: "client_new", screen: "Új ügyfél", href: "/clients/new", how: "Add a client by hand: 'Gyors műveletek' → 'Új ügyfél' in the menu. Usually faster: 'Rögzítés' creates the client from the conversation." },
   {
