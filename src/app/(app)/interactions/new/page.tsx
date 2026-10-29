@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { CaptureWorkspace } from "@/components/capture/capture-workspace";
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { llmConfig, transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { findMentionedProperty } from "@/lib/away/logic";
@@ -52,8 +51,8 @@ async function CaptureContent({ searchParams }: Pick<PageProps<"/interactions/ne
 
 export default function CapturePage({ searchParams }: PageProps<"/interactions/new">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <CaptureContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

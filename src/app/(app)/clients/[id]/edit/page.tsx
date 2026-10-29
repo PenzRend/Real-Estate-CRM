@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { ClientForm, type ClientFormValues } from "@/components/crm/client-form";
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { getClientRow, type ClientRowData } from "@/lib/db/clients";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
@@ -60,8 +59,8 @@ async function EditClientContent({ params }: Pick<PageProps<"/clients/[id]/edit"
 
 export default function EditClientPage({ params }: PageProps<"/clients/[id]/edit">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <EditClientContent params={params} />
-    </Suspense>
+    </PageSuspense>
   );
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { ImportWorkspace } from "@/components/listings/import-workspace";
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { llmConfig, transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { listOwnerOptions } from "@/lib/db/properties";
@@ -32,8 +31,8 @@ async function ImportContent() {
 
 export default function ImportPage() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <ImportContent />
-    </Suspense>
+    </PageSuspense>
   );
 }

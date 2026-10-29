@@ -1,13 +1,12 @@
 import { CheckCircle2, CircleAlert, EyeOff, Inbox, Mail, PlugZap, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { ImapConnectForm } from "@/components/mail/imap-connect-form";
 import { MailboxBar } from "@/components/mail/mailbox-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { listEmails, type EmailItem, type EmailStatus } from "@/lib/db/mail";
@@ -228,8 +227,8 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
 
 export default function InboxPage({ searchParams }: PageProps<"/inbox">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <InboxContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

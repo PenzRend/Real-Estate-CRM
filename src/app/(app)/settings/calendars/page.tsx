@@ -1,10 +1,9 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { CalendarConnections } from "@/components/calendar/connections";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Naptárak" };
@@ -27,8 +26,8 @@ async function CalendarsContent() {
 
 export default function CalendarSettingsPage() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <CalendarsContent />
-    </Suspense>
+    </PageSuspense>
   );
 }

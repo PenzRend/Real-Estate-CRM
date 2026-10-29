@@ -1,10 +1,9 @@
 import { CheckCircle2, Plus } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { ClientFilterBar, ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { countArchivedClients, LIST_LIMIT, listClients, type ClientListFilters } from "@/lib/db/clients";
 import { parseHungarianNumber } from "@/lib/validation/client";
@@ -78,8 +77,8 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
 
 export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <ClientsContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

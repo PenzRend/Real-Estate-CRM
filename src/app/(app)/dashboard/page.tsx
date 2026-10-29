@@ -9,8 +9,7 @@ import { getDashboardData } from "@/lib/db/dashboard";
 import { ViewingsCard } from "@/components/viewings/viewings-card";
 import { listOpenViewings } from "@/lib/viewings/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
@@ -48,8 +47,8 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
 // Request-time content streams in behind Suspense so navigation stays instant.
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <DashboardContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

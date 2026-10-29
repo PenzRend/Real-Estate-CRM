@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { AssistantBubble } from "@/components/assistant/assistant-bubble";
 import { AccountMenu, AccountMenuSkeleton } from "@/components/app-shell/account-menu";
+import { NavigationProgress } from "@/components/app-shell/navigation-progress";
 import { SetupNotice } from "@/components/app-shell/setup-notice";
 import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
 import { llmConfig } from "@/lib/ai/config";
@@ -16,6 +17,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-dvh">
+      <Suspense>
+        <NavigationProgress />
+      </Suspense>
       <Sidebar account={account} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav account={account} />

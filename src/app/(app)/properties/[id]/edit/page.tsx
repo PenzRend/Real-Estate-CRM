@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { PropertyForm, type PropertyFormValues } from "@/components/crm/property-form";
 import { Eyebrow } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { getPropertyRow, listOwnerOptions, type PropertyRow } from "@/lib/db/properties";
@@ -72,8 +71,8 @@ async function EditPropertyContent({ params }: Pick<PageProps<"/properties/[id]/
 
 export default function EditPropertyPage({ params }: PageProps<"/properties/[id]/edit">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <EditPropertyContent params={params} />
-    </Suspense>
+    </PageSuspense>
   );
 }

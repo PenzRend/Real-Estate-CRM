@@ -2,14 +2,13 @@ import { ChevronLeft, ChevronRight, CircleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { eventColors } from "@/components/calendar/colors";
 import { CalendarConnections } from "@/components/calendar/connections";
 import { ConnectionsDialog } from "@/components/calendar/connections-dialog";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { calendarEvents, listSubscriptions } from "@/lib/calendar/data";
 import { eventsByDay, localDate, monthGrid, timeLabel, weekDays, weekStart, type CalendarEvent } from "@/lib/calendar/week";
@@ -274,8 +273,8 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
 
 export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <CalendarContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { Menu, Mic, Plus, X } from "lucide-react";
-import Link from "next/link";
+import { Loader2, Menu, Mic, Plus, X } from "lucide-react";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -9,16 +9,28 @@ import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
 import { navItems } from "./nav-items";
 
+/** A small spinner on the clicked item while its page is still loading (only shows when that takes a moment). */
+function PendingDot() {
+  const { pending } = useLinkStatus();
+  return <Loader2 aria-hidden className={cn("ml-auto size-3.5 animate-spin text-subtle transition-opacity", pending ? "opacity-100 delay-150" : "opacity-0")} />;
+}
+
 function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
+  // The clicked item lights up at once, before its page has loaded; it is dropped as soon as the URL changes.
+  const [clicked, setClicked] = useState<{ href: string; on: string | null } | null>(null);
+  const current = clicked && clicked.on === pathname ? clicked.href : pathname;
   return (
     <nav aria-label="Fő navigáció" className="flex flex-col gap-0.5">
       {navItems.map(({ href, label, icon: Icon }) => {
-        const active = pathname != null && (pathname === href || pathname.startsWith(`${href}/`));
+        const active = current != null && (current === href || current.startsWith(`${href}/`));
         return (
           <Link
             key={href}
             href={href}
-            onClick={onNavigate}
+            onClick={() => {
+              setClicked({ href, on: pathname });
+              onNavigate?.();
+            }}
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-full px-3.5 py-2 text-sm transition-colors",
@@ -27,6 +39,7 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
           >
             <Icon className="size-[18px]" strokeWidth={active ? 2 : 1.75} />
             {label}
+            <PendingDot />
           </Link>
         );
       })}

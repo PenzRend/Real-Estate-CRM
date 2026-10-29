@@ -1,10 +1,9 @@
 import { Download, Plus } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { PropertiesTable, PropertyFilterBar, type PropertyFilters } from "@/components/crm/properties-list";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { coverThumbs } from "@/lib/db/media";
 import { countArchivedProperties, LIST_LIMIT, listProperties, type PropertyListFilters } from "@/lib/db/properties";
@@ -89,8 +88,8 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
 
 export default function PropertiesPage({ searchParams }: PageProps<"/properties">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <PropertiesContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

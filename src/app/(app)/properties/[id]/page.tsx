@@ -1,13 +1,12 @@
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
 import { PropertyMedia } from "@/components/media/property-media";
 import { ShareButton } from "@/components/shares/share-button";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { recordTitle } from "@/lib/db/titles";
 import { matchesForProperty } from "@/lib/db/matches";
@@ -75,8 +74,8 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
 
 export default function PropertyPage({ params }: PageProps<"/properties/[id]">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <PropertyContent params={params} />
-    </Suspense>
+    </PageSuspense>
   );
 }

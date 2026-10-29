@@ -1,12 +1,11 @@
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { ClientDetailView } from "@/components/crm/client-detail-view";
 import { EraseClientButton } from "@/components/crm/erase-client";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { recordTitle } from "@/lib/db/titles";
 import { getClientDetail } from "@/lib/db/clients";
@@ -91,8 +90,8 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
 
 export default function ClientPage({ params, searchParams }: PageProps<"/clients/[id]">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <ClientContent params={params} searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

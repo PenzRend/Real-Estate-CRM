@@ -1,12 +1,11 @@
 import { CheckSquare } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { TaskRow } from "@/components/crm/items";
 import { NewTaskForm } from "@/components/crm/new-task-form";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { listClientOptions, listTasks, type TaskView } from "@/lib/db/activity";
 import { cn } from "@/lib/cn";
@@ -67,8 +66,8 @@ async function TasksContent({ searchParams }: Pick<PageProps<"/tasks">, "searchP
 
 export default function TasksPage({ searchParams }: PageProps<"/tasks">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <TasksContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }

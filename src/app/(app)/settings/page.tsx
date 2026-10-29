@@ -2,7 +2,6 @@ import { ArrowRight, CalendarDays, Download, LogOut, Mail, Puzzle } from "lucide
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Suspense } from "react";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -11,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { listSubscriptions } from "@/lib/calendar/data";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
@@ -239,8 +238,8 @@ async function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <SettingsContent />
-    </Suspense>
+    </PageSuspense>
   );
 }

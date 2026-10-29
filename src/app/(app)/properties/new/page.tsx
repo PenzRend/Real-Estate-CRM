@@ -1,11 +1,10 @@
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { PropertyForm } from "@/components/crm/property-form";
 import { Eyebrow } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageSuspense } from "@/components/ui/page-suspense";
 import { transcriptionConfig } from "@/lib/ai/config";
 import { getCurrentUser } from "@/lib/auth";
 import { listOwnerOptions } from "@/lib/db/properties";
@@ -46,8 +45,8 @@ async function NewPropertyContent({ searchParams }: Pick<PageProps<"/properties/
 
 export default function NewPropertyPage({ searchParams }: PageProps<"/properties/new">) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <PageSuspense>
       <NewPropertyContent searchParams={searchParams} />
-    </Suspense>
+    </PageSuspense>
   );
 }
