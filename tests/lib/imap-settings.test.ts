@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { composeUrl } from "@/lib/away/logic";
 import { buildReplyMime } from "@/lib/mail/compose";
 import { checkSettings, fromMx, guessSettings, knownProvider, mxBaseDomain, parseAutoconfig } from "@/lib/mail/imap-settings";
+import { isICloudEmail, normalizeAppPassword } from "@/lib/mail/app-password";
 import { mailboxLabel, permissionHref, withArticle } from "@/lib/mail/provider";
 import { isPublicAddress } from "@/lib/net/address";
 
@@ -95,5 +96,17 @@ describe("IMAP mailboxes on screen", () => {
     expect(mime).toContain("Message-ID: <abc@iroda.hu>\r\n");
     expect(mime).toContain("Date: Thu, 29 Oct 2026 10:00:00 +0000\r\n");
     expect(mime).toContain("In-Reply-To: <orig@x>\r\n");
+  });
+});
+
+describe("Apple app passwords", () => {
+  it("accepts the 16 letters however they were pasted, and rejects a normal password", () => {
+    expect(normalizeAppPassword(" abcd-efgh-ijkl-mnop ")).toBe("abcd-efgh-ijkl-mnop");
+    expect(normalizeAppPassword("ABCDEFGHIJKLMNOP")).toBe("abcd-efgh-ijkl-mnop");
+    expect(normalizeAppPassword("abcd efgh ijkl mnop")).toBe("abcd-efgh-ijkl-mnop");
+    expect(normalizeAppPassword("Kutya123!")).toBeNull();
+    expect(normalizeAppPassword("abcd-efgh-ijkl")).toBeNull();
+    expect(isICloudEmail(" Kata@Me.com")).toBe(true);
+    expect(isICloudEmail("kata@gmail.com")).toBe(false);
   });
 });

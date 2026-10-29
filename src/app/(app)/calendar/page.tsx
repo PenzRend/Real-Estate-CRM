@@ -12,7 +12,8 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
-import { calendarEvents, isICloudAddress, listSubscriptions } from "@/lib/calendar/data";
+import { calendarEvents, listSubscriptions } from "@/lib/calendar/data";
+import { isICloudEmail } from "@/lib/mail/app-password";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
 import { eventsByDay, localDate, monthGrid, timeLabel, weekDays, weekStart, type CalendarEvent } from "@/lib/calendar/week";
 import { cn } from "@/lib/cn";
@@ -106,7 +107,7 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
   const accounts: CalendarAccount[] = mailboxes.flatMap((m) =>
     m.provider !== "imap" && m.status !== "revoked" ? [{ id: m.id, email: m.email_address, provider: m.provider, canCalendar: m.can_calendar }] : [],
   );
-  const icloudMailboxes = mailboxes.filter((m) => m.provider === "imap" && m.status !== "revoked" && isICloudAddress(m.email_address)).map((m) => ({ id: m.id, email: m.email_address }));
+  const icloudMailboxes = mailboxes.filter((m) => m.provider === "imap" && m.status !== "revoked" && isICloudEmail(m.email_address)).map((m) => ({ id: m.id, email: m.email_address }));
   const configured = configuredProviders().filter((p): p is CalendarAccount["provider"] => p !== "imap");
 
   const title = view === "month" ? monthTitle.format(asDate(month.first)) : `${fullDate.format(asDate(week.days[0]))} – ${dayMonth.format(asDate(week.days[6]))}`;
@@ -283,8 +284,8 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="flex flex-col gap-3">
           <h2 className="text-lg">Naptáraid a Flavióban</h2>
-          <p className="text-sm text-muted">Csak te látod őket. Az iPhone-od naptára az iCloud-naptár: az Apple ID-ddal és egy alkalmazásjelszóval jelenik meg itt.</p>
-          <CalendarSources accounts={accounts} configured={configured} calendars={subscriptions.filter((s) => s.kind === "caldav")} icloudMailboxes={icloudMailboxes} />
+          <p className="text-sm text-muted">Az iPhone-od, a Google- és az Outlook-naptárad – csak te látod őket.</p>
+          <CalendarSources accounts={accounts} configured={configured} calendars={subscriptions.filter((s) => s.kind === "caldav")} icloudMailboxes={icloudMailboxes} appleId={user.email} />
           <Subscriptions subscriptions={subscriptions.filter((s) => s.kind === "ics")} />
         </section>
         <section className="flex flex-col gap-3">

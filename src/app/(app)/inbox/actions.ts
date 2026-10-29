@@ -45,6 +45,6 @@ export async function setPrimaryMailboxAction(mailboxId: string) {
 export async function connectImapAction(_prev: ImapConnectState, form: FormData): Promise<ImapConnectState> {
   const user = await getCurrentUser();
   const r = await connectImapMailbox(user, form);
-  if (r.ok) redirect("/inbox?connected=1");
+  if (r.ok) redirect(r.calendars ? `/inbox?connected=1&calendars=${r.calendars}` : "/inbox?connected=1");
   return r;
 }

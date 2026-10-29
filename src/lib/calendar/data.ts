@@ -2,6 +2,7 @@ import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
+import { isICloudEmail, NOT_APP_PASSWORD, normalizeAppPassword } from "@/lib/mail/app-password";
 import { decryptToken, encryptToken } from "@/lib/mail/crypto";
 import { MailAccessRevoked } from "@/lib/mail/google";
 import { calendarLabels } from "@/lib/mail/provider";
@@ -137,16 +138,22 @@ export async function addCalDavCalendars(
   input: { username: string; password: string; server?: string | null },
 ): Promise<{ ok: true; added: number } | { ok: false; error: string; auth?: boolean }> {
   const username = input.username.trim().toLowerCase();
-  if (!username || username.length > 320 || !input.password) return { ok: false, error: "Add meg az Apple ID-t és az alkalmazásjelszót." };
+  if (!username || username.length > 320 || !input.password.trim()) return { ok: false, error: "Add meg az Apple ID-t és az Apple-től kapott jelszót." };
   let server = ICLOUD_CALDAV;
+  let password = input.password.trim();
   if (input.server?.trim()) {
     const url = normalizeCalendarUrl(input.server.trim().replace(/^(?!https?:\/\/)/i, "https://"));
     if (!url || !url.startsWith("https:")) return { ok: false, error: "A szerver címe https:// kezdetű legyen." };
     server = url;
+  } else {
+    // iCloud only takes app passwords: catch a pasted normal password before Apple refuses it.
+    const appPassword = normalizeAppPassword(password);
+    if (!appPassword) return { ok: false, error: NOT_APP_PASSWORD };
+    password = appPassword;
   }
   let calendars;
   try {
-    calendars = await discoverCalendars(server, { username, password: input.password });
+    calendars = await discoverCalendars(server, { username, password });
   } catch (error) {
     if (error instanceof CalDavError) return { ok: false, error: error.message, auth: error.auth };
     console.error("caldav discovery failed", error instanceof Error ? error.message : error);
@@ -162,7 +169,7 @@ export async function addCalDavCalendars(
   const { count } = await supabase.from("calendar_subscriptions").select("id", { count: "exact", head: true }).match(own);
   const room = Math.max(0, MAX_SUBSCRIPTIONS - (count ?? 0));
   if (!room) return { ok: false, error: `Legfeljebb ${MAX_SUBSCRIPTIONS} naptárat köthetsz be.` };
-  const secret = encryptToken(input.password);
+  const secret = encryptToken(password);
   const { error } = await supabase.from("calendar_subscriptions").insert(
     calendars.slice(0, room).map((c, i) => ({
       ...own,
@@ -181,20 +188,15 @@ export async function addCalDavCalendars(
   return { ok: true, added: Math.min(room, calendars.length) };
 }
 
-const ICLOUD_DOMAINS = ["icloud.com", "me.com", "mac.com"];
-
 /** iCloud mail connected over IMAP: its app password works for iCloud Calendar too. */
 export async function addICloudCalendarsFromMailbox(user: CurrentUser, mailboxId: string) {
   const access = await mailboxWithToken(user, mailboxId).catch(() => null);
   const email = access?.mailbox.email_address ?? "";
-  if (!access || access.mailbox.provider !== "imap" || !ICLOUD_DOMAINS.includes(email.slice(email.lastIndexOf("@") + 1))) {
+  if (!access || access.mailbox.provider !== "imap" || !isICloudEmail(email)) {
     return { ok: false as const, error: "Ehhez a postafiókhoz nem tartozik iCloud-naptár." };
   }
   return addCalDavCalendars(user, { username: email, password: access.token });
 }
-
-/** iCloud mailboxes whose app password can also open their calendars. */
-export const isICloudAddress = (email: string) => ICLOUD_DOMAINS.includes(email.slice(email.lastIndexOf("@") + 1).toLowerCase());
 
 export async function removeSubscription(user: CurrentUser, id: string) {
   const supabase = await createClient();

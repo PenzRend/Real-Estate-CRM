@@ -45,7 +45,7 @@ async function dav(url: string, login: Login, method: "PROPFIND" | "REPORT", dep
       target = new URL(res.headers.get("location")!, target);
       continue;
     }
-    if (res.status === 401 || res.status === 403) throw new CalDavError("A naptárszerver elutasította a belépést. Ellenőrizd az Apple ID-t és az alkalmazásjelszót.", true);
+    if (res.status === 401 || res.status === 403) throw new CalDavError("Az Apple nem fogadta el a belépést. Ellenőrizd, hogy jó-e az Apple ID, és hogy az Apple-től kapott új jelszót másoltad-e be (nem a rendes jelszavadat).", true);
     if (res.status !== 207 && !res.ok) throw new CalDavError(`A naptárszerver hibát adott (${res.status}).`);
     const text = await res.text();
     if (text.length > MAX_BYTES) throw new CalDavError("A naptár túl nagy.");

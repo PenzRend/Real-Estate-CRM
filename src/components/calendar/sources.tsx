@@ -3,6 +3,7 @@
 import { Apple, CalendarDays, Check, CircleAlert, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
 import { addCalDavAction, addICloudFromMailboxAction, removeSubscriptionAction, type SubscriptionState } from "@/app/(app)/calendar/actions";
+import { AppPasswordSteps } from "@/components/mail/app-password-steps";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
@@ -56,7 +57,7 @@ function ProviderCard({ provider, accounts, configured }: { provider: CalendarAc
   );
 }
 
-function ICloudCard({ calendars, icloudMailboxes }: { calendars: Subscription[]; icloudMailboxes: { id: string; email: string }[] }) {
+function ICloudCard({ calendars, icloudMailboxes, appleId }: { calendars: Subscription[]; icloudMailboxes: { id: string; email: string }[]; appleId: string }) {
   const [state, action, pending] = useActionState<SubscriptionState, FormData>(addCalDavAction, {});
   const [quick, setQuick] = useState<SubscriptionState>({});
   const [quickPending, startQuick] = useTransition();
@@ -98,32 +99,28 @@ function ICloudCard({ calendars, icloudMailboxes }: { calendars: Subscription[];
       ))}
       {quick.error && <p className="text-xs text-danger">{quick.error}</p>}
 
+      {!calendars.length && !offer.length && (
+        <p className="text-sm text-muted">Így az iPhone-od naptára is itt lesz. Két perc, egyszer kell megcsinálni:</p>
+      )}
       <details open={!calendars.length && !offer.length} className="text-sm">
-        <summary className="cursor-pointer text-xs font-medium text-ink">{calendars.length ? "Másik Apple ID hozzáadása" : "Bejelentkezés Apple ID-val"}</summary>
-        <form action={action} className="mt-3 flex flex-col gap-3">
-          <Field label="Apple ID (e-mail-cím)" htmlFor="icloud-user">
-            <Input id="icloud-user" name="username" type="email" autoComplete="off" required />
+        <summary className="cursor-pointer text-xs font-medium text-ink">{calendars.length || offer.length ? "Másik Apple ID hozzáadása" : "Lépések"}</summary>
+        <form action={action} className="mt-3 flex flex-col gap-4">
+          <AppPasswordSteps id="icloud-password" error={state.error} />
+          <Field label="Apple ID-d (e-mail-cím)" htmlFor="icloud-user" hint="Amivel az iPhone-odon be vagy jelentkezve: Beállítások → legfelül a neved.">
+            <Input id="icloud-user" name="username" type="email" autoComplete="email" required defaultValue={appleId} />
           </Field>
-          <Field
-            label="Alkalmazásjelszó"
-            htmlFor="icloud-password"
-            error={state.error}
-            hint="Nem az Apple ID jelszava: appleid.apple.com → Bejelentkezés és biztonság → Alkalmazásjelszavak → új jelszó (pl. „Flavio”)."
-          >
-            <Input id="icloud-password" name="password" type="password" autoComplete="off" required placeholder="xxxx-xxxx-xxxx-xxxx" aria-invalid={Boolean(state.error)} />
-          </Field>
+          <Button type="submit" className="w-fit" disabled={pending}>
+            {pending ? <Loader2 className="animate-spin" /> : <Apple />} {pending ? "Naptárak keresése…" : "Kész – naptáraim megjelenítése"}
+          </Button>
+          <p className="text-xs text-muted">Csak olvassuk a naptáraidat, és csak te látod őket. A jelszót titkosítva tároljuk.</p>
           <details className="text-xs text-muted">
-            <summary className="cursor-pointer">Más naptárszerver (CalDAV: Fastmail, Nextcloud, Zoho…)</summary>
+            <summary className="cursor-pointer">Nem iCloudot használsz? Más naptárszerver (Fastmail, Nextcloud, Zoho…)</summary>
             <div className="mt-2">
               <Field label="Szerver címe" htmlFor="caldav-server" hint="Üresen hagyva az iCloudot használjuk.">
                 <Input id="caldav-server" name="server" placeholder="https://caldav.fastmail.com/" autoCapitalize="none" spellCheck={false} />
               </Field>
             </div>
           </details>
-          <Button type="submit" size="sm" className="w-fit" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : <Apple />} {pending ? "Naptárak keresése…" : "Naptárak megjelenítése"}
-          </Button>
-          <p className="text-xs text-muted">Csak olvassuk a naptáraidat, és csak te látod őket. A jelszót titkosítva tároljuk.</p>
         </form>
       </details>
     </Card>
@@ -136,15 +133,18 @@ export function CalendarSources({
   configured,
   calendars,
   icloudMailboxes,
+  appleId,
 }: {
   accounts: CalendarAccount[];
   configured: CalendarAccount["provider"][];
   calendars: Subscription[];
   icloudMailboxes: { id: string; email: string }[];
+  /** A good first guess for the Apple ID: the agent's own email address. */
+  appleId: string;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3">
-      <ICloudCard calendars={calendars} icloudMailboxes={icloudMailboxes} />
+      <ICloudCard calendars={calendars} icloudMailboxes={icloudMailboxes} appleId={appleId} />
       <ProviderCard provider="gmail" accounts={accounts} configured={configured.includes("gmail")} />
       <ProviderCard provider="outlook" accounts={accounts} configured={configured.includes("outlook")} />
     </div>

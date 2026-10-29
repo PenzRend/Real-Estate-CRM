@@ -2,11 +2,13 @@
 
 import { Info, Loader2, Mail, Server } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { connectImapAction } from "@/app/(app)/inbox/actions";
+import { AppPasswordSteps } from "@/components/mail/app-password-steps";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
+import { isICloudEmail } from "@/lib/mail/app-password";
 import type { ImapConnectState } from "@/lib/mail/connect-imap";
 import { connectPaths } from "@/lib/mail/provider";
 
@@ -18,6 +20,9 @@ import { connectPaths } from "@/lib/mail/provider";
 export function ImapConnectForm({ email, cancelHref }: { email?: string; cancelHref: string | null }) {
   const [state, action, pending] = useActionState<ImapConnectState, FormData>(connectImapAction, { email });
   const s = state.settings;
+  const [address, setAddress] = useState(state.email ?? email ?? "");
+  // iCloud needs an app password: the agent gets the steps to make one.
+  const icloud = isICloudEmail(address);
 
   return (
     <Card className="p-6 sm:p-8">
@@ -28,24 +33,39 @@ export function ImapConnectForm({ email, cancelHref }: { email?: string; cancelH
           </span>
           <h2 className="text-2xl">Céges, iCloud vagy más postafiók</h2>
           <p className="text-sm text-muted">
-            Bármelyik postafiók, ami IMAP-ot és SMTP-t használ: saját domaines céges cím (pl. tárhelyszolgáltatónál), iCloud, Yahoo, Zoho… A szerverbeállításokat
-            a címből kikeressük. Google Workspace és Microsoft 365 címeknél a Google- vagy Microsoft-bejelentkezésre irányítunk.
+            Saját domaines céges cím, iCloud, Yahoo vagy bármilyen más postafiók. Elég az e-mail-cím és a jelszó – a többit a Flavio kikeresi.
           </p>
         </div>
 
         <Field label="E-mail-cím" htmlFor="imap-email" error={state.field === "email" ? state.error : undefined}>
-          <Input id="imap-email" name="email" type="email" autoComplete="email" required defaultValue={state.email ?? email} aria-invalid={state.field === "email"} />
+          <Input
+            id="imap-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            aria-invalid={state.field === "email"}
+          />
         </Field>
-        <Field
-          label="Jelszó"
-          htmlFor="imap-password"
-          hint="iCloudnál és kétlépcsős azonosításnál a szolgáltatónál létrehozott alkalmazásjelszó kell, nem a fiók jelszava."
-          error={state.field === "password" ? state.error : undefined}
-        >
-          <Input id="imap-password" name="password" type="password" autoComplete="off" required aria-invalid={state.field === "password"} />
-        </Field>
+        {icloud ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+            <p className="text-sm font-medium text-ink">iCloud-címhez az Apple-től kérünk egy külön jelszót – két perc, egyszer kell megcsinálni:</p>
+            <AppPasswordSteps id="imap-password" error={state.field === "password" ? state.error : undefined} />
+          </div>
+        ) : (
+          <Field
+            label="Jelszó"
+            htmlFor="imap-password"
+            hint="A postafiókod jelszava. Ha kétlépcsős azonosítást használsz, a szolgáltatónál létrehozott alkalmazásjelszó kell."
+            error={state.field === "password" ? state.error : undefined}
+          >
+            <Input id="imap-password" name="password" type="password" autoComplete="off" required aria-invalid={state.field === "password"} />
+          </Field>
+        )}
 
-        {state.hint && (
+        {state.hint && !icloud && (
           <p className="flex gap-2 rounded-xl bg-surface px-3 py-2 text-xs text-text">
             <Info className="mt-0.5 size-3.5 shrink-0 text-accent" /> {state.hint}
           </p>

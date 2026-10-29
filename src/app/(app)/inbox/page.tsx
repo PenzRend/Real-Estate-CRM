@@ -150,7 +150,17 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
 
       {params.connected === "1" && (
         <p role="status" className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
-          <CheckCircle2 className="size-4" /> A postafiók összekapcsolva. Az elmúlt 14 nap releváns leveleit most töltjük be.
+          <CheckCircle2 className="size-4 shrink-0" /> A postafiók összekapcsolva. Az elmúlt 14 nap releváns leveleit most töltjük be.
+          {Number(params.calendars) > 0 && (
+            <>
+              {" "}
+              Az iCloud-naptárad is bekerült a{" "}
+              <Link href="/calendar" className="font-medium underline">
+                Naptárba
+              </Link>
+              .
+            </>
+          )}
         </p>
       )}
       {error && (

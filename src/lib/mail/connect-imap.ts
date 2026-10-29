@@ -1,8 +1,10 @@
 import "server-only";
 import { z } from "zod";
 import type { CurrentUser } from "@/lib/auth";
+import { addCalDavCalendars } from "@/lib/calendar/data";
 import { createClient } from "@/lib/supabase/server";
 import { configuredProviders } from "./configured";
+import { isICloudEmail, NOT_APP_PASSWORD, normalizeAppPassword } from "./app-password";
 import { encryptToken, isMailCryptoConfigured } from "./crypto";
 import { discoverSettings, testMailbox } from "./imap";
 import type { ServerSettings, Suggestion } from "./imap-settings";
@@ -13,6 +15,8 @@ import { isFirstMailbox } from "./sync";
 
 export type ImapConnectState = {
   ok?: boolean;
+  /** iCloud calendars that came along with an iCloud mailbox. */
+  calendars?: number;
   error?: string;
   /** Which field the error is about, so the form can point at it. */
   field?: "email" | "password" | "imap" | "smtp";
@@ -71,7 +75,15 @@ export async function connectImapMailbox(user: CurrentUser, form: FormData): Pro
     hint = found.hint;
   }
 
-  const result = await testMailbox(d.email, settings, d.password);
+  // iCloud only takes app passwords: catch a pasted normal password before Apple refuses it.
+  let password = d.password;
+  if (settings.imap.host === "imap.mail.me.com") {
+    const appPassword = normalizeAppPassword(password);
+    if (!appPassword) return { email, error: NOT_APP_PASSWORD, field: "password", settings, hint };
+    password = appPassword;
+  }
+
+  const result = await testMailbox(d.email, settings, password);
   if (!result.ok) return { email, error: result.error, field: result.field, settings, hint };
 
   const first = await isFirstMailbox(user);
@@ -83,7 +95,7 @@ export async function connectImapMailbox(user: CurrentUser, form: FormData): Pro
       provider: "imap",
       email_address: d.email,
       ...(first ? { is_primary: true } : {}),
-      refresh_token_enc: encryptToken(d.password),
+      refresh_token_enc: encryptToken(password),
       access_token_enc: null,
       access_token_expires_at: null,
       server_settings: result.settings,
@@ -99,5 +111,11 @@ export async function connectImapMailbox(user: CurrentUser, form: FormData): Pro
     console.error("imap mailbox save failed", error.code);
     return { email, error: "A kapcsolat mentése nem sikerült. Próbáld újra.", settings: result.settings };
   }
-  return { ok: true, email };
+  // The same app password opens iCloud Calendar: the agent's calendars come along.
+  let calendars = 0;
+  if (isICloudEmail(d.email)) {
+    const r = await addCalDavCalendars(user, { username: d.email, password }).catch(() => null);
+    if (r?.ok) calendars = r.added;
+  }
+  return { ok: true, email, calendars };
 }
