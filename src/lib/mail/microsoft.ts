@@ -195,3 +195,28 @@ export async function outlookSend(accessToken: string, m: { to: string[]; subjec
     throw error;
   }
 }
+
+/**
+ * One page of the whole mailbox for the "all emails" view, newest first
+ * (search results come in Graph's relevance order). `cursor` is the next-page
+ * link Graph gave; only Graph links to the user's messages are followed.
+ */
+export async function browseOutlook(accessToken: string, p: { cursor?: string | null; query?: string | null; top: number }) {
+  let path: string;
+  if (p.cursor) {
+    if (!p.cursor.startsWith(`${GRAPH}/messages?`)) throw new Error("Not an Outlook page link");
+    path = p.cursor;
+  } else if (p.query) {
+    path = `messages?$search=${encodeURIComponent(`"${p.query.replace(/["\\]/g, " ")}"`)}&$top=${p.top}&$select=${META_FIELDS}`;
+  } else {
+    const filter = encodeURIComponent("receivedDateTime ge 1900-01-01T00:00:00Z and isDraft eq false");
+    path = `messages?$filter=${filter}&$orderby=receivedDateTime desc&$top=${p.top}&$select=${META_FIELDS}`;
+  }
+  const page = await graph<{ value?: GraphMessage[]; "@odata.nextLink"?: string }>(path, accessToken);
+  return { items: page?.value ?? [], next: page?.["@odata.nextLink"] ?? null };
+}
+
+/** One message's headers, for bringing a single email into Flavio. */
+export async function outlookMessage(accessToken: string, id: string) {
+  return graph<GraphMessage>(`messages/${encodeURIComponent(id)}?$select=${META_FIELDS}`, accessToken);
+}

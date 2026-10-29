@@ -136,7 +136,7 @@ export type SyncResult = { stored: number; errors: string[] };
 type GmailMessage = { id: string; threadId?: string; internalDate?: string; snippet?: string; payload?: GmailPart };
 
 /** One message's headers, the same shape from either provider. */
-type Meta = { id: string; threadId: string | null; at: number; from: Address | null; to: string[]; subject: string | null; replyTo: Address | null; snippet: string };
+export type Meta = { id: string; threadId: string | null; at: number; from: Address | null; to: string[]; subject: string | null; replyTo: Address | null; snippet: string };
 
 /** Where messages come from: ids newest first, headers for a batch, and the plain-text body. */
 type Source = {
@@ -162,31 +162,39 @@ function gmailSource(token: string): Source {
       } while (pageToken && ids.length < MAX_IDS_LISTED);
       return ids;
     },
-    async meta(ids) {
-      const messages = await Promise.all(
-        ids.map((id) =>
-          gmail<GmailMessage>(`messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Reply-To`, token),
-        ),
-      );
-      return messages.map((m) => {
-        const payload = m.payload ?? {};
-        return {
-          id: m.id,
-          threadId: m.threadId ?? null,
-          at: Number(m.internalDate ?? 0),
-          from: parseAddress(header(payload, "From")),
-          to: [...parseAddressList(header(payload, "To")), ...parseAddressList(header(payload, "Cc"))].map((a) => a.email),
-          subject: header(payload, "Subject") ?? null,
-          replyTo: parseAddress(header(payload, "Reply-To")),
-          snippet: m.snippet ?? "",
-        };
-      });
-    },
-    async body(id) {
-      const full = await gmail<GmailMessage>(`messages/${id}?format=full`, token);
-      return extractBody(full.payload ?? {});
-    },
+    meta: (ids) => gmailMetas(token, ids),
+    body: (id) => gmailBody(token, id),
   };
+}
+
+/** Headers of Gmail messages, one request each. */
+export async function gmailMetas(token: string, ids: string[]): Promise<Meta[]> {
+  const messages = await Promise.all(
+    ids.map((id) =>
+      gmail<GmailMessage>(
+        `messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Reply-To`,
+        token,
+      ),
+    ),
+  );
+  return messages.map((m) => {
+    const payload = m.payload ?? {};
+    return {
+      id: m.id,
+      threadId: m.threadId ?? null,
+      at: Number(m.internalDate ?? 0),
+      from: parseAddress(header(payload, "From")),
+      to: [...parseAddressList(header(payload, "To")), ...parseAddressList(header(payload, "Cc"))].map((a) => a.email),
+      subject: header(payload, "Subject") ?? null,
+      replyTo: parseAddress(header(payload, "Reply-To")),
+      snippet: m.snippet ?? "",
+    };
+  });
+}
+
+export async function gmailBody(token: string, id: string) {
+  const full = await gmail<GmailMessage>(`messages/${encodeURIComponent(id)}?format=full`, token);
+  return extractBody(full.payload ?? {});
 }
 
 function outlookSource(token: string): Source {

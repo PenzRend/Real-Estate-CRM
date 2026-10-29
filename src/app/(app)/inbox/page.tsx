@@ -1,27 +1,30 @@
-import { CheckCircle2, CircleAlert, EyeOff, Inbox, Mail, PlugZap, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CheckCircle2, CircleAlert, EyeOff, Inbox, Mail, PlugZap, Search, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AllMailList } from "@/components/mail/all-mail";
 import { ImapConnectForm } from "@/components/mail/imap-connect-form";
 import { MailboxBar } from "@/components/mail/mailbox-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/form";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { listEmails, type EmailItem, type EmailStatus } from "@/lib/db/mail";
 import { formatDateTime } from "@/lib/i18n/format";
 import { configuredProviders } from "@/lib/mail/configured";
 import { connectPaths, type MailProvider } from "@/lib/mail/provider";
+import { browseMailbox } from "@/lib/mail/browse";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
-import { listMailboxes } from "@/lib/mail/sync";
+import { listMailboxes, type Mailbox } from "@/lib/mail/sync";
 import { ignoreEmailAction, restoreEmailAction } from "./actions";
 import { FormSubmit } from "@/components/ui/form-submit";
 import { buttonClasses } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Levelek" };
 
-const tabs: { key: EmailStatus; label: string; empty: string }[] = [
+const tabs: { key: EmailStatus | "all"; label: string; empty: string }[] = [
   { key: "new", label: "Feldolgozandó", empty: "Nincs feldolgozandó levél." },
   {
     key: "processed",
@@ -29,7 +32,89 @@ const tabs: { key: EmailStatus; label: string; empty: string }[] = [
     empty: "Még nincs feldolgozott levél.",
   },
   { key: "ignored", label: "Elrejtett", empty: "Nincs elrejtett levél." },
+  { key: "all", label: "Összes levél", empty: "Nincs levél." },
 ];
+
+/**
+ * "Összes levél": the chosen mailbox read live (search, older pages); nothing
+ * here is stored until the agent processes an email.
+ */
+async function AllMail({ user, mailboxes, params }: { user: CurrentUser; mailboxes: Mailbox[]; params: Awaited<PageProps<"/inbox">["searchParams"]> }) {
+  const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : null);
+  const usable = mailboxes.filter((m) => m.status !== "revoked");
+  const mailbox = usable.find((m) => m.id === one(params.mb)) ?? usable[0];
+  if (!mailbox) return <EmptyState icon={Inbox} title="Nincs elérhető postafiók." description="Kapcsold össze újra a postafiókodat." />;
+  const query = one(params.q)?.trim() || null;
+  const page = await browseMailbox(user, mailbox.id, { cursor: one(params.page), query });
+  const href = (extra: Record<string, string | null>) => {
+    const q = new URLSearchParams({ view: "all", mb: mailbox.id });
+    if (query) q.set("q", query);
+    for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
+    return `/inbox?${q.toString()}`;
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {usable.length > 1 ? (
+          <nav aria-label="Postafiók" className="flex flex-wrap gap-1.5">
+            {usable.map((m) => (
+              <Link
+                key={m.id}
+                href={`/inbox?view=all&mb=${m.id}`}
+                aria-current={m.id === mailbox.id ? "true" : undefined}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs transition-colors",
+                  m.id === mailbox.id ? "border-ink bg-ink text-white" : "border-border text-muted hover:text-ink",
+                )}
+              >
+                {m.email_address}
+              </Link>
+            ))}
+          </nav>
+        ) : (
+          <p className="text-xs text-muted">{mailbox.email_address}</p>
+        )}
+        <form action="/inbox" className="flex gap-2">
+          <input type="hidden" name="view" value="all" />
+          <input type="hidden" name="mb" value={mailbox.id} />
+          <Input name="q" type="search" defaultValue={query ?? ""} placeholder="Keresés: feladó, tárgy, szöveg" aria-label="Keresés a levelekben" className="h-9 text-sm sm:w-72" />
+          <button type="submit" className={buttonClasses("secondary", "sm", "h-9")}>
+            <Search /> Keresés
+          </button>
+        </form>
+      </div>
+      <p className="text-xs text-muted">
+        Élőben a postafiókodból. A Flavio ezeket nem tárolja – csak azt, amit a Feldolgozás gombbal átveszel.
+      </p>
+      <Card>
+        {!page.ok ? (
+          <p role="alert" className="px-5 py-4 text-sm text-danger">
+            {page.error}
+          </p>
+        ) : page.items.length ? (
+          <AllMailList mailboxId={page.mailbox.id} ownEmail={page.mailbox.email} items={page.items} />
+        ) : (
+          <EmptyState icon={Inbox} title={query ? "Nincs találat." : "A postafiók üres."} description={query ? "Próbálj más keresőszót." : ""} />
+        )}
+      </Card>
+      {page.ok && (page.next || one(params.page)) && (
+        <div className="flex gap-2">
+          {one(params.page) && (
+            <Link href={href({})} className={buttonClasses("ghost", "sm")}>
+              Legújabbak
+            </Link>
+          )}
+          {page.next && (
+            <Link href={href({ page: page.next })} className={buttonClasses("secondary", "sm")}>
+              Régebbi levelek
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const errors: Record<string, string> = {
   config: "A postafiók-kapcsolat most nem érhető el. Jelezd nekünk a Visszajelzés gombbal.",
@@ -140,7 +225,7 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
   const configured = isMailCryptoConfigured();
   const mailboxes = configured ? await listMailboxes(user) : [];
   const adding = configured && params.add === "imap";
-  const emails = mailboxes.length ? await listEmails(user, tab.key) : [];
+  const emails = mailboxes.length && tab.key !== "all" ? await listEmails(user, tab.key) : [];
   const error = typeof params.mail_error === "string" ? errors[params.mail_error] : null;
 
   return (
@@ -208,17 +293,25 @@ async function InboxContent({ searchParams }: Pick<PageProps<"/inbox">, "searchP
             ))}
           </nav>
 
-          <Card>
-            {emails.length ? (
-              <ul className="divide-y divide-border">
-                {emails.map((e) => (
-                  <EmailRow key={e.id} e={e} />
-                ))}
-              </ul>
-            ) : (
-              <EmptyState icon={Inbox} title={tab.empty} description="Csak az ügyfelekkel kapcsolatos és az ingatlanos érdeklődő leveleket mutatjuk." />
-            )}
-          </Card>
+          {tab.key === "all" ? (
+            <AllMail user={user} mailboxes={mailboxes} params={params} />
+          ) : (
+            <Card>
+              {emails.length ? (
+                <ul className="divide-y divide-border">
+                  {emails.map((e) => (
+                    <EmailRow key={e.id} e={e} />
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState
+                  icon={Inbox}
+                  title={tab.empty}
+                  description="Itt az ügyfelekkel kapcsolatos és az ingatlanos érdeklődő levelek vannak. Minden más levelet az Összes levél fülön látsz."
+                />
+              )}
+            </Card>
+          )}
         </>
       )}
     </div>

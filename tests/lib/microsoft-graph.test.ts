@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { MailAccessRevoked, MailSendNotAllowed } from "@/lib/mail/google";
-import { listOutlookMessages, outlookSend } from "@/lib/mail/microsoft";
+import { browseOutlook, listOutlookMessages, outlookSend } from "@/lib/mail/microsoft";
 
 type Call = { method: string; url: string; body: unknown; prefer: string | null };
 
@@ -73,5 +73,24 @@ describe("Outlook listing", () => {
     expect(calls).toHaveLength(3);
     expect(decodeURIComponent(calls[0])).toContain("receivedDateTime ge 2026-10-13T00:00:00.000Z and isDraft eq false");
     expect(calls[1]).toBe("https://graph.microsoft.com/v1.0/me/messages?$skip=100");
+  });
+});
+
+describe("Outlook, all emails", () => {
+  it("pages newest first, searches with $search, and follows only Graph's own page links", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", async (input: string) => {
+      urls.push(String(input));
+      return new Response(JSON.stringify({ value: [{ id: "m1" }], "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/messages?$skip=25" }), { status: 200 });
+    });
+    const first = await browseOutlook("tok", { top: 25 });
+    expect(first).toEqual({ items: [{ id: "m1" }], next: "https://graph.microsoft.com/v1.0/me/messages?$skip=25" });
+    expect(decodeURIComponent(urls[0])).toContain("$orderby=receivedDateTime desc&$top=25");
+    await browseOutlook("tok", { query: 'Kiss "Éva"', top: 25 });
+    expect(decodeURIComponent(urls[1])).toContain('$search="Kiss  Éva "');
+    await browseOutlook("tok", { cursor: first.next, top: 25 });
+    expect(urls[2]).toBe("https://graph.microsoft.com/v1.0/me/messages?$skip=25");
+    await expect(browseOutlook("tok", { cursor: "https://evil.example/steal", top: 25 })).rejects.toThrow();
+    expect(urls).toHaveLength(3);
   });
 });

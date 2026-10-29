@@ -252,3 +252,66 @@ export async function imapSend(s: ServerSettings, password: string, m: { from: s
     console.error("imap sent copy failed", error instanceof Error ? error.message : error);
   }
 }
+
+const metaOf = (m: { uid: number; envelope?: MessageEnvelopeObject; internalDate?: Date | string }, uidValidity: bigint): ImapMeta => {
+  const env = m.envelope;
+  return {
+    id: messageKey(env, "INBOX", uidValidity, m.uid),
+    folder: "INBOX",
+    uid: m.uid,
+    threadId: env?.inReplyTo?.trim() || null,
+    at: m.internalDate ? new Date(m.internalDate).getTime() : env?.date ? new Date(env.date).getTime() : 0,
+    from: toAddress(env?.from?.[0]),
+    to: [...(env?.to ?? []), ...(env?.cc ?? [])].flatMap((a) => toAddress(a)?.email ?? []),
+    subject: env?.subject ?? null,
+    replyTo: toAddress(env?.replyTo?.[0]),
+  };
+};
+
+/**
+ * One page of the Inbox for the "all emails" view, newest first: messages
+ * below the `before` UID (the previous page's oldest), optionally only those
+ * whose sender, subject or text matches `query`.
+ */
+export async function browseImap(s: ServerSettings, password: string, p: { before?: number | null; query?: string | null; top: number }) {
+  const client = await connect(s, password);
+  try {
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      const uidValidity = client.mailbox ? client.mailbox.uidValidity : BigInt(0);
+      const q = p.query?.trim();
+      const found = (await client.search(q ? { or: [{ from: q }, { subject: q }, { body: q }] } : { all: true }, { uid: true })) || [];
+      const older = found.filter((uid) => !p.before || uid < p.before).sort((a, b) => a - b);
+      const pageUids = older.slice(-p.top);
+      const items: ImapMeta[] = [];
+      if (pageUids.length) {
+        for await (const m of client.fetch(pageUids, { uid: true, envelope: true, internalDate: true }, { uid: true })) items.push(metaOf(m, uidValidity));
+      }
+      items.sort((a, b) => b.uid - a.uid);
+      return { items, next: older.length > pageUids.length ? pageUids[0] : null };
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => client.close());
+  }
+}
+
+/** One Inbox message by UID: its headers and plain-text body. Null when it is gone. */
+export async function readImapMessage(s: ServerSettings, password: string, uid: number) {
+  const client = await connect(s, password);
+  try {
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      const uidValidity = client.mailbox ? client.mailbox.uidValidity : BigInt(0);
+      const m = await client.fetchOne(String(uid), { uid: true, envelope: true, internalDate: true, source: { maxLength: 2_000_000 } }, { uid: true });
+      if (!m) return null;
+      const parsed = m.source ? await simpleParser(m.source, { skipImageLinks: true, skipTextToHtml: true }) : null;
+      return { meta: metaOf(m, uidValidity), body: (parsed?.text ?? "").trim() };
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => client.close());
+  }
+}
