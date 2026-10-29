@@ -1,4 +1,4 @@
-# Status (2026-10-27)
+# Status (2026-10-29)
 
 Branch `feat/mvp-foundation`.
 
@@ -342,11 +342,42 @@ Branch `feat/mvp-foundation`.
   rises in). `ViewTabs` slides its pill on click; filter bars use next/form
   and read the URL in the browser. The IMAP form moved to `/inbox/connect`.
 
+- Agent workflow features (2026-10-29), each tested in Chrome on TESZT data:
+  - **Ügyletek** (`/deals`): offer → deposit → contract → financing →
+    handover → commission board; deadlines become tasks, offers and
+    counter-offers, parties, listing status follows the deal.
+  - **Instant alerts:** background mail sync and web push (`/api/cron`,
+    `public/sw.js`, VAPID keys in `.env.local`); "Értesítések" per device in
+    Beállítások. Cron needs `SUPABASE_SECRET_KEY` and a scheduler
+    (DEPLOY.md 6c).
+  - **Weekly seller report** (Monday 7:00, editable before sending).
+  - **Matches and bulk offer** for a new listing.
+  - **Viewing reminders:** the day before, the client confirms or declines
+    in one click (`/v/<token>`).
+  - **Listing documents** checklist with uploads and asking the owner.
+  - **AI ad writer, price check against comparables, valuation sheet.**
+  - **One-tap contact** (call, SMS, WhatsApp, Viber) and "Hogy ment?".
+  - **Ctrl+K search** everywhere; **undo** instead of "are you sure?".
+  - **AML (Pmt.) client identification**, encrypted, printable, 8-year
+    retention (blocks erasure). Side effect: TESZT client "Teszt Kata" has
+    an identification, so she can't be erased until 2034.
+  - **Team:** new-client assignment (creator or in turn, with a
+    notification), Iroda page with monthly numbers and targets, "A hónapom"
+    on the dashboard, "Csak az enyéim" on Ügyfelek. The assignment block
+    shows only with more than one member.
+  - **Portal export feed** (`docs/PORTAL-FEED.md`): "Portálokra" per
+    listing, XML link per workspace; going live needs portal partner
+    agreements.
+  - **Android call capture groundwork** (`docs/ANDROID-CALLS.md`): phone
+    keys and `POST /api/calls`; the phone app itself is still to be built.
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).
 - Unused index `properties_title_trgm_idx` (superseded) can be dropped.
-- Next: Android call capture app; a real inquiry email through Feldolgozás.
+- Next: the Android call capture app; portal agreements and their import
+  formats; a real inquiry email through Feldolgozás; real iCloud, IMAP and
+  Outlook mailboxes (need the owner's accounts).
 - Dev tip: don't run `next build` while `next dev` is running; it crashed the dev server once.
