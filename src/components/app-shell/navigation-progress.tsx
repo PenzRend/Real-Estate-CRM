@@ -40,6 +40,10 @@ export function NavigationProgress() {
     setPhase("done");
     setFrom(null);
   }
+  // While a page loads, the list that is about to change dims a little (see [data-list-content] in globals.css).
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-navigating", phase === "loading");
+  }, [phase]);
   // A click that never navigates (e.g. a link that only opens something) gives up after a while.
   useEffect(() => {
     if (phase !== "loading") return;

@@ -1,9 +1,7 @@
-import { CheckCircle2, Plus } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
-import { ClientFilterBar, ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
-import { ButtonLink } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page";
-import { PageSuspense } from "@/components/ui/page-suspense";
+import { ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
+import { ListSuspense } from "@/components/ui/list-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { countArchivedClients, LIST_LIMIT, listClients, type ClientListFilters } from "@/lib/db/clients";
 import { parseHungarianNumber } from "@/lib/validation/client";
@@ -49,24 +47,14 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
   const archivedCount = total === 0 && !filtered ? await countArchivedClients(user) : 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Ügyfelek"
-        description="Vevők, eladók, tulajdonosok és befektetők egy helyen."
-        actions={
-          <ButtonLink href="/clients/new">
-            <Plus /> Új ügyfél
-          </ButtonLink>
-        }
-      />
+    <div className="flex flex-col gap-4">
       {params.erased === "1" && (
         <p role="status" className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success">
           <CheckCircle2 className="size-4 shrink-0" /> Az ügyfél és minden adata véglegesen törölve.
         </p>
       )}
-      <ClientFilterBar filters={filters} />
       {total > 0 && (
-        <p className="-mb-3 text-sm text-muted" aria-live="polite">
+        <p className="text-sm text-muted" aria-live="polite">
           {total > LIST_LIMIT ? `${total} ügyfélből az első ${LIST_LIMIT} látható. Szűkítsd a keresést.` : `${total} ügyfél`}
         </p>
       )}
@@ -77,8 +65,8 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
 
 export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
   return (
-    <PageSuspense>
+    <ListSuspense>
       <ClientsContent searchParams={searchParams} />
-    </PageSuspense>
+    </ListSuspense>
   );
 }

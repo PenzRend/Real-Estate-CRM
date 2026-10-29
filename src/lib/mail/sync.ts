@@ -6,7 +6,7 @@ import { gmail, MailAccessRevoked, refreshAccessToken, revokeToken } from "./goo
 import { ImapUnreachable, openImapReader } from "./imap";
 import type { ServerSettings } from "./imap-settings";
 import { graphAddress, listOutlookMessages, outlookBody, refreshMicrosoftToken, type GraphMessage } from "./microsoft";
-import { extractBody, header, parseAddress, parseAddressList, stripQuotedReply, type Address, type GmailPart } from "./parse";
+import { decodeEntities, extractBody, header, parseAddress, parseAddressList, stripQuotedReply, type Address, type GmailPart } from "./parse";
 import { withArticle, type MailProvider } from "./provider";
 import { classifyEmail } from "./relevance";
 
@@ -187,7 +187,7 @@ export async function gmailMetas(token: string, ids: string[]): Promise<Meta[]> 
       to: [...parseAddressList(header(payload, "To")), ...parseAddressList(header(payload, "Cc"))].map((a) => a.email),
       subject: header(payload, "Subject") ?? null,
       replyTo: parseAddress(header(payload, "Reply-To")),
-      snippet: m.snippet ?? "",
+      snippet: decodeEntities(m.snippet ?? ""),
     };
   });
 }

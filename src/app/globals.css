@@ -95,7 +95,8 @@ h3 {
   pointer-events: none; /* clicks during a transition still reach the page */
 }
 ::view-transition-old(.page-exit),
-::view-transition-old(.skeleton-exit) {
+::view-transition-old(.skeleton-exit),
+::view-transition-old(.list-exit) {
   animation: 120ms ease-in both vt-fade-out;
 }
 ::view-transition-new(.page-enter) {
@@ -103,6 +104,13 @@ h3 {
 }
 ::view-transition-new(.content-enter) {
   animation: 260ms ease-out both vt-rise-in;
+}
+/* The list that is about to change, while its new content loads. */
+[data-list-content] {
+  transition: opacity 200ms ease;
+}
+html[data-navigating] [data-list-content] {
+  opacity: 0.55;
 }
 @keyframes vt-fade-out {
   to {

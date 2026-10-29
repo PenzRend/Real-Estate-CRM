@@ -23,7 +23,7 @@ export function withArticle(provider: MailProvider, suffix = "", capital = false
 }
 
 /** Where "connect" starts for each provider (IMAP: the form on the Levelek page). */
-export const connectPaths: Record<MailProvider, string> = { gmail: "/api/mail/google/connect", outlook: "/api/mail/microsoft/connect", imap: "/inbox?add=imap" };
+export const connectPaths: Record<MailProvider, string> = { gmail: "/api/mail/google/connect", outlook: "/api/mail/microsoft/connect", imap: "/inbox/connect" };
 
 /**
  * Asks for a further permission (sending, calendar) from the provider of the

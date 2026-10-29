@@ -1,9 +1,6 @@
-import { Download, Plus } from "lucide-react";
 import type { Metadata } from "next";
-import { PropertiesTable, PropertyFilterBar, type PropertyFilters } from "@/components/crm/properties-list";
-import { ButtonLink } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page";
-import { PageSuspense } from "@/components/ui/page-suspense";
+import { PropertiesTable, type PropertyFilters } from "@/components/crm/properties-list";
+import { ListSuspense } from "@/components/ui/list-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { coverThumbs } from "@/lib/db/media";
 import { countArchivedProperties, LIST_LIMIT, listProperties, type PropertyListFilters } from "@/lib/db/properties";
@@ -60,24 +57,9 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Ingatlanok"
-        description="Eladó és kiadó ingatlanaid, fotókkal és illő ügyfelekkel."
-        actions={
-          <>
-            <ButtonLink href="/properties/import" variant="secondary">
-              <Download /> Importálás hirdetésből
-            </ButtonLink>
-            <ButtonLink href="/properties/new">
-              <Plus /> Új ingatlan
-            </ButtonLink>
-          </>
-        }
-      />
-      <PropertyFilterBar filters={filters} />
+    <div className="flex flex-col gap-4">
       {total > 0 && (
-        <p className="-mb-3 text-sm text-muted" aria-live="polite">
+        <p className="text-sm text-muted" aria-live="polite">
           {total > LIST_LIMIT ? `${total} ingatlanból az első ${LIST_LIMIT} látható. Szűkítsd a keresést.` : `${total} ingatlan`}
         </p>
       )}
@@ -88,8 +70,8 @@ async function PropertiesContent({ searchParams }: Pick<PageProps<"/properties">
 
 export default function PropertiesPage({ searchParams }: PageProps<"/properties">) {
   return (
-    <PageSuspense>
+    <ListSuspense>
       <PropertiesContent searchParams={searchParams} />
-    </PageSuspense>
+    </ListSuspense>
   );
 }

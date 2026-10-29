@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
 import { createTaskAction, type TaskFormState } from "@/app/(app)/tasks/actions";
 import { Button } from "@/components/ui/button";
@@ -54,4 +55,9 @@ export function NewTaskForm({ clients, defaultClientId, autoFocus }: { clients: 
       )}
     </form>
   );
+}
+
+/** The form on the Feladatok page; the sidebar's "Új feladat" link (?new=1) puts the cursor in it. */
+export function TasksPageForm({ clients }: { clients: Option[] }) {
+  return <NewTaskForm clients={clients} autoFocus={useSearchParams().get("new") === "1"} />;
 }

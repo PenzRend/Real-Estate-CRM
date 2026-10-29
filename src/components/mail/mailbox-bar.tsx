@@ -30,7 +30,7 @@ const disconnectNote: Record<MailProvider, string> = {
 };
 
 /** Where an expired connection is made again: the provider's sign-in, or the IMAP form with the address filled in. */
-const reconnectHref = (m: MailboxRow) => (m.provider === "imap" ? `/inbox?add=imap&email=${encodeURIComponent(m.email)}` : connectPaths[m.provider]);
+const reconnectHref = (m: MailboxRow) => (m.provider === "imap" ? `/inbox/connect?email=${encodeURIComponent(m.email)}` : connectPaths[m.provider]);
 
 function statusLine(m: MailboxRow) {
   if (m.status === "revoked") return "A hozzáférés megszűnt – kapcsold össze újra.";
@@ -143,7 +143,7 @@ export function MailboxBar({ mailboxes, providers }: { mailboxes: MailboxRow[]; 
                   {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail / Google Workspace"}
                 </a>
               ))}
-              <Link href="/inbox?add=imap" className="rounded-xl px-3 py-2 text-sm text-ink hover:bg-surface">
+              <Link href="/inbox/connect" className="rounded-xl px-3 py-2 text-sm text-ink hover:bg-surface">
                 Céges, iCloud vagy más postafiók
               </Link>
             </div>

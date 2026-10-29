@@ -335,6 +335,13 @@ Branch `feat/mvp-foundation`.
   Tested: the tab and its empty state; the live list needs a connected
   mailbox (the owner's Gmail grant had ended).
 
+- Seamless tabs and filters: Levelek, Feladatok, Naptár, Ügyfelek and
+  Ingatlanok keep their header, tabs and filters in a layout (route groups
+  `(list)` where the route has sub-pages), so switching only reloads the list
+  (`ListSuspense`: old list dims and fades, skeleton only if slow, new list
+  rises in). `ViewTabs` slides its pill on click; filter bars use next/form
+  and read the URL in the browser. The IMAP form moved to `/inbox/connect`.
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

@@ -1,4 +1,5 @@
 import { Plus, Search, SlidersHorizontal, Users } from "lucide-react";
+import Form from "next/form";
 import Link from "next/link";
 import { ClientStatusBadge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -27,12 +28,12 @@ function budget(c: ClientListItem) {
   return c.budgetMax != null ? `max. ${formatPriceShort(c.budgetMax)}` : `min. ${formatPriceShort(c.budgetMin)}`;
 }
 
-/** GET form so filters live in the URL and survive reloads and sharing. */
+/** GET form so filters live in the URL and survive reloads and sharing; it navigates in place, so only the list reloads. */
 export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
   const advanced = Boolean(filters.followUp || filters.budget || filters.location || filters.archived);
   const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
-    <form className="flex flex-col gap-2" role="search">
+    <Form action="/clients" scroll={false} className="flex flex-col gap-2" role="search">
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
@@ -93,7 +94,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
           </label>
         </div>
       </details>
-    </form>
+    </Form>
   );
 }
 

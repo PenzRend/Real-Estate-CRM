@@ -3,6 +3,7 @@ import { composeUrl } from "@/lib/away/logic";
 import { buildReplyMime } from "@/lib/mail/compose";
 import { checkSettings, fromMx, guessSettings, knownProvider, mxBaseDomain, parseAutoconfig } from "@/lib/mail/imap-settings";
 import { isICloudEmail, normalizeAppPassword } from "@/lib/mail/app-password";
+import { decodeEntities, htmlToText } from "@/lib/mail/parse";
 import { mailboxLabel, permissionHref, withArticle } from "@/lib/mail/provider";
 import { isPublicAddress } from "@/lib/net/address";
 
@@ -108,5 +109,14 @@ describe("Apple app passwords", () => {
     expect(normalizeAppPassword("abcd-efgh-ijkl")).toBeNull();
     expect(isICloudEmail(" Kata@Me.com")).toBe(true);
     expect(isICloudEmail("kata@gmail.com")).toBe(false);
+  });
+});
+
+describe("Gmail snippets", () => {
+  it("decode HTML entities once", () => {
+    expect(decodeEntities("Here&#39;s a &lt;quick&gt; rundown &amp; more&#x21;")).toBe("Here's a <quick> rundown & more!");
+    expect(decodeEntities("&amp;lt; stays escaped once")).toBe("&lt; stays escaped once");
+    expect(decodeEntities("&unknown; &#0;")).toBe("&unknown; &#0;");
+    expect(htmlToText("<p>Kedves &Eacute;va,</p><p>Szia&nbsp;!</p>")).toBe("Kedves &Eacute;va,\nSzia !");
   });
 });

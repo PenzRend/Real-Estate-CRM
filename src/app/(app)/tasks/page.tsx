@@ -1,73 +1,40 @@
 import { CheckSquare } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { TaskRow } from "@/components/crm/items";
-import { NewTaskForm } from "@/components/crm/new-task-form";
 import { Card } from "@/components/ui/card";
-import { EmptyState, PageHeader } from "@/components/ui/page";
-import { PageSuspense } from "@/components/ui/page-suspense";
+import { ListSuspense } from "@/components/ui/list-suspense";
+import { EmptyState } from "@/components/ui/page";
 import { getCurrentUser } from "@/lib/auth";
-import { listClientOptions, listTasks, type TaskView } from "@/lib/db/activity";
-import { cn } from "@/lib/cn";
+import { listTasks } from "@/lib/db/activity";
+import { taskViews } from "@/lib/tasks/views";
 
 export const metadata: Metadata = { title: "Feladatok" };
 
-const views: { key: TaskView; label: string; empty: string }[] = [
-  { key: "today", label: "Mai", empty: "Mára nincs feladat." },
-  { key: "overdue", label: "Lejárt", empty: "Nincs lejárt feladat. Szép munka!" },
-  { key: "upcoming", label: "Közelgő", empty: "Nincs közelgő vagy határidő nélküli feladat." },
-  { key: "completed", label: "Kész", empty: "Még nincs elvégzett feladat." },
-];
-
-async function TasksContent({ searchParams }: Pick<PageProps<"/tasks">, "searchParams">) {
+async function TaskList({ searchParams }: Pick<PageProps<"/tasks">, "searchParams">) {
   const params = await searchParams;
-  const view = views.find((v) => v.key === params.view) ?? views[0];
+  const view = taskViews.find((v) => v.value === params.view) ?? taskViews[0];
   const user = await getCurrentUser();
-  const now = new Date();
-  const [tasks, clients] = await Promise.all([listTasks(user, view.key, now), listClientOptions(user)]);
+  const tasks = await listTasks(user, view.value, new Date());
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Feladatok" description="Visszahívások és utánkövetések, ügyfelekhez és ingatlanokhoz kötve." />
-
-      {/* The sidebar's "Új feladat" link lands here with ?new=1. */}
-      <NewTaskForm clients={clients} autoFocus={params.new === "1"} />
-
-      <nav aria-label="Nézetek" className="flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
-        {views.map((v) => (
-          <Link
-            key={v.key}
-            href={`/tasks?view=${v.key}`}
-            aria-current={v.key === view.key ? "page" : undefined}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-sm transition-colors",
-              v.key === view.key ? "bg-primary font-medium text-white" : "text-muted hover:text-ink",
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </nav>
-
-      <Card>
-        {tasks.length ? (
-          <ul className="divide-y divide-border">
-            {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} overdue={view.key === "overdue"} done={t.status === "completed"} />
-            ))}
-          </ul>
-        ) : (
-          <EmptyState icon={CheckSquare} title={view.empty} description="Feladat keletkezik a hívásjegyzetekből is: az AI kigyűjti, mit vállaltál." />
-        )}
-      </Card>
-    </div>
+    <Card>
+      {tasks.length ? (
+        <ul className="divide-y divide-border">
+          {tasks.map((t) => (
+            <TaskRow key={t.id} task={t} overdue={view.value === "overdue"} done={t.status === "completed"} />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon={CheckSquare} title={view.empty} description="Feladat keletkezik a hívásjegyzetekből is: az AI kigyűjti, mit vállaltál." />
+      )}
+    </Card>
   );
 }
 
 export default function TasksPage({ searchParams }: PageProps<"/tasks">) {
   return (
-    <PageSuspense>
-      <TasksContent searchParams={searchParams} />
-    </PageSuspense>
+    <ListSuspense>
+      <TaskList searchParams={searchParams} />
+    </ListSuspense>
   );
 }

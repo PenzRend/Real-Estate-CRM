@@ -1,14 +1,10 @@
-import { ChevronLeft, ChevronRight, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { eventColors } from "@/components/calendar/colors";
-import { CalendarConnections } from "@/components/calendar/connections";
-import { ConnectionsDialog } from "@/components/calendar/connections-dialog";
-import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page";
-import { PageSuspense } from "@/components/ui/page-suspense";
+import { ListSuspense } from "@/components/ui/list-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { calendarEvents, listSubscriptions } from "@/lib/calendar/data";
 import { eventsByDay, localDate, monthGrid, timeLabel, weekDays, weekStart, type CalendarEvent } from "@/lib/calendar/week";
@@ -20,8 +16,6 @@ export const metadata: Metadata = { title: "Naptár" };
 const weekday = new Intl.DateTimeFormat("hu-HU", { weekday: "long", timeZone: "UTC" });
 const weekdayShort = new Intl.DateTimeFormat("hu-HU", { weekday: "short", timeZone: "UTC" });
 const dayMonth = new Intl.DateTimeFormat("hu-HU", { month: "long", day: "numeric", timeZone: "UTC" });
-const fullDate = new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-const monthTitle = new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long", timeZone: "UTC" });
 
 const asDate = (d: string) => new Date(`${d}T00:00:00Z`);
 const MONTH_CELL_EVENTS = 3;
@@ -74,11 +68,6 @@ function MonthEvent({ e, day }: { e: CalendarEvent; day: string }) {
   );
 }
 
-const views = [
-  { key: "month", label: "Hónap" },
-  { key: "week", label: "Hét" },
-] as const;
-
 async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "searchParams">) {
   await connection();
   const params = await searchParams;
@@ -93,48 +82,9 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
 
   const [data, subscriptions] = await Promise.all([calendarEvents(user, range.from, range.to), listSubscriptions(user)]);
   const byDay = eventsByDay(data.events, range.days);
-  const title = view === "month" ? monthTitle.format(asDate(month.first)) : `${fullDate.format(asDate(week.days[0]))} – ${dayMonth.format(asDate(week.days[6]))}`;
-  const nav =
-    view === "month"
-      ? { previous: `/calendar?month=${month.previous}`, next: `/calendar?month=${month.next}`, today: "/calendar" }
-      : { previous: `/calendar?view=week&week=${week.previous}`, next: `/calendar?view=week&week=${week.next}`, today: "/calendar?view=week" };
 
   return (
-    <div data-wide className="flex flex-col gap-6">
-      <PageHeader title="Naptár" description="Megtekintések, feladatok, a Google-, Apple- és Outlook-naptárad egy helyen – és a Flavio a többi naptáradban is." />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl">{title}</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <nav aria-label="Nézet" className="flex gap-1 rounded-full border border-border p-1">
-            {views.map((v) => (
-              <Link
-                key={v.key}
-                href={v.key === "month" ? "/calendar" : "/calendar?view=week"}
-                aria-current={v.key === view ? "page" : undefined}
-                className={cn("rounded-full px-4 py-1 text-sm transition-colors", v.key === view ? "bg-primary font-medium text-white" : "text-muted hover:text-ink")}
-              >
-                {v.label}
-              </Link>
-            ))}
-          </nav>
-          <ConnectionsDialog attention={data.problems.length > 0 || subscriptions.some((x) => x.lastError)}>
-            <CalendarConnections user={user} returnTo="/calendar" />
-          </ConnectionsDialog>
-          <nav aria-label="Lapozás" className="flex items-center gap-1">
-            <Link href={nav.previous} className={buttonClasses("secondary", "sm")} aria-label={view === "month" ? "Előző hónap" : "Előző hét"}>
-              <ChevronLeft />
-            </Link>
-            <Link href={nav.today} className={buttonClasses("secondary", "sm")}>
-              Ma
-            </Link>
-            <Link href={nav.next} className={buttonClasses("secondary", "sm")} aria-label={view === "month" ? "Következő hónap" : "Következő hét"}>
-              <ChevronRight />
-            </Link>
-          </nav>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-6">
       {data.problems.length > 0 && (
         <div role="alert" className="flex items-start gap-2 rounded-2xl bg-warning-soft px-4 py-3 text-sm text-warning">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
@@ -273,8 +223,8 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
 
 export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   return (
-    <PageSuspense>
+    <ListSuspense fallback={<div className="h-[36rem] animate-pulse rounded-2xl border border-border bg-surface/60" />}>
       <CalendarContent searchParams={searchParams} />
-    </PageSuspense>
+    </ListSuspense>
   );
 }
