@@ -50,7 +50,28 @@ async function mailJob(admin: SupabaseClient): Promise<JobResult> {
     const message = arrivalsMessage(list);
     if (message) notified += await asBackgroundJob(admin, () => pushToUser(userId, message));
   }
-  return { synced, failed, newEmails: [...arrivals.values()].reduce((n, l) => n + l.length, 0), notified };
+  return { synced, failed, newEmails: [...arrivals.values()].reduce((n, l) => n + l.length, 0), notified, leadsAnnounced: await announceNewLeads(admin) };
+}
+
+/** A client given to an agent by someone else (or by the rotation): a notification to that agent, once. */
+async function announceNewLeads(admin: SupabaseClient): Promise<number> {
+  const { data: fresh } = await admin
+    .from("clients")
+    .select("id, full_name, assigned_to, created_by, lead_source")
+    .is("lead_notified_at", null)
+    .not("assigned_to", "is", null)
+    .gte("created_at", new Date(Date.now() - 86_400_000).toISOString())
+    .limit(500);
+  let sent = 0;
+  for (const c of fresh ?? []) {
+    if (c.assigned_to !== c.created_by) {
+      sent += await asBackgroundJob(admin, () =>
+        pushToUser(c.assigned_to as string, { title: `Új ügyfelet kaptál: ${c.full_name}`, body: c.lead_source ? `Forrás: ${c.lead_source}` : "Nézd meg, és vedd fel vele a kapcsolatot.", url: `/clients/${c.id}`, tag: `lead-${c.id}` }),
+      );
+    }
+    await admin.from("clients").update({ lead_notified_at: new Date().toISOString() }).eq("id", c.id);
+  }
+  return sent;
 }
 
 export async function runCronJob(admin: SupabaseClient, job: CronJob, now: Date): Promise<JobResult> {

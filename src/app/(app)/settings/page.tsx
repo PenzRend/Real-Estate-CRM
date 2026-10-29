@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { NotificationsSetting } from "@/components/settings/notifications";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
+import { LeadAssignment } from "@/components/team/lead-assignment";
+import { leadSettings } from "@/lib/team/office-data";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { FormSubmit } from "@/components/ui/form-submit";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +51,7 @@ const initials = (name: string) =>
     .toUpperCase();
 
 async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
-  const [{ members, pending }, workspaces] = await Promise.all([listTeam(user), listWorkspaces(user)]);
+  const [{ members, pending }, workspaces, leads] = await Promise.all([listTeam(user), listWorkspaces(user), leadSettings(user)]);
   const manage = canManageTeam(user);
   // The owner removes anyone; an admin removes members only (the database enforces the same).
   const canRemove = (role: string) => role !== "owner" && (user.organization.role === "owner" || (manage && role === "member"));
@@ -86,6 +88,10 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
           </li>
         ))}
       </ul>
+
+      {manage && members.length > 1 && (
+        <LeadAssignment mode={leads.mode} members={members.map((m) => ({ userId: m.userId, name: m.name, inRotation: leads.inRotation.has(m.userId) }))} />
+      )}
 
       {manage && (
         <TeamInvites

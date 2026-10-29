@@ -8,7 +8,7 @@ import { PropertyFilterBar, type PropertyFilters } from "./properties-list";
 // the filters from the URL themselves, so they stay on screen while the list
 // below reloads. Keyed by the URL, so "clear filters" empties the fields too.
 
-const CLIENT_KEYS = ["q", "status", "type", "followUp", "budget", "location", "archived"] as const;
+const CLIENT_KEYS = ["q", "status", "type", "followUp", "budget", "location", "archived", "mine"] as const;
 const PROPERTY_KEYS = ["q", "type", "status", "listing", "minPrice", "maxPrice", "minRooms", "minArea", "maxArea", "balcony", "garden", "parking", "archived"] as const;
 
 function read<K extends string>(params: URLSearchParams, keys: readonly K[]) {

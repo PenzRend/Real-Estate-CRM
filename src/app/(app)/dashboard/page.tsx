@@ -12,6 +12,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { DealsPulse } from "@/components/deals/deals-pulse";
 import { dealSummary } from "@/lib/deals/data";
+import { MyMonth } from "@/components/team/my-month";
+import { utcToZonedLocal } from "@/lib/i18n/timezone";
+import { officeStats } from "@/lib/team/office-data";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
@@ -42,12 +45,20 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
     listOpenViewings(user, now),
     dealSummary(user, now),
   ]);
+  // The agent's own month (numbers and targets).
+  const month = await officeStats(user, utcToZonedLocal(now.toISOString()).slice(0, 7)).catch(() => null);
+  const me = month?.agents.find((a) => a.userId === user.id) ?? null;
   return (
     <DashboardView
       now={now}
       data={data}
       away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />}
-      deals={<DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
+      deals={
+        <>
+          <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />
+          {me && <MyMonth me={me} />}
+        </>
+      }
       viewings={<ViewingsCard viewings={viewings} now={now.toISOString()} empty="Nincs foglalt megtekintés a következő két hétben. Egy ügyfél levelénél vagy az ingatlan oldalán foglalhatsz." />}
     />
   );

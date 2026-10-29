@@ -20,6 +20,7 @@ function readFilters(params: Record<string, string | string[] | undefined>): Cli
     budget: one("budget"),
     location: one("location"),
     archived: one("archived"),
+    mine: one("mine"),
   };
 }
 
@@ -42,7 +43,7 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
   const filters = readFilters(params);
   const user = await getCurrentUser();
   const now = new Date();
-  const { clients, total } = await listClients(user, toQuery(filters), now);
+  const { clients, total } = await listClients(user, { ...toQuery(filters), assignedTo: filters.mine === "1" ? user.id : undefined }, now);
   const filtered = Object.values(filters).some(Boolean);
   const archivedCount = total === 0 && !filtered ? await countArchivedClients(user) : 0;
 

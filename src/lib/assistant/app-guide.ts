@@ -91,6 +91,12 @@ export const appGuide: GuideEntry[] = [
     how: "This chat, also available from the round button in the bottom-right corner on every screen. Answers questions about the agent's own clients, listings, tasks and emails, and where things are in Flavio. It only reads.",
   },
   {
+    id: "office",
+    screen: "Iroda",
+    href: "/office",
+    how: "The month's numbers per agent: 'Jutalék' (commission of deals won this month), 'Lezárt ügylet', 'Új megbízás' (listings taken), 'Megtekintés' (viewings held), 'Új ügyfél' (clients assigned) and 'Folyamatban' (commission of open deals), with the office's totals on top and the arrows to switch month. The owner and admins type each agent's monthly target ('cél') into the table – it saves when the field is left – and see everyone; an agent sees the office totals and their own row. The dashboard's 'A hónapom' card shows the agent's own month against the targets. New clients are shared out in Beállítások → Csapat → 'Új ügyfelek kiosztása': 'Aki felveszi' (the agent who adds it) or 'Sorban kiosztva' (in turn among the ticked colleagues); whoever gets a client from someone else is notified. On Ügyfelek, 'Csak az enyéim' shows only the agent's own clients.",
+  },
+  {
     id: "settings",
     screen: "Beállítások",
     href: "/settings",

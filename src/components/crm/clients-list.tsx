@@ -20,6 +20,7 @@ export type ClientFilters = {
   budget?: string;
   location?: string;
   archived?: string;
+  mine?: string;
 };
 
 function budget(c: ClientListItem) {
@@ -30,7 +31,7 @@ function budget(c: ClientListItem) {
 
 /** GET form so filters live in the URL and survive reloads and sharing; it navigates in place, so only the list reloads. */
 export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
-  const advanced = Boolean(filters.followUp || filters.budget || filters.location || filters.archived);
+  const advanced = Boolean(filters.followUp || filters.budget || filters.location || filters.archived || filters.mine);
   const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
     <Form action="/clients" scroll={false} className="flex flex-col gap-2" role="search">
@@ -91,6 +92,10 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
           <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
             <input type="checkbox" name="archived" value="1" defaultChecked={filters.archived === "1"} className="size-4 accent-[var(--primary)]" />
             Csak archiváltak
+          </label>
+          <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
+            <input type="checkbox" name="mine" value="1" defaultChecked={filters.mine === "1"} className="size-4 accent-[var(--primary)]" />
+            Csak az enyéim
           </label>
         </div>
       </details>

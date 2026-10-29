@@ -69,6 +69,8 @@ export type ClientListFilters = {
   budgetM?: number;
   location?: string;
   archived?: boolean;
+  /** Only the clients this agent looks after. */
+  assignedTo?: string;
   /** Match each word by its stem, so inflected names ("Katáról", "Péternek") still find the client. */
   stemmedNames?: boolean;
 };
@@ -108,6 +110,7 @@ export async function listClients(user: CurrentUser, f: ClientListFilters, now =
     }
   }
   if (f.status) query = query.eq("status", f.status);
+  if (f.assignedTo) query = query.eq("assigned_to", f.assignedTo);
   if (f.type) query = query.eq("client_type", f.type);
   if (f.location) {
     const term = searchTerm(f.location);
