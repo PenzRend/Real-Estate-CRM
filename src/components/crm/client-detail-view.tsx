@@ -26,8 +26,11 @@ export function ClientDetailView({
   notice,
   matches,
   viewings,
+  deals,
 }: {
   client: ClientDetail;
+  /** Deals where the client is the buyer or the seller. */
+  deals?: ReactNode;
   /** Extra header actions, e.g. archive / restore. */
   actions?: ReactNode;
   archivedAt?: string | null;
@@ -118,6 +121,8 @@ export function ClientDetailView({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
+          {deals}
+
           {viewings}
 
           {matches}

@@ -16,6 +16,8 @@ import { defaultContact, getActiveShare } from "@/lib/shares/data";
 import { ClientMatchesCard } from "@/components/crm/match-lists";
 import { ViewingsCard } from "@/components/viewings/viewings-card";
 import { listViewingsFor } from "@/lib/viewings/data";
+import { DealsCard } from "@/components/deals/deals-card";
+import { listDealsFor } from "@/lib/deals/data";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
 import { FormSubmit } from "@/components/ui/form-submit";
 
@@ -26,13 +28,14 @@ export async function generateMetadata({ params }: PageProps<"/properties/[id]">
 async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "params">) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const [property, matches, media, share, contact, viewings] = await Promise.all([
+  const [property, matches, media, share, contact, viewings, deals] = await Promise.all([
     getPropertyDetail(user, id),
     matchesForProperty(user, id),
     listMedia(user, id),
     getActiveShare(user, id),
     defaultContact(user),
     listViewingsFor(user, { propertyId: id }),
+    listDealsFor(user, { propertyId: id }),
   ]);
   if (!property) notFound();
 
@@ -67,6 +70,7 @@ async function PropertyContent({ params }: Pick<PageProps<"/properties/[id]">, "
       viewings={
         <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />
       }
+      deals={property.archived_at && !deals.length ? null : <DealsCard deals={deals} newHref={`/deals/new?property=${property.id}`} empty="Még nincs ügylet. Ha egy vevő ajánlatot tesz, indíts egyet." />}
       media={<PropertyMedia propertyId={property.id} organizationId={user.organization.id} items={media} sourceUrl={property.source_url} />}
     />
   );

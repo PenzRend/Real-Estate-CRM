@@ -14,6 +14,8 @@ import { listOwnedProperties } from "@/lib/db/properties";
 import { PropertyMatchesCard } from "@/components/crm/match-lists";
 import { BookViewingButton, ViewingsCard } from "@/components/viewings/viewings-card";
 import { listViewingsFor } from "@/lib/viewings/data";
+import { DealsCard } from "@/components/deals/deals-card";
+import { listDealsFor } from "@/lib/deals/data";
 import { archiveClientAction, restoreClientAction } from "../actions";
 import { FormSubmit } from "@/components/ui/form-submit";
 
@@ -24,11 +26,12 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
 async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
-  const [detail, owned, matches, viewings] = await Promise.all([
+  const [detail, owned, matches, viewings, deals] = await Promise.all([
     getClientDetail(user, id),
     listOwnedProperties(user, id),
     matchesForClient(user, id),
     listViewingsFor(user, { clientId: id }),
+    listDealsFor(user, { clientId: id }),
   ]);
   if (!detail) notFound();
   // Owned listings first, then properties linked through interest/viewings.
@@ -81,6 +84,11 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       viewings={
         viewings.length || wantsListings ? (
           <ViewingsCard viewings={viewings} now={new Date().toISOString()} showClient={false} empty="Még nincs foglalt megtekintés." />
+        ) : null
+      }
+      deals={
+        deals.length || (!client.archivedAt && wantsListings) ? (
+          <DealsCard deals={deals} newHref={`/deals/new?buyer=${client.id}`} empty="Még nincs ügylet. Ha ajánlatot tesz egy ingatlanra, indíts egyet." />
         ) : null
       }
       matches={wantsListings && !client.archivedAt ? <PropertyMatchesCard clientId={client.id} matches={matches} hasRequirements={hasRequirements} /> : null}

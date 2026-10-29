@@ -10,6 +10,8 @@ import { ViewingsCard } from "@/components/viewings/viewings-card";
 import { listOpenViewings } from "@/lib/viewings/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PageSuspense } from "@/components/ui/page-suspense";
+import { DealsPulse } from "@/components/deals/deals-pulse";
+import { dealSummary } from "@/lib/deals/data";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
@@ -33,12 +35,19 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
     );
   }
   const user = await getCurrentUser();
-  const [data, away, shown, viewings] = await Promise.all([getDashboardData(user, now), getAwaySummary(user, now), notice(searchParams), listOpenViewings(user, now)]);
+  const [data, away, shown, viewings, deals] = await Promise.all([
+    getDashboardData(user, now),
+    getAwaySummary(user, now),
+    notice(searchParams),
+    listOpenViewings(user, now),
+    dealSummary(user, now),
+  ]);
   return (
     <DashboardView
       now={now}
       data={data}
       away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />}
+      deals={<DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
       viewings={<ViewingsCard viewings={viewings} now={now.toISOString()} empty="Nincs foglalt megtekintés a következő két hétben. Egy ügyfél levelénél vagy az ingatlan oldalán foglalhatsz." />}
     />
   );

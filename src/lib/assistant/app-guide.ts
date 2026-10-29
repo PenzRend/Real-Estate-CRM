@@ -49,6 +49,12 @@ export const appGuide: GuideEntry[] = [
     how: "On a client's page 'Illő ingatlanok', on a listing's page 'Illő ügyfelek': rule-based matches with reasons. 'Ajánlom' creates a task to offer it and can open 'Ajánlat küldése' (an email draft to the client). A match can be hidden and restored.",
   },
   {
+    id: "deals",
+    screen: "Ügyletek",
+    href: "/deals",
+    how: "Deals from the buyer's offer to the commission, as a board by stage: Ajánlat, Foglaló, Adásvételi, Finanszírozás, Birtokbaadás, Jutalék; tabs 'Folyamatban', 'Sikeres', 'Meghiúsult', with this month's expected commission on top. Start one with 'Új ügylet' or 'Ügylet indítása' on a listing's or a client's page. On a deal: 'Tovább: …' moves it to the next stage ('Jutalék megérkezett – lezárás' closes it as won, the listing becomes sold), dates under 'Határidők' (deposit, contract, financing, handover, commission) save themselves and each becomes a task, 'Ajánlatok' records offers and counter-offers ('Elfogadva' sets the agreed price), 'Ár és jutalék' (percentage or fixed), 'Felek' (buyer, seller, and the lawyer, bank or mortgage adviser with one-tap call), 'Meghiúsult' with a reason.",
+  },
+  {
     id: "tasks",
     screen: "Feladatok",
     href: "/tasks",
