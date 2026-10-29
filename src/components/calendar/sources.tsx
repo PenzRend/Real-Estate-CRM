@@ -27,7 +27,7 @@ function Card({ icon, title, children }: { icon: React.ReactNode; title: string;
 }
 
 /** Google or Outlook: the connected accounts, each shown or one click from being allowed. */
-function ProviderCard({ provider, accounts, configured }: { provider: CalendarAccount["provider"]; accounts: CalendarAccount[]; configured: boolean }) {
+function ProviderCard({ provider, accounts, configured, returnTo }: { provider: CalendarAccount["provider"]; accounts: CalendarAccount[]; configured: boolean; returnTo: string }) {
   const mine = accounts.filter((a) => a.provider === provider);
   if (!mine.length && !configured) return null;
   const connect = provider === "gmail" ? "/api/mail/google/connect" : "/api/mail/microsoft/connect";
@@ -41,14 +41,14 @@ function ProviderCard({ provider, accounts, configured }: { provider: CalendarAc
               <Check className="size-3" /> Megjelenik
             </Badge>
           ) : (
-            <a href={permissionHref("calendar", "/calendar", a.id)} className={buttonClasses("secondary", "xs")}>
+            <a href={permissionHref("calendar", returnTo, a.id)} className={buttonClasses("secondary", "xs")}>
               <ShieldCheck /> Engedélyezés
             </a>
           )}
         </div>
       ))}
       {configured && (
-        <a href={`${connect}?calendar=1&next=%2Fcalendar`} className={buttonClasses(mine.length ? "ghost" : "secondary", "sm", "w-fit")}>
+        <a href={`${connect}?calendar=1&next=${encodeURIComponent(returnTo)}`} className={buttonClasses(mine.length ? "ghost" : "secondary", "sm", "w-fit")}>
           {mine.length ? "Másik fiók hozzáadása" : `${provider === "gmail" ? "Google" : "Microsoft"}-fiók összekapcsolása`}
         </a>
       )}
@@ -134,6 +134,7 @@ export function CalendarSources({
   calendars,
   icloudMailboxes,
   appleId,
+  returnTo,
 }: {
   accounts: CalendarAccount[];
   configured: CalendarAccount["provider"][];
@@ -141,12 +142,14 @@ export function CalendarSources({
   icloudMailboxes: { id: string; email: string }[];
   /** A good first guess for the Apple ID: the agent's own email address. */
   appleId: string;
+  /** Where Google / Microsoft sign-ins come back to. */
+  returnTo: string;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3">
       <ICloudCard calendars={calendars} icloudMailboxes={icloudMailboxes} appleId={appleId} />
-      <ProviderCard provider="gmail" accounts={accounts} configured={configured.includes("gmail")} />
-      <ProviderCard provider="outlook" accounts={accounts} configured={configured.includes("outlook")} />
+      <ProviderCard provider="gmail" accounts={accounts} configured={configured.includes("gmail")} returnTo={returnTo} />
+      <ProviderCard provider="outlook" accounts={accounts} configured={configured.includes("outlook")} returnTo={returnTo} />
     </div>
   );
 }

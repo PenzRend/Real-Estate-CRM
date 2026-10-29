@@ -1,9 +1,8 @@
-import { ArrowRight, Download, LogOut, Mail, Puzzle } from "lucide-react";
+import { ArrowRight, CalendarDays, Download, LogOut, Mail, Puzzle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import { CalendarFeed } from "@/components/settings/calendar-feed";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -14,6 +13,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
+import { listSubscriptions } from "@/lib/calendar/data";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { mailboxLabel } from "@/lib/mail/provider";
@@ -139,7 +139,14 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const [mailboxes, feedActive] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user)]);
+  const [mailboxes, feedActive, calendars] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user), listSubscriptions(user)]);
+  // One line on the calendars: which are shown in Flavio, and whether the subscription link is on.
+  const calendarParts = [
+    ...mailboxes.filter((m) => m.can_calendar && m.status !== "revoked").map((m) => (m.provider === "outlook" ? "Outlook-naptár" : "Google Naptár")),
+    ...(calendars.some((c) => c.kind === "caldav") ? ["iCloud-naptár"] : []),
+    ...(calendars.some((c) => c.kind === "ics") ? [`${calendars.filter((c) => c.kind === "ics").length} naptár linkkel`] : []),
+    ...(feedActive ? ["feliratkozási link aktív"] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -188,7 +195,13 @@ async function SettingsContent() {
             href="/properties/import"
             cta="Telepítés"
           />
-          <CalendarFeed active={feedActive} />
+          <Connection
+            icon={CalendarDays}
+            title="Naptárak (iPhone, Google, Outlook)"
+            status={calendarParts.length ? [...new Set(calendarParts)].join(" · ") : "A saját naptáraid a Flavióban, és a megtekintések a telefonod naptárában."}
+            href="/settings/calendars"
+            cta={calendarParts.length ? "Kezelés" : "Beállítás"}
+          />
         </FormSection>
 
         <FormSection number="04" title="Adatok" description="Az összes ügyfél, ingatlan, feladat, előzmény és megtekintés egy Excel-fájlban.">

@@ -4,22 +4,17 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { eventColors } from "@/components/calendar/colors";
-import { CalendarSources, type CalendarAccount } from "@/components/calendar/sources";
-import { Subscriptions } from "@/components/calendar/subscriptions";
-import { CalendarFeed } from "@/components/settings/calendar-feed";
+import { CalendarConnections } from "@/components/calendar/connections";
+import { ConnectionsDialog } from "@/components/calendar/connections-dialog";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth";
 import { calendarEvents, listSubscriptions } from "@/lib/calendar/data";
-import { isICloudEmail } from "@/lib/mail/app-password";
-import { hasCalendarFeed } from "@/lib/calendar/feed";
 import { eventsByDay, localDate, monthGrid, timeLabel, weekDays, weekStart, type CalendarEvent } from "@/lib/calendar/week";
 import { cn } from "@/lib/cn";
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
-import { configuredProviders } from "@/lib/mail/configured";
-import { listMailboxes } from "@/lib/mail/sync";
 
 export const metadata: Metadata = { title: "Naptár" };
 
@@ -97,19 +92,8 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
   const week = weekDays(weekStart(typeof params.week === "string" ? params.week : null, now));
   const range = view === "month" ? month : week;
 
-  const [data, subscriptions, mailboxes, feedActive] = await Promise.all([
-    calendarEvents(user, range.from, range.to),
-    listSubscriptions(user),
-    listMailboxes(user).catch(() => []),
-    hasCalendarFeed(user),
-  ]);
+  const [data, subscriptions] = await Promise.all([calendarEvents(user, range.from, range.to), listSubscriptions(user)]);
   const byDay = eventsByDay(data.events, range.days);
-  const accounts: CalendarAccount[] = mailboxes.flatMap((m) =>
-    m.provider !== "imap" && m.status !== "revoked" ? [{ id: m.id, email: m.email_address, provider: m.provider, canCalendar: m.can_calendar }] : [],
-  );
-  const icloudMailboxes = mailboxes.filter((m) => m.provider === "imap" && m.status !== "revoked" && isICloudEmail(m.email_address)).map((m) => ({ id: m.id, email: m.email_address }));
-  const configured = configuredProviders().filter((p): p is CalendarAccount["provider"] => p !== "imap");
-
   const title = view === "month" ? monthTitle.format(asDate(month.first)) : `${fullDate.format(asDate(week.days[0]))} – ${dayMonth.format(asDate(week.days[6]))}`;
   const nav =
     view === "month"
@@ -135,6 +119,9 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
               </Link>
             ))}
           </nav>
+          <ConnectionsDialog attention={data.problems.length > 0 || subscriptions.some((x) => x.lastError)}>
+            <CalendarConnections user={user} returnTo="/calendar" />
+          </ConnectionsDialog>
           <nav aria-label="Lapozás" className="flex items-center gap-1">
             <Link href={nav.previous} className={buttonClasses("secondary", "sm")} aria-label={view === "month" ? "Előző hónap" : "Előző hét"}>
               <ChevronLeft />
@@ -281,24 +268,6 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg">Naptáraid a Flavióban</h2>
-          <p className="text-sm text-muted">Az iPhone-od, a Google- és az Outlook-naptárad – csak te látod őket.</p>
-          <CalendarSources accounts={accounts} configured={configured} calendars={subscriptions.filter((s) => s.kind === "caldav")} icloudMailboxes={icloudMailboxes} appleId={user.email} />
-          <Subscriptions subscriptions={subscriptions.filter((s) => s.kind === "ics")} />
-        </section>
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg">A Flavio a többi naptáradban</h2>
-          <p className="text-sm text-muted">
-            A foglalt megtekintések maguktól bekerülnek a Google- vagy Outlook-naptáradba (ha engedélyezted), feliratkozással pedig bármelyik naptárba: iPhone,
-            Mac, Android, Outlook, Thunderbird…
-          </p>
-          <div className="grid grid-cols-1">
-            <CalendarFeed active={feedActive} />
-          </div>
-        </section>
-      </div>
     </div>
   );
 }

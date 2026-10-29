@@ -64,7 +64,13 @@ export const appGuide: GuideEntry[] = [
     id: "calendar",
     screen: "Naptár",
     href: "/calendar",
-    how: "A big month view ('Hónap', the default; click a day for that week) and a week view ('Hét'), with 'Ma' and previous/next. Shows the workspace's viewings, the agent's own tasks, their Google or Outlook calendars ('Naptáraid a Flavióban' → 'Engedélyezés' or connect the account), their Apple iCloud calendars (the iPhone calendar: the 'Apple iCloud-naptár' card walks through three steps – 'Apple-fiók megnyitása', there Bejelentkezés és biztonság → Alkalmazásspecifikus jelszavak → name it Flavio → Létrehozás, then paste the password Apple shows ('Beillesztés') and click 'Kész – naptáraim megjelenítése'; the normal Apple password does not work; connecting an iCloud mailbox in Levelek adds the calendars automatically; other CalDAV servers under 'Más naptárszerver'), and any other calendar by its iCal/webcal link ('Más naptár hozzáadása linkkel'). Only the agent sees their own calendars. The other way round, 'A Flavio a többi naptáradban' creates a subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app.",
+    how: "A big month view ('Hónap', the default; click a day for that week) and a week view ('Hét'), with 'Ma' and previous/next. Shows the workspace's viewings, the agent's own tasks, and the agent's own calendars. All calendar connections are behind the 'Naptárak' button at the top of the calendar (a popup) and also in Beállítások → Naptárak: their Google or Outlook calendars ('Engedélyezés' or connect the account), their Apple iCloud calendars (the iPhone calendar: the 'Apple iCloud-naptár' card walks through three steps – 'Apple-fiók megnyitása', there Bejelentkezés és biztonság → Alkalmazásspecifikus jelszavak → name it Flavio → Létrehozás, then paste the password Apple shows ('Beillesztés') and click 'Kész – naptáraim megjelenítése'; the normal Apple password does not work; connecting an iCloud mailbox in Levelek adds the calendars automatically; other CalDAV servers under 'Más naptárszerver'), and any other calendar by its iCal/webcal link ('Más naptár hozzáadása linkkel'). Only the agent sees their own calendars. The other way round, 'A Flavio a többi naptáradban' creates a subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app.",
+  },
+  {
+    id: "settings-calendars",
+    screen: "Beállítások → Naptárak",
+    href: "/settings/calendars",
+    how: "The same calendar connections as the 'Naptárak' button on the calendar page: the iPhone (iCloud) calendar in three guided steps, Google and Outlook calendars, other calendars by link, and the subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app ('Új link létrehozása').",
   },
   {
     id: "assistant",
