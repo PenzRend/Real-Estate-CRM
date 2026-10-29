@@ -327,6 +327,14 @@ Branch `feat/mvp-foundation`.
   address. Migration `20261029134731_calendar_caldav.sql`. Tested: XML
   parsing units, the error path in the browser; not yet with a real Apple ID.
 
+- Levelek → "Összes levél" (`src/lib/mail/browse.ts`): the whole mailbox read
+  live, page by page (Gmail list + metadata, Graph messages with $search /
+  nextLink — only Graph's own links followed, IMAP Inbox by UID with SEARCH),
+  read in place, never stored; "Feldolgozás" stores that one email (relevance
+  filter skipped, client and portal still detected) and opens processing.
+  Tested: the tab and its empty state; the live list needs a connected
+  mailbox (the owner's Gmail grant had ended).
+
 ## Known gaps / next
 
 - Supabase advisor: enable leaked password protection (dashboard setting);

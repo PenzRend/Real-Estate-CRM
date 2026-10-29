@@ -106,7 +106,8 @@ export default function PrivacyPage() {
             Más postafiókot (pl. saját domaines céges címet vagy iCloudot) az ingatlanos a címével és egy jelszóval (jellemzően alkalmazásjelszóval) köt be. A
             jelszót titkosítva tároljuk, és csak a levelek lekéréséhez (IMAP), illetve az ingatlanos kattintására történő küldéshez (SMTP) használjuk; a
             Flavióból elküldött levél másolata a postafiók Elküldött mappájába kerül. A levelekből ugyanúgy csak a relevánsakat tároljuk, mint a Google- és
-            Microsoft-fióknál. Leválasztáskor a jelszót töröljük.
+            Microsoft-fióknál. Leválasztáskor a jelszót töröljük. Az „Összes levél” nézet bármelyik bekötött postafiókot élőben, a megnyitás
+            pillanatában olvassa, és ezeket a leveleket nem tároljuk; csak azt a levelet mentjük el, amelyet az ingatlanos feldolgozásra átvesz.
           </p>
           <p>
             Ha az ingatlanos egy naptár iCal-linkjét adja meg (pl. iCloud, Google, Outlook), vagy az iCloud-naptárát Apple ID-val és alkalmazásjelszóval köti
