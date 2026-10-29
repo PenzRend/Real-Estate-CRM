@@ -21,6 +21,9 @@ import { SellerReportCard } from "@/components/reports/seller-report-card";
 import { listReports, reportTarget } from "@/lib/reports/data";
 import { DocumentsCard } from "@/components/documents/documents-card";
 import { listDocuments } from "@/lib/documents/data";
+import { AdWriter } from "@/components/listings/ad-writer";
+import { PriceCheckCard } from "@/components/listings/price-check-card";
+import { priceStudy } from "@/lib/listings/comparables";
 import { listDealsFor } from "@/lib/deals/data";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
 import { FormSubmit } from "@/components/ui/form-submit";
@@ -34,7 +37,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   // Just created or imported: the matching buyers are offered it straight away.
   const justAdded = query.new === "1";
   const user = await getCurrentUser();
-  const [property, matches, media, share, contact, viewings, deals, target, reports, documents] = await Promise.all([
+  const [property, matches, media, share, contact, viewings, deals, target, reports, documents, study] = await Promise.all([
     getPropertyDetail(user, id),
     matchesForProperty(user, id),
     listMedia(user, id),
@@ -45,6 +48,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
     reportTarget(user, id),
     listReports(user, id),
     listDocuments(user, id),
+    priceStudy(user, id),
   ]);
   if (!property) notFound();
   const draftMatches = property.status === "draft" ? (await matchesForProperty(user, id, { preview: true })).length : 0;
@@ -80,6 +84,8 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
       viewings={
         <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />
       }
+      priceCheck={study ? <PriceCheckCard propertyId={property.id} study={study} /> : null}
+      descriptionAction={property.archived_at ? null : <AdWriter propertyId={property.id} currentTitle={property.title} />}
       documents={<DocumentsCard propertyId={property.id} organizationId={user.organization.id} rows={documents} hasOwnerEmail={Boolean(target?.ownerEmail)} />}
       sellerReport={
         property.archived_at || !target ? null : (

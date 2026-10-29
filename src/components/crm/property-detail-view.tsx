@@ -49,8 +49,14 @@ export function PropertyDetailView({
   deals,
   sellerReport,
   documents,
+  priceCheck,
+  descriptionAction,
 }: {
   property: PropertyDetail;
+  /** Price per m² against comparable properties. */
+  priceCheck?: ReactNode;
+  /** Next to the description's title: the AI ad writer. */
+  descriptionAction?: ReactNode;
   /** The paperwork checklist. */
   documents?: ReactNode;
   /** The weekly report to the owner. */
@@ -137,7 +143,7 @@ export function PropertyDetailView({
           {matches}
 
           <Card>
-            <CardHeader title="Leírás" />
+            <CardHeader title="Leírás" action={descriptionAction} />
             {p.description ? (
               <p className="px-5 py-4 text-[15px] leading-relaxed whitespace-pre-line text-text">{p.description}</p>
             ) : (
@@ -206,6 +212,8 @@ export function PropertyDetailView({
               <p className="px-5 py-4 text-sm text-muted">Nincs megadva. A szerkesztésnél választhatsz az ügyfeleid közül.</p>
             )}
           </Card>
+
+          {priceCheck}
 
           {sellerReport}
 
