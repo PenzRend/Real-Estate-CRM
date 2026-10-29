@@ -15,7 +15,7 @@ import { followUpFor, outcomeLabels, relationFor, type CalendarOutcome, type Int
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COLUMNS =
-  "id, client_id, property_id, starts_at, duration_minutes, location, notes, status, interest, feedback, feedback_at, calendar_user_id, calendar_mailbox_id, calendar_event_id, calendar_link, created_by";
+  "id, client_id, property_id, starts_at, duration_minutes, location, notes, status, interest, feedback, feedback_at, calendar_user_id, calendar_mailbox_id, calendar_event_id, calendar_link, created_by, reminder_sent_at, client_response, client_response_at, client_response_note";
 
 export type Viewing = {
   id: string;
@@ -31,6 +31,9 @@ export type Viewing = {
   property: { id: string; name: string; address: string | null };
   /** In someone's calendar (Google or Outlook); `mine` when it is the current user's. */
   calendar: { link: string | null; mine: boolean } | null;
+  /** The day-before reminder to the client, and their answer. */
+  reminderSentAt: string | null;
+  response: { answer: "confirmed" | "declined"; at: string | null; note: string | null } | null;
 };
 
 type Row = {
@@ -48,6 +51,10 @@ type Row = {
   calendar_user_id: string | null;
   calendar_mailbox_id: string | null;
   calendar_event_id: string | null;
+  reminder_sent_at: string | null;
+  client_response: "confirmed" | "declined" | null;
+  client_response_at: string | null;
+  client_response_note: string | null;
   calendar_link: string | null;
   created_by: string | null;
 };
@@ -84,6 +91,8 @@ async function hydrate(user: CurrentUser, rows: Row[]): Promise<Viewing[]> {
       client: { id: r.client_id, name: client?.full_name ?? "Ügyfél", email: client?.email ?? null, phone: client?.phone ?? null },
       property: { id: r.property_id, name: property?.title ?? "Ingatlan", address: property ? propertyAddress(property) : null },
       calendar: r.calendar_event_id ? { link: r.calendar_link, mine: r.calendar_user_id === user.id } : null,
+      reminderSentAt: r.reminder_sent_at,
+      response: r.client_response ? { answer: r.client_response, at: r.client_response_at, note: r.client_response_note } : null,
     };
   });
 }
@@ -367,7 +376,14 @@ export async function updateViewing(user: CurrentUser, id: string, input: MoveIn
   const supabase = await createClient();
   const { data: updated, error } = await supabase
     .from("viewings")
-    .update({ starts_at: startsAt, duration_minutes: input.durationMinutes, location: input.location, notes: input.notes })
+    .update({
+      starts_at: startsAt,
+      duration_minutes: input.durationMinutes,
+      location: input.location,
+      notes: input.notes,
+      // A new time needs a new reminder and a new answer; the old link stops working.
+      ...(moved ? { reminder_sent_at: null, client_response: null, client_response_at: null, client_response_note: null, response_token_hash: null } : {}),
+    })
     .eq("id", id)
     .eq("organization_id", user.organization.id)
     .eq("status", "scheduled")

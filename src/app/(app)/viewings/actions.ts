@@ -7,6 +7,7 @@ import { clientContactFields } from "@/lib/validation/client";
 import { prepareBooking, type BookingPrep } from "@/lib/viewings/booking";
 import { addToCalendar, bookViewing, cancelViewing, saveFeedback, updateViewing, type BookingResult, type CalendarOutcome, type FeedbackResult } from "@/lib/viewings/data";
 import { DURATIONS } from "@/lib/viewings/logic";
+import { sendViewingReminder } from "@/lib/viewings/reminders";
 
 const id = z.uuid();
 const optionalId = id.nullable().optional();
@@ -77,6 +78,14 @@ export async function saveFeedbackAction(viewingId: string, input: unknown): Pro
   if (!parsed.success || !id.safeParse(viewingId).success) return { ok: false, error: "Válaszd ki, hogyan sikerült." };
   const user = await getCurrentUser();
   const r = await saveFeedback(user, viewingId, parsed.data, new Date());
+  if (r.ok) refresh();
+  return r;
+}
+
+/** The day-before reminder, sent now by hand (the morning job sends it otherwise). */
+export async function sendReminderAction(viewingId: string) {
+  const user = await getCurrentUser();
+  const r = await sendViewingReminder(user, viewingId, new Date());
   if (r.ok) refresh();
   return r;
 }

@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncMailbox, type Arrival } from "@/lib/mail/sync";
 import { draftReport, dueWeeklyReports, sendReport } from "@/lib/reports/data";
+import { dueReminders, sendViewingReminder } from "@/lib/viewings/reminders";
 import { arrivalsMessage } from "@/lib/push/messages";
 import { pushToUser } from "@/lib/push/server";
 import { asBackgroundJob } from "@/lib/supabase/db";
@@ -81,7 +82,22 @@ async function sellerReportsJob(admin: SupabaseClient, now: Date): Promise<JobRe
   return { sellerReports: sent, sellerReportsFailed: failed };
 }
 
-/** Once a morning (7:00): weekly seller reports on Mondays; the reminders join here. */
+/** Tomorrow's viewings: a reminder to each client, from the agent who booked it. */
+async function viewingRemindersJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  const due = await asBackgroundJob(admin, () => dueReminders(now));
+  let sent = 0;
+  let failed = 0;
+  for (const d of due) {
+    const user = await jobUser(admin, d.agentId, d.organizationId);
+    if (!user) continue;
+    const r = await asBackgroundJob(admin, () => sendViewingReminder(user, d.viewingId, now));
+    if (r.ok) sent++;
+    else failed++;
+  }
+  return { viewingReminders: sent, viewingRemindersFailed: failed };
+}
+
+/** Once a morning (7:00): tomorrow's viewing reminders, and the weekly seller reports on Mondays. */
 async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
-  return { ...(await sellerReportsJob(admin, now)) };
+  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)) };
 }

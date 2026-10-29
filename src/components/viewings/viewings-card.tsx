@@ -1,14 +1,15 @@
 "use client";
 
-import { CalendarCheck, CalendarClock, CalendarPlus, ExternalLink, Loader2, MapPin, MessageSquareText, Pencil, Plus, X } from "lucide-react";
+import { BellRing, CalendarCheck, CalendarClock, CalendarPlus, ExternalLink, Loader2, MapPin, MessageSquareText, Pencil, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { addToCalendarAction, cancelViewingAction } from "@/app/(app)/viewings/actions";
+import { addToCalendarAction, cancelViewingAction, sendReminderAction } from "@/app/(app)/viewings/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
+import { permissionHref } from "@/lib/mail/provider";
 import type { Viewing } from "@/lib/viewings/data";
 import { awaitingFeedback, calendarMessages, enableCalendarHref, outcomeLabels, statusLabels } from "@/lib/viewings/logic";
 import { FeedbackDialog } from "./feedback-dialog";
@@ -65,7 +66,8 @@ function ViewingRow({
 }) {
   const pathname = usePathname();
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [busy, setBusy] = useState<"calendar" | "cancel" | null>(null);
+  const [busy, setBusy] = useState<"calendar" | "cancel" | "remind" | null>(null);
+  const [reminded, setReminded] = useState(Boolean(v.reminderSentAt));
   const [message, setMessage] = useState<{ text: string; permission?: boolean } | null>(null);
   const waiting = awaitingFeedback(v, now);
   const upcoming = v.status === "scheduled" && !waiting;
@@ -81,6 +83,16 @@ function ViewingRow({
     }
     const text = calendarMessages[r];
     if (text) setMessage({ text });
+  }
+
+  async function remind() {
+    setBusy("remind");
+    const r = await sendReminderAction(v.id).catch(() => ({ ok: false as const, error: "Nem sikerült elküldeni." }));
+    setBusy(null);
+    if (r.ok) {
+      setReminded(true);
+      setMessage({ text: "Elküldve: az ügyfél egy kattintással jelezheti, hogy jön-e." });
+    } else setMessage({ text: r.error, permission: "needsPermission" in r && r.needsPermission });
   }
 
   async function cancel() {
@@ -112,6 +124,9 @@ function ViewingRow({
               {v.property.name}
             </Link>
           )}
+          {upcoming && v.response && (
+            <Badge tone={v.response.answer === "confirmed" ? "success" : "danger"}>{v.response.answer === "confirmed" ? "Visszaigazolta" : "Nem tud jönni"}</Badge>
+          )}
           {waiting ? (
             <Badge tone="warning">Visszajelzésre vár</Badge>
           ) : v.status === "completed" && v.interest ? (
@@ -126,6 +141,7 @@ function ViewingRow({
           </p>
         )}
         {v.feedback && <p className="line-clamp-2 text-xs text-text">„{v.feedback}”</p>}
+        {upcoming && v.response?.note && <p className="line-clamp-2 text-xs text-text">Az ügyfél: „{v.response.note}”</p>}
         {v.status === "scheduled" && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {waiting && (
@@ -149,6 +165,18 @@ function ViewingRow({
                 </button>
               )
             )}
+            {upcoming && !v.response && v.client.email && (
+              <button
+                type="button"
+                onClick={remind}
+                disabled={busy != null}
+                title="Emlékeztető e-mail az ügyfélnek a címmel és térképpel; egy kattintással jelezheti, hogy jön-e. Az előző napon reggel magától is elmegy."
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface hover:text-ink disabled:opacity-50"
+              >
+                {busy === "remind" ? <Loader2 className="size-3.5 animate-spin" /> : reminded ? <BellRing className="size-3.5 text-success" /> : <BellRing className="size-3.5" />}
+                {reminded ? "Emlékeztető elment" : "Emlékeztető"}
+              </button>
+            )}
             {upcoming && (
               <button type="button" onClick={() => onOpen("edit")} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
                 <Pencil className="size-3.5" /> Módosítás
@@ -171,7 +199,16 @@ function ViewingRow({
             )}
           </div>
         )}
-        {message?.text && <p className="text-xs text-warning">{message.text}</p>}
+        {message?.text && (
+          <p className="text-xs text-warning">
+            {message.text}{" "}
+            {message.permission && (
+              <a href={permissionHref("send", pathname)} className="font-medium underline">
+                Küldés engedélyezése
+              </a>
+            )}
+          </p>
+        )}
       </div>
     </li>
   );

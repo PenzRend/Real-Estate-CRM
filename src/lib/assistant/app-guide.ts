@@ -40,7 +40,7 @@ export const appGuide: GuideEntry[] = [
     id: "viewings",
     screen: "Megtekintés foglalása",
     href: "/clients",
-    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With a Gmail or Outlook mailbox connected and its calendar allowed, it also goes into that calendar (Google Calendar or the Outlook calendar); for Apple Calendar (iPhone/Mac), subscribe once in Beállítások → Kapcsolatok. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
+    how: "On a client's or a listing's page, the 'Megtekintések' card → 'Foglalás'. With a Gmail or Outlook mailbox connected and its calendar allowed, it also goes into that calendar (Google Calendar or the Outlook calendar); for Apple Calendar (iPhone/Mac), subscribe once in Beállítások → Kapcsolatok. The morning before a viewing the client automatically gets an email from the agent's mailbox with the time, address, a map link and a link to answer 'Ott leszek' / 'Nem tudok jönni' (the answer shows on the viewing as 'Visszaigazolta' / 'Nem tud jönni', with their message, and the agent gets a notification); 'Emlékeztető' on an upcoming viewing sends it right away. After the viewing, 'Visszajelzés a megtekintésről' records how it went.",
   },
   {
     id: "matches",
