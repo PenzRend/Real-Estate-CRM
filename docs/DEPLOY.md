@@ -139,6 +139,22 @@ In the Microsoft Entra admin center, in the Flavio app registration (see
    `https://flavio.hu/adatvedelem`.
 3. Note the client secret's expiry date; renew it before it runs out.
 
+## 6c. Background jobs and notifications
+
+Set `SUPABASE_SECRET_KEY`, `CRON_SECRET` and the three `VAPID` values (see
+`.env.example`). Then let the server call the jobs (crontab of the user that
+runs Flavio; `$CRON_SECRET` from the same environment file):
+
+```
+*/2 * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" "https://flavio.hu/api/cron?job=mail"  >/dev/null
+0 7 * * *    curl -fsS -H "Authorization: Bearer $CRON_SECRET" "https://flavio.hu/api/cron?job=daily" >/dev/null
+```
+
+`mail` checks every connected mailbox and sends phone notifications about new
+inquiries; `daily` sends the morning reminders and reports. Agents switch
+notifications on per device in Beállítások → Kapcsolatok (on an iPhone after
+adding Flavio to the home screen).
+
 ## 7. Check it
 
 1. `https://flavio.hu/api/health` returns `{"ok":true}`.

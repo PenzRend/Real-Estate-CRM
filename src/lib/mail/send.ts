@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { CurrentUser } from "@/lib/auth";
 import { findMentionedProperty } from "@/lib/away/logic";
 import { listPropertyOptions } from "@/lib/db/activity";
-import { createClient } from "@/lib/supabase/server";
+import { db } from "@/lib/supabase/db";
 import { buildReplyMime, encodeHeader, findPlaceholders, parseRecipients, toBase64Url } from "./compose";
 import { gmail, gmailSend, MailAccessRevoked, MailSendNotAllowed } from "./google";
 import { imapSend } from "./imap";
@@ -94,7 +94,7 @@ async function deliver(
 /** The user's message for a failed send, after marking a lost send permission. */
 async function sendFailure(access: Access, error: unknown): Promise<Fail> {
   if (error instanceof MailSendNotAllowed) {
-    const supabase = await createClient();
+    const supabase = await db();
     await supabase.from("mailboxes").update({ can_send: false }).eq("id", access.mailbox.id);
     return { ok: false, error: `${withArticle(access.mailbox.provider, "", true)} nem engedélyezte a küldést. Engedélyezd újra.`, needsPermission: true };
   }
@@ -105,7 +105,7 @@ async function sendFailure(access: Access, error: unknown): Promise<Fail> {
 
 /** The daily limit, then the mailbox (the given one, else the default) with a token and the send permission. */
 async function sendingAccess(user: CurrentUser, now: Date, mailboxId?: string | null) {
-  const supabase = await createClient();
+  const supabase = await db();
   const dayAgo = new Date(now.getTime() - 24 * 3600_000).toISOString();
   const { count } = await supabase.from("emails").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("sent_from_crm", true).gte("created_at", dayAgo);
   if ((count ?? 0) >= DAILY_LIMIT) return { ok: false as const, error: "Elérted a napi küldési keretet. Holnap újra küldhetsz." };
@@ -152,7 +152,7 @@ export async function sendNewEmail(user: CurrentUser, input: NewEmailInput, now:
   const gate = await sendingAccess(user, now, input.mailboxId);
   if (!gate.ok) return gate;
   const { access } = gate;
-  const supabase = await createClient();
+  const supabase = await db();
 
   const from = user.fullName ? `${encodeHeader(user.fullName)} <${access.mailbox.email_address}>` : access.mailbox.email_address;
   let sent;
@@ -215,7 +215,7 @@ export async function sendReply(user: CurrentUser, input: SendInput, now: Date):
   if (!msg.ok) return msg;
   const { to, subject, body } = msg;
 
-  const supabase = await createClient();
+  const supabase = await db();
   const { data: original } = await supabase
     .from("emails")
     .select("id, mailbox_id, provider_message_id, thread_id, subject, snippet, body_text, client_id, replied_at")

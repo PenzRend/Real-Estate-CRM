@@ -1,6 +1,6 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { db } from "@/lib/supabase/db";
 import { decryptToken, encryptToken } from "./crypto";
 import { gmail, MailAccessRevoked, refreshAccessToken, revokeToken } from "./google";
 import { ImapUnreachable, openImapReader } from "./imap";
@@ -44,7 +44,7 @@ const SECRET_COLUMNS = `${PUBLIC_COLUMNS}, organization_id, refresh_token_enc, a
 
 /** The agent's mailboxes in this workspace, the default one first. */
 export async function listMailboxes(user: CurrentUser): Promise<Mailbox[]> {
-  const supabase = await createClient();
+  const supabase = await db();
   const { data, error } = await supabase
     .from("mailboxes")
     .select(PUBLIC_COLUMNS)
@@ -67,7 +67,7 @@ export async function getMailbox(user: CurrentUser): Promise<Mailbox | null> {
  * or the default one.
  */
 async function loadSecrets(user: CurrentUser, pick?: string): Promise<MailboxSecrets | null> {
-  const supabase = await createClient();
+  const supabase = await db();
   let q = supabase.from("mailboxes").select(SECRET_COLUMNS).eq("user_id", user.id).eq("organization_id", user.organization.id);
   if (pick && pick !== "calendar") q = q.eq("id", pick);
   const { data, error } = await q.order("is_primary", { ascending: false }).order("created_at", { ascending: true }).limit(20);
@@ -81,7 +81,7 @@ async function markMailbox(
   id: string,
   patch: Partial<Pick<MailboxSecrets, "status" | "last_error" | "last_synced_at" | "access_token_enc" | "access_token_expires_at" | "refresh_token_enc">>,
 ) {
-  const supabase = await createClient();
+  const supabase = await db();
   const { error } = await supabase.from("mailboxes").update(patch).eq("id", id);
   if (error) console.error("mailbox update failed", error.code);
 }
@@ -128,7 +128,10 @@ export async function mailboxWithToken(user: CurrentUser, pick?: string) {
   }
 }
 
-type MailboxSync = { ok: true; checked: number; stored: number } | { ok: false; error: string; revoked?: boolean };
+/** A newly stored incoming email worth telling the agent about at once (a portal inquiry or a client writing). */
+export type Arrival = { emailId: string; fromName: string | null; fromEmail: string | null; subject: string | null; portal: string | null; fromClient: boolean };
+
+type MailboxSync = { ok: true; checked: number; stored: number; arrivals: Arrival[] } | { ok: false; error: string; revoked?: boolean };
 
 /** All of the agent's mailboxes synced: what was stored, and a message per mailbox that failed. */
 export type SyncResult = { stored: number; errors: string[] };
@@ -253,7 +256,7 @@ export async function syncMailbox(user: CurrentUser, mailboxId: string): Promise
   if (mailbox.status === "revoked") return { ok: false, error: accessEndedMessage(mailbox.provider), revoked: true };
 
   const startedAt = new Date();
-  const supabase = await createClient();
+  const supabase = await db();
   let source: Source | null = null;
   try {
     const token = await accessToken(mailbox);
@@ -293,6 +296,7 @@ export async function syncMailbox(user: CurrentUser, mailboxId: string): Promise
 
     // 4. Headers first; full content only for relevant messages.
     let stored = 0;
+    const arrivals: Arrival[] = [];
     for (let i = 0; i < fresh.length; i += 10) {
       for (const meta of await source.meta(fresh.slice(i, i + 10))) {
         newestChecked = Math.max(newestChecked, meta.at);
@@ -302,7 +306,8 @@ export async function syncMailbox(user: CurrentUser, mailboxId: string): Promise
         const body = stripQuotedReply(await source.body(meta.id)).slice(0, 20_000);
         const snippet = meta.snippet || body.replace(/\s+/g, " ").slice(0, 200);
         const outgoing = meta.from?.email === mailbox.email_address.toLowerCase();
-        const { error } = await supabase.from("emails").insert({
+        const clientId = verdict.clientEmail ? (clientByEmail.get(verdict.clientEmail) ?? null) : null;
+        const { data: row, error } = await supabase.from("emails").insert({
           organization_id: user.organization.id,
           user_id: user.id,
           mailbox_id: mailbox.id,
@@ -318,16 +323,22 @@ export async function syncMailbox(user: CurrentUser, mailboxId: string): Promise
           body_text: body || null,
           received_at: new Date(meta.at || Date.now()).toISOString(),
           portal: verdict.portal,
-          client_id: verdict.clientEmail ? (clientByEmail.get(verdict.clientEmail) ?? null) : null,
-        });
-        if (!error) stored++;
+          client_id: clientId,
+        }).select("id").single();
+        if (!error) {
+          stored++;
+          // Only what arrived since the last sync is news (the first sync loads two weeks back).
+          if (!outgoing && row && mailbox.last_synced_at) {
+            arrivals.push({ emailId: row.id, fromName: meta.from?.name ?? null, fromEmail: meta.from?.email ?? null, subject: meta.subject, portal: verdict.portal, fromClient: Boolean(clientId) });
+          }
+        }
         else if (error.code !== "23505") console.error("email insert failed", error.code); // 23505: stored by a parallel sync
       }
     }
 
     const syncedUntil = capped && newestChecked ? new Date(newestChecked) : startedAt;
     await markMailbox(mailbox.id, { last_synced_at: syncedUntil.toISOString(), status: "active", last_error: null });
-    return { ok: true, checked: fresh.length, stored };
+    return { ok: true, checked: fresh.length, stored, arrivals };
   } catch (error) {
     if (error instanceof MailAccessRevoked) {
       await markMailbox(mailbox.id, { status: "revoked", last_error: revokedNote(mailbox.provider) });
@@ -361,7 +372,7 @@ export async function syncMailboxes(user: CurrentUser, only?: (m: Mailbox) => bo
  * what ends Flavio's access there. Another mailbox becomes the default.
  */
 export async function disconnectMailbox(user: CurrentUser, mailboxId: string) {
-  const supabase = await createClient();
+  const supabase = await db();
   const { data: m } = await supabase
     .from("mailboxes")
     .select("id, provider, refresh_token_enc, is_primary")
@@ -387,7 +398,7 @@ export async function disconnectMailbox(user: CurrentUser, mailboxId: string) {
 
 /** Makes one of the agent's mailboxes the default sender. */
 export async function setPrimaryMailbox(user: CurrentUser, mailboxId: string) {
-  const supabase = await createClient();
+  const supabase = await db();
   const { error: clearError } = await supabase
     .from("mailboxes")
     .update({ is_primary: false })
@@ -402,7 +413,7 @@ export async function setPrimaryMailbox(user: CurrentUser, mailboxId: string) {
 
 /** True when the agent has no mailbox yet: a new one then becomes the default. */
 export async function isFirstMailbox(user: CurrentUser) {
-  const supabase = await createClient();
+  const supabase = await db();
   const { count } = await supabase.from("mailboxes").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("organization_id", user.organization.id);
   return (count ?? 0) === 0;
 }

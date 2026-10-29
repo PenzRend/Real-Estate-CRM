@@ -2,6 +2,7 @@ import { ArrowRight, CalendarDays, Download, LogOut, Mail, Puzzle } from "lucide
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { NotificationsSetting } from "@/components/settings/notifications";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -165,7 +166,8 @@ async function SettingsContent() {
 
         <TeamSection user={user} />
 
-        <FormSection number="03" title="Kapcsolatok" description="Levelek, naptár és hirdetésimport.">
+        <FormSection number="03" title="Kapcsolatok" description="Értesítések, levelek, naptár és hirdetésimport.">
+          <NotificationsSetting publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
           <Connection
             icon={Mail}
             title={mailboxes.length > 1 ? `${mailboxes.length} postafiók` : "E-mail (Gmail, Outlook, céges, iCloud…)"}
