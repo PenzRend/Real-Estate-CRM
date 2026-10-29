@@ -14,6 +14,8 @@ import { buttonClasses } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
 import { ListingFeed } from "@/components/portal/listing-feed";
 import { feedStatus } from "@/lib/portal/feed";
+import { PhoneKeys } from "@/components/phone/phone-keys";
+import { listPhoneKeys } from "@/lib/phone/calls";
 import { PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
@@ -147,7 +149,7 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const [mailboxes, feedActive, calendars, feed] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user), listSubscriptions(user), feedStatus(user)]);
+  const [mailboxes, feedActive, calendars, feed, phoneKeys] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user), listSubscriptions(user), feedStatus(user), listPhoneKeys(user)]);
   // One line on the calendars: which are shown in Flavio, and whether the subscription link is on.
   const calendarParts = [
     ...mailboxes.filter((m) => m.can_calendar && m.status !== "revoked").map((m) => (m.provider === "outlook" ? "Outlook-naptár" : "Google Naptár")),
@@ -211,6 +213,7 @@ async function SettingsContent() {
             href="/settings/calendars"
             cta={calendarParts.length ? "Kezelés" : "Beállítás"}
           />
+          <PhoneKeys keys={phoneKeys} />
           <ListingFeed active={feed.exists} listings={feed.listings} lastFetchedAt={feed.lastFetchedAt} canManage={canManageTeam(user)} />
         </FormSection>
 

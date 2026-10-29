@@ -97,6 +97,12 @@ export const appGuide: GuideEntry[] = [
     how: "Listings go to real estate portals through an XML link: on a listing's page 'Portálokra' marks it (it shows 'Portálokon'; only active, reserved or under-negotiation listings are sent, without the street address). The owner or an admin creates the link once in Beállítások → Kapcsolatok → 'Hirdetési portálok (XML export)' → 'Export link létrehozása' and gives it to the portal; the portal then downloads the marked listings with their photos regularly. Portals (ingatlan.com, Otthon Centrum, Jófogás…) need a partner agreement for automatic import – the agency arranges that with the portal.",
   },
   {
+    id: "phone-calls",
+    screen: "Hívásnapló Androidról",
+    href: "/settings",
+    how: "Calls with clients on an Android phone can go onto the client's timeline by themselves ('Kimenő hívás (2 perc)', 'Nem fogadott hívás'); calls with numbers that are not a client's are not recorded. It needs the Flavio Android app, which is not available yet; the key for it is made in Beállítások → Kapcsolatok → 'Hívásnapló Androidról' → 'Telefon hozzáadása' (shown once; 'Kikapcsolás' switches a phone off). On iPhone this is not possible: use the 'Hívás' button on the client's page and 'Hogy ment?'.",
+  },
+  {
     id: "office",
     screen: "Iroda",
     href: "/office",
