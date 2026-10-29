@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
 import { PropertyMedia } from "@/components/media/property-media";
 import { ShareButton } from "@/components/shares/share-button";
+import { PortalToggle } from "@/components/portal/portal-toggle";
+import { portalExportOf } from "@/lib/portal/feed";
 import { buttonClasses } from "@/components/ui/button";
 import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
@@ -37,7 +39,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   // Just created or imported: the matching buyers are offered it straight away.
   const justAdded = query.new === "1";
   const user = await getCurrentUser();
-  const [property, matches, media, share, contact, viewings, deals, target, reports, documents, study] = await Promise.all([
+  const [property, matches, media, share, contact, viewings, deals, target, reports, documents, study, onPortals] = await Promise.all([
     getPropertyDetail(user, id),
     matchesForProperty(user, id),
     listMedia(user, id),
@@ -49,6 +51,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
     listReports(user, id),
     listDocuments(user, id),
     priceStudy(user, id),
+    portalExportOf(user, id),
   ]);
   if (!property) notFound();
   const draftMatches = property.status === "draft" ? (await matchesForProperty(user, id, { preview: true })).length : 0;
@@ -61,6 +64,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
     </form>
   ) : (
     <>
+      <PortalToggle propertyId={property.id} on={onPortals} listed={["active", "reserved", "under_negotiation"].includes(property.status)} />
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
       <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">
         <Archive /> Archiválás

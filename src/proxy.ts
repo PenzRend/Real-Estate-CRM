@@ -8,7 +8,7 @@ import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib
 // is a calendar subscription, read by calendar apps that carry no session.
 // "/api/cron" is the server's scheduler (it checks its own secret); "/sw.js"
 // and the manifest make Flavio installable as an app with notifications.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/invite", "/api/calendar", "/adatvedelem", "/api/health", "/api/cron", "/sw.js", "/manifest.webmanifest", "/app-icon", "/apple-icon", "/v"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/invite", "/api/calendar", "/api/feed", "/adatvedelem", "/api/health", "/api/cron", "/sw.js", "/manifest.webmanifest", "/app-icon", "/apple-icon", "/v"];
 // Signed-in users have no reason to see these.
 const GUEST_ONLY_PATHS = ["/", "/login", "/signup", "/forgot-password"];
 

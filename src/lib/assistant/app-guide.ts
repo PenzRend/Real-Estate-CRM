@@ -91,6 +91,12 @@ export const appGuide: GuideEntry[] = [
     how: "This chat, also available from the round button in the bottom-right corner on every screen. Answers questions about the agent's own clients, listings, tasks and emails, and where things are in Flavio. It only reads.",
   },
   {
+    id: "portals",
+    screen: "Hirdetési portálok (export)",
+    href: "/settings",
+    how: "Listings go to real estate portals through an XML link: on a listing's page 'Portálokra' marks it (it shows 'Portálokon'; only active, reserved or under-negotiation listings are sent, without the street address). The owner or an admin creates the link once in Beállítások → Kapcsolatok → 'Hirdetési portálok (XML export)' → 'Export link létrehozása' and gives it to the portal; the portal then downloads the marked listings with their photos regularly. Portals (ingatlan.com, Otthon Centrum, Jófogás…) need a partner agreement for automatic import – the agency arranges that with the portal.",
+  },
+  {
     id: "office",
     screen: "Iroda",
     href: "/office",
