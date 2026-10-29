@@ -19,8 +19,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Sidebar account={account} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav account={account} />
-        {/* Bottom padding keeps the last buttons clear of the assistant bubble. */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-24 sm:px-8 sm:pt-10 sm:pb-24">
+        {/* Bottom padding keeps the last buttons clear of the assistant bubble; a page that needs the room (the calendar) marks itself data-wide. */}
+        <main className="mx-auto w-full max-w-6xl flex-1 has-[[data-wide]]:max-w-[1600px] px-4 pt-8 pb-24 sm:px-8 sm:pt-10 sm:pb-24">
           <SetupNotice />
           {children}
         </main>

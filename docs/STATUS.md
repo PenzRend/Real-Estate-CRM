@@ -318,6 +318,14 @@ Branch `feat/mvp-foundation`.
   minutes; repeating events expanded with ical.js). The calendar feed link
   for iPhone/Outlook/any app is on the same page. Tested in the browser with
   the real Google calendar and a public holidays calendar.
+  Month view (default, Apple-style grid, full width via `data-wide` on the
+  page) and week view. Apple iCloud calendars over CalDAV
+  (`src/lib/calendar/caldav*.ts`): Apple ID + app password, principal →
+  calendar home → event calendars, REPORT calendar-query per range; one
+  `calendar_subscriptions` row per calendar (`kind = 'caldav'`, password
+  encrypted), one click from an iCloud IMAP mailbox; other CalDAV servers by
+  address. Migration `20261029134731_calendar_caldav.sql`. Tested: XML
+  parsing units, the error path in the browser; not yet with a real Apple ID.
 
 ## Known gaps / next
 

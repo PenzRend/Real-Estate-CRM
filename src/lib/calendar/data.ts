@@ -1,5 +1,4 @@
 import "server-only";
-import { lookup } from "node:dns/promises";
 import type { CurrentUser } from "@/lib/auth";
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
@@ -7,20 +6,23 @@ import { decryptToken, encryptToken } from "@/lib/mail/crypto";
 import { MailAccessRevoked } from "@/lib/mail/google";
 import { calendarLabels } from "@/lib/mail/provider";
 import { listMailboxes, mailboxWithToken } from "@/lib/mail/sync";
-import { isPublicAddress } from "@/lib/net/address";
+import { publicHostProblem } from "@/lib/net/public-host";
 import { createClient } from "@/lib/supabase/server";
 import { CalendarApiDisabled, CalendarNotAllowed, listEvents } from "@/lib/viewings/calendar";
-import { eventsInRange } from "./ics-import";
+import { CalDavError, calendarEventsIcs, discoverCalendars, ICLOUD_CALDAV } from "./caldav";
+import { nearestColor } from "./caldav-xml";
+import { eventsInRange, type ImportedEvent } from "./ics-import";
 import type { CalendarEvent } from "./week";
 
 // The Flavio calendar: the workspace's viewings, the agent's tasks, their own
-// Google or Outlook calendars, and any calendar they subscribed to by iCal link
-// (iCloud, a colleague's Google calendar, a booking system…), side by side.
+// Google or Outlook calendars, their iCloud (or other CalDAV) calendars, and
+// any calendar they subscribed to by iCal link, side by side.
 
 export const SUBSCRIPTION_COLORS = ["sky", "violet", "amber", "rose", "emerald", "slate"] as const;
 export type SubscriptionColor = (typeof SUBSCRIPTION_COLORS)[number];
 
-export type Subscription = { id: string; name: string; color: SubscriptionColor; lastError: string | null };
+/** An outside calendar: by iCal link, or read over CalDAV (iCloud…) as `username`. */
+export type Subscription = { id: string; name: string; color: SubscriptionColor; lastError: string | null; kind: "ics" | "caldav"; username: string | null };
 
 const MAX_ICS_BYTES = 5_000_000;
 const CACHE_MS = 10 * 60_000;
@@ -42,13 +44,8 @@ export function normalizeCalendarUrl(raw: string): string | null {
 }
 
 async function assertPublicHost(url: URL) {
-  let addresses;
-  try {
-    addresses = await lookup(url.hostname, { all: true });
-  } catch {
-    throw new IcsFetchError("A naptár címe nem található.");
-  }
-  if (!addresses.length || addresses.some((a) => !isPublicAddress(a.address))) throw new IcsFetchError("Ez a link nem nyilvános naptárra mutat.");
+  const problem = await publicHostProblem(url.hostname);
+  if (problem) throw new IcsFetchError(problem);
 }
 
 /** Downloads an iCal file: public hosts only (also after redirects), size- and time-limited, cached for a few minutes. */
@@ -93,12 +90,12 @@ export async function listSubscriptions(user: CurrentUser): Promise<Subscription
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("calendar_subscriptions")
-    .select("id, name, color, last_error")
+    .select("id, name, color, last_error, kind, username")
     .eq("user_id", user.id)
     .eq("organization_id", user.organization.id)
     .order("created_at");
   if (error) throw new Error(`Failed to load calendars: ${error.message}`);
-  return (data ?? []).map((s) => ({ id: s.id, name: s.name, color: s.color as SubscriptionColor, lastError: s.last_error }));
+  return (data ?? []).map((s) => ({ id: s.id, name: s.name, color: s.color as SubscriptionColor, lastError: s.last_error, kind: s.kind as Subscription["kind"], username: s.username }));
 }
 
 /** Checks the link really is a calendar before saving it (encrypted: whoever has it can read the calendar). */
@@ -113,7 +110,7 @@ export async function addSubscription(user: CurrentUser, input: { name: string; 
   }
   const supabase = await createClient();
   const { count } = await supabase.from("calendar_subscriptions").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("organization_id", user.organization.id);
-  if ((count ?? 0) >= 20) return { ok: false, error: "Legfeljebb 20 naptárat köthetsz be." };
+  if ((count ?? 0) >= MAX_SUBSCRIPTIONS) return { ok: false, error: `Legfeljebb ${MAX_SUBSCRIPTIONS} naptárat köthetsz be.` };
   const { error } = await supabase.from("calendar_subscriptions").insert({
     organization_id: user.organization.id,
     user_id: user.id,
@@ -127,6 +124,77 @@ export async function addSubscription(user: CurrentUser, input: { name: string; 
   }
   return { ok: true };
 }
+
+const MAX_SUBSCRIPTIONS = 20;
+
+/**
+ * Adds every event calendar of a CalDAV account (iCloud by default): each shows
+ * separately and can be removed on its own. Connecting the same account again
+ * replaces its calendars (e.g. after a new app password).
+ */
+export async function addCalDavCalendars(
+  user: CurrentUser,
+  input: { username: string; password: string; server?: string | null },
+): Promise<{ ok: true; added: number } | { ok: false; error: string; auth?: boolean }> {
+  const username = input.username.trim().toLowerCase();
+  if (!username || username.length > 320 || !input.password) return { ok: false, error: "Add meg az Apple ID-t és az alkalmazásjelszót." };
+  let server = ICLOUD_CALDAV;
+  if (input.server?.trim()) {
+    const url = normalizeCalendarUrl(input.server.trim().replace(/^(?!https?:\/\/)/i, "https://"));
+    if (!url || !url.startsWith("https:")) return { ok: false, error: "A szerver címe https:// kezdetű legyen." };
+    server = url;
+  }
+  let calendars;
+  try {
+    calendars = await discoverCalendars(server, { username, password: input.password });
+  } catch (error) {
+    if (error instanceof CalDavError) return { ok: false, error: error.message, auth: error.auth };
+    console.error("caldav discovery failed", error instanceof Error ? error.message : error);
+    return { ok: false, error: "A naptárakat nem sikerült lekérni. Próbáld újra." };
+  }
+  if (!calendars.length) return { ok: false, error: "Ebben a fiókban nem találtunk naptárat." };
+
+  const supabase = await createClient();
+  const own = { user_id: user.id, organization_id: user.organization.id };
+  // Reconnecting the same account replaces its calendars.
+  const { error: clearError } = await supabase.from("calendar_subscriptions").delete().match(own).eq("kind", "caldav").eq("username", username);
+  if (clearError) return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
+  const { count } = await supabase.from("calendar_subscriptions").select("id", { count: "exact", head: true }).match(own);
+  const room = Math.max(0, MAX_SUBSCRIPTIONS - (count ?? 0));
+  if (!room) return { ok: false, error: `Legfeljebb ${MAX_SUBSCRIPTIONS} naptárat köthetsz be.` };
+  const secret = encryptToken(input.password);
+  const { error } = await supabase.from("calendar_subscriptions").insert(
+    calendars.slice(0, room).map((c, i) => ({
+      ...own,
+      kind: "caldav",
+      name: c.name.slice(0, 80),
+      url_enc: encryptToken(c.href),
+      username,
+      secret_enc: secret,
+      color: nearestColor(c.color, SUBSCRIPTION_COLORS[i % SUBSCRIPTION_COLORS.length]),
+    })),
+  );
+  if (error) {
+    console.error("caldav calendars save failed", error.code);
+    return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
+  }
+  return { ok: true, added: Math.min(room, calendars.length) };
+}
+
+const ICLOUD_DOMAINS = ["icloud.com", "me.com", "mac.com"];
+
+/** iCloud mail connected over IMAP: its app password works for iCloud Calendar too. */
+export async function addICloudCalendarsFromMailbox(user: CurrentUser, mailboxId: string) {
+  const access = await mailboxWithToken(user, mailboxId).catch(() => null);
+  const email = access?.mailbox.email_address ?? "";
+  if (!access || access.mailbox.provider !== "imap" || !ICLOUD_DOMAINS.includes(email.slice(email.lastIndexOf("@") + 1))) {
+    return { ok: false as const, error: "Ehhez a postafiókhoz nem tartozik iCloud-naptár." };
+  }
+  return addCalDavCalendars(user, { username: email, password: access.token });
+}
+
+/** iCloud mailboxes whose app password can also open their calendars. */
+export const isICloudAddress = (email: string) => ICLOUD_DOMAINS.includes(email.slice(email.lastIndexOf("@") + 1).toLowerCase());
 
 export async function removeSubscription(user: CurrentUser, id: string) {
   const supabase = await createClient();
@@ -153,6 +221,19 @@ function taskEvent(t: { id: string; title: string; due_at: string; client_id: st
     location: null,
     href: t.client_id ? `/clients/${t.client_id}` : "/tasks",
   };
+}
+
+const davCache = new Map<string, { at: number; events: ImportedEvent[] }>();
+
+/** One CalDAV calendar's events in the range, cached for a few minutes. */
+async function davEvents(id: string, url: string, login: { username: string; password: string }, from: Date, to: Date) {
+  const key = `${id}|${from.toISOString()}|${to.toISOString()}`;
+  const hit = davCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS / 2) return hit.events;
+  const events = (await calendarEventsIcs(url, login, from, to)).flatMap((ics) => eventsInRange(ics, from, to));
+  if (davCache.size > 500) davCache.clear();
+  davCache.set(key, { at: Date.now(), events });
+  return events;
 }
 
 export type WeekData = { events: CalendarEvent[]; problems: string[]; connected: { email: string; label: string }[] };
@@ -183,7 +264,7 @@ export async function calendarEvents(user: CurrentUser, from: Date, to: Date): P
       .lt("due_at", range.to)
       .limit(500),
     listMailboxes(user),
-    supabase.from("calendar_subscriptions").select("id, name, color, url_enc, last_error").eq("user_id", user.id).eq("organization_id", user.organization.id).order("created_at"),
+    supabase.from("calendar_subscriptions").select("id, name, color, url_enc, last_error, kind, username, secret_enc").eq("user_id", user.id).eq("organization_id", user.organization.id).order("created_at"),
   ]);
 
   const events: CalendarEvent[] = [];
@@ -240,17 +321,20 @@ export async function calendarEvents(user: CurrentUser, from: Date, to: Date): P
     }),
   );
 
-  // Calendars subscribed by link.
+  // Calendars subscribed by link or read over CalDAV.
   await Promise.all(
     (subscriptions.data ?? []).map(async (s) => {
       let note: string | null = null;
       try {
-        const text = await fetchIcs(decryptToken(s.url_enc));
-        for (const e of eventsInRange(text, from, to)) {
+        const found: ImportedEvent[] =
+          s.kind === "caldav" && s.username && s.secret_enc
+            ? await davEvents(s.id, decryptToken(s.url_enc), { username: s.username, password: decryptToken(s.secret_enc) }, from, to)
+            : eventsInRange(await fetchIcs(decryptToken(s.url_enc)), from, to);
+        for (const e of found) {
           events.push({ id: `${s.id}:${e.uid}`, title: e.title, start: e.start, end: e.end, allDay: e.allDay, source: "external", calendar: s.name, color: s.color, location: e.location, href: null });
         }
       } catch (error) {
-        note = error instanceof IcsFetchError ? error.message : "A naptárt nem tudtuk beolvasni.";
+        note = error instanceof IcsFetchError || error instanceof CalDavError ? error.message : "A naptárt nem tudtuk beolvasni.";
         problems.push(`${s.name}: ${note}`);
       }
       if (note !== s.last_error) await supabase.from("calendar_subscriptions").update({ last_error: note }).eq("id", s.id).eq("user_id", user.id);

@@ -1,4 +1,4 @@
-// The Flavio calendar's week: which days it shows, and which events fall on
+// The Flavio calendar's week and month: which days they show, and which events fall on
 // which day, in Budapest time. Pure functions, no I/O.
 
 import { DEFAULT_TIMEZONE } from "@/lib/i18n/format";
@@ -76,4 +76,33 @@ export function timeLabel(e: CalendarEvent, day: string, timeZone = DEFAULT_TIME
   const from = start.slice(0, 10) === day ? start.slice(11, 16) : "00:00";
   const until = end.slice(0, 10) === day ? end.slice(11, 16) : "24:00";
   return from === until ? from : `${from}–${until}`;
+}
+
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * A month view like Apple Calendar's: whole weeks from the Monday on or
+ * before the 1st to the Sunday on or after the last day (5 or 6 rows).
+ */
+export function monthGrid(month: string | null | undefined, now: Date, timeZone = DEFAULT_TIMEZONE) {
+  const key = month && MONTH.test(month) ? month : utcToZonedLocal(now.toISOString(), timeZone).slice(0, 7);
+  const first = `${key}-01`;
+  const [y, m] = key.split("-").map(Number);
+  const nextFirst = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  const previousKey = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  const start = weekStart(first, now, timeZone);
+  const lastDay = addDays(nextFirst, -1);
+  const end = addDays(weekStart(lastDay, now, timeZone), 7);
+  const days: string[] = [];
+  for (let d = start; d < end; d = addDays(d, 1)) days.push(d);
+  return {
+    key,
+    first,
+    days,
+    from: new Date(zonedLocalToUtc(`${start}T00:00`, timeZone)!),
+    to: new Date(zonedLocalToUtc(`${end}T00:00`, timeZone)!),
+    previous: previousKey,
+    next: nextFirst.slice(0, 7),
+    inMonth: (day: string) => day.startsWith(key),
+  };
 }

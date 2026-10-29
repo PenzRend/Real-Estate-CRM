@@ -109,8 +109,9 @@ export default function PrivacyPage() {
             Microsoft-fióknál. Leválasztáskor a jelszót töröljük.
           </p>
           <p>
-            Ha az ingatlanos egy naptár iCal-linkjét adja meg (pl. iCloud, Google, Outlook), a linket titkosítva tároljuk, és a naptár eseményeit csak neki
-            jelenítjük meg a Flavio naptárában; az eseményeket nem mentjük el. A link bármikor eltávolítható.
+            Ha az ingatlanos egy naptár iCal-linkjét adja meg (pl. iCloud, Google, Outlook), vagy az iCloud-naptárát Apple ID-val és alkalmazásjelszóval köti
+            be, a linket, illetve a jelszót titkosítva tároljuk, és a naptár eseményeit csak neki jelenítjük meg a Flavio naptárában; a naptárat csak
+            olvassuk, az eseményeket nem mentjük el. Bármikor eltávolítható.
           </p>
         </Section>
 

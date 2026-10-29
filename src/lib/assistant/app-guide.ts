@@ -64,7 +64,7 @@ export const appGuide: GuideEntry[] = [
     id: "calendar",
     screen: "Naptár",
     href: "/calendar",
-    how: "A week view ('Ma', previous/next week) with the workspace's viewings, the agent's own tasks, the events of their connected Google or Outlook calendars (after allowing the calendar), and any other calendar added by its iCal/webcal link ('Naptár hozzáadása linkkel': iCloud public calendar link, Google 'Titkos cím iCal formátumban', Outlook published ICS link; only the agent sees them). The other way round, 'A Flavio a többi naptáradban' creates a subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app.",
+    how: "A big month view ('Hónap', the default; click a day for that week) and a week view ('Hét'), with 'Ma' and previous/next. Shows the workspace's viewings, the agent's own tasks, their Google or Outlook calendars ('Naptáraid a Flavióban' → 'Engedélyezés' or connect the account), their Apple iCloud calendars (the iPhone calendar: 'Apple iCloud-naptár' → Apple ID and an app password from appleid.apple.com; one click when an iCloud mailbox is already connected; other CalDAV servers under 'Más naptárszerver'), and any other calendar by its iCal/webcal link ('Más naptár hozzáadása linkkel'). Only the agent sees their own calendars. The other way round, 'A Flavio a többi naptáradban' creates a subscription link that puts viewings into iPhone, Mac, Outlook or any calendar app.",
   },
   {
     id: "assistant",

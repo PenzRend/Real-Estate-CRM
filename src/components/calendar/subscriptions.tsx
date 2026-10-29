@@ -10,7 +10,7 @@ import type { Subscription } from "@/lib/calendar/data";
 import { colorNames, eventColors } from "./colors";
 
 const howTo: { name: string; steps: string }[] = [
-  { name: "iCloud (iPhone, Mac)", steps: "icloud.com/calendar → a naptár neve melletti megosztás ikon → Nyilvános naptár → link másolása." },
+  { name: "iCloud (iPhone, Mac)", steps: "egyszerűbb fent, Apple ID-val; vagy icloud.com/calendar → a naptár melletti megosztás ikon → Nyilvános naptár → link másolása." },
   { name: "Google Naptár", steps: "Beállítások → a naptár neve → Naptár integrálása → „Titkos cím iCal formátumban”." },
   { name: "Outlook / Microsoft 365", steps: "Outlook a weben → Beállítások → Naptár → Megosztott naptárak → Naptár közzététele → ICS-link." },
 ];
@@ -51,7 +51,7 @@ export function Subscriptions({ subscriptions }: { subscriptions: Subscription[]
 
       <form ref={form} action={action} className="grid grid-cols-1 gap-3 rounded-2xl border border-border p-4 sm:grid-cols-[1fr_10rem]">
         <p className="flex items-center gap-2 text-sm font-medium text-ink sm:col-span-2">
-          <Link2 className="size-4 text-muted" /> Naptár hozzáadása linkkel
+          <Link2 className="size-4 text-muted" /> Más naptár hozzáadása linkkel
         </p>
         <div className="sm:col-span-2">
           <Field label="Naptár linkje (iCal / webcal)" htmlFor="sub-url" error={state.error}>
