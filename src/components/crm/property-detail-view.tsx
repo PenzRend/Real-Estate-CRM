@@ -48,8 +48,11 @@ export function PropertyDetailView({
   viewings,
   deals,
   sellerReport,
+  documents,
 }: {
   property: PropertyDetail;
+  /** The paperwork checklist. */
+  documents?: ReactNode;
   /** The weekly report to the owner. */
   sellerReport?: ReactNode;
   /** Deals on this listing. */
@@ -126,6 +129,8 @@ export function PropertyDetailView({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">
           {deals}
+
+          {documents}
 
           {viewings}
 
