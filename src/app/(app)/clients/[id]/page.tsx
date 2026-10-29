@@ -15,6 +15,8 @@ import { PropertyMatchesCard } from "@/components/crm/match-lists";
 import { BookViewingButton, ViewingsCard } from "@/components/viewings/viewings-card";
 import { listViewingsFor } from "@/lib/viewings/data";
 import { DealsCard } from "@/components/deals/deals-card";
+import { IdentificationCard } from "@/components/aml/identification-card";
+import { identificationSummaries } from "@/lib/aml/data";
 import { listDealsFor } from "@/lib/deals/data";
 import { archiveClientAction, restoreClientAction } from "../actions";
 import { FormSubmit } from "@/components/ui/form-submit";
@@ -26,12 +28,13 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
 async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
-  const [detail, owned, matches, viewings, deals] = await Promise.all([
+  const [detail, owned, matches, viewings, deals, identifications] = await Promise.all([
     getClientDetail(user, id),
     listOwnedProperties(user, id),
     matchesForClient(user, id),
     listViewingsFor(user, { clientId: id }),
     listDealsFor(user, { clientId: id }),
+    identificationSummaries(user, [id]),
   ]);
   if (!detail) notFound();
   // Owned listings first, then properties linked through interest/viewings.
@@ -62,7 +65,12 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
     </>
   );
 
-  const notice = query.saved === "1" ? "Elmentve. Az ügyfél adatai, az előzmények és a feladatok frissültek." : null;
+  const notice =
+    query.saved === "1"
+      ? "Elmentve. Az ügyfél adatai, az előzmények és a feladatok frissültek."
+      : query.identified === "1"
+        ? "Az azonosítás elmentve (titkosítva). Az adatlapot az azonosítás oldalán nyomtathatod ki aláírásra."
+        : null;
   const hasRequirements = Boolean(
     client.budgetMin != null || client.budgetMax != null || client.preferredLocations.length || client.requirements.propertyTypes.length,
   );
@@ -77,6 +85,9 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
         viewings.length || wantsListings ? (
           <ViewingsCard viewings={viewings} now={new Date().toISOString()} showClient={false} empty="Még nincs foglalt megtekintés." />
         ) : null
+      }
+      identification={
+        client.archivedAt ? null : <IdentificationCard clientId={client.id} summary={identifications.get(client.id) ?? null} today={new Date().toISOString().slice(0, 10)} />
       }
       deals={
         deals.length || (!client.archivedAt && wantsListings) ? (

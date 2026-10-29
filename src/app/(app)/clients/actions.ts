@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { retentionFor } from "@/lib/aml/data";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { removeCalendarEvents, upcomingCalendarEvents } from "@/lib/viewings/data";
@@ -114,6 +115,11 @@ export async function eraseClientAction(id: string, confirmName: string): Promis
   if (!client) return { ok: false, error: "Az ügyfél nem található." };
   if (!client.archived_at) return { ok: false, error: "Előbb archiváld az ügyfelet." };
   if (confirmName.trim().toLowerCase() !== client.full_name.trim().toLowerCase()) return { ok: false, error: "A beírt név nem egyezik az ügyfél nevével." };
+  // The AML act (Pmt.) requires keeping an identified client's data for 8 years.
+  const keepUntil = await retentionFor(user, id);
+  if (keepUntil && keepUntil > new Date().toISOString().slice(0, 10)) {
+    return { ok: false, error: `Az ügyfelet a pénzmosás elleni törvény szerint ${keepUntil.replace(/-/g, ". ")}.-ig meg kell őrizni (azonosítás vagy ügylet miatt), ezért most nem törölhető véglegesen.` };
+  }
 
   // Read the Google Calendar events now: once the viewings are erased, their ids are gone.
   const events = await upcomingCalendarEvents(user, id, new Date());

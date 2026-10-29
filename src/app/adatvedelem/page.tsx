@@ -116,6 +116,15 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Pénzmosás elleni ügyfél-azonosítás">
+          <p>
+            Az ingatlanközvetítő a pénzmosás és a terrorizmus finanszírozása megelőzéséről szóló 2017. évi LIII. törvény (Pmt.) alapján azonosítja ügyfeleit. Az
+            ehhez rögzített adatokat (személyazonosító adatok, okmányadatok, kiemelt közszereplői és tényleges tulajdonosi nyilatkozat) a Flavio titkosítva tárolja,
+            csak az iroda munkatársai érhetik el, és a törvény szerinti ideig – az üzleti kapcsolat megszűnésétől számított 8 évig – megőrzi; addig az ügyfél
+            adatai véglegesen nem törölhetők.
+          </p>
+        </Section>
+
         <Section title="Az importáló böngészőbővítmény">
           <p>A bővítmény az ingatlanos saját hirdetéseit hozza át egy hirdetési portálról a Flavióba.</p>
           <ul className="list-disc pl-5">

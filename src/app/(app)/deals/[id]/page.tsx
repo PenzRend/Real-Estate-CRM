@@ -1,4 +1,4 @@
-import { ChevronLeft, Mail, MapPin, Phone, UserRound } from "lucide-react";
+import { ChevronLeft, Mail, MapPin, Phone, ShieldAlert, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,6 +8,8 @@ import { DealOutcome, OffersList, PartiesList, StageBar } from "@/components/dea
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageSuspense } from "@/components/ui/page-suspense";
+import { identificationSummaries } from "@/lib/aml/data";
+import { identificationStatus } from "@/lib/aml/identification";
 import { getCurrentUser } from "@/lib/auth";
 import { listClientOptions } from "@/lib/db/activity";
 import { getDeal } from "@/lib/deals/data";
@@ -50,6 +52,10 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
   const user = await getCurrentUser();
   const [deal, clients, team] = await Promise.all([getDeal(user, id), listClientOptions(user), listTeam(user).catch(() => null)]);
   if (!deal) notFound();
+  // Pmt.: buyer and seller are identified before the deal goes ahead.
+  const idents = await identificationSummaries(user, [deal.buyer_client_id, deal.seller_client_id].filter((x): x is string => Boolean(x)));
+  const today = new Date().toISOString().slice(0, 10);
+  const unidentified = [deal.buyer, deal.seller].filter((p): p is NonNullable<typeof p> => Boolean(p)).filter((p) => identificationStatus(idents.get(p.id) ?? null, today).state !== "ok");
   const open = deal.status === "open";
   const clientOptions = [{ value: "", label: "Nincs megadva" }, ...clients.map((c) => ({ value: c.id, label: c.name }))];
   const members = team?.members ?? [];
@@ -82,6 +88,16 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
           <DealOutcome dealId={deal.id} status={deal.status} />
         </div>
         <StageBar dealId={deal.id} stage={deal.stage} status={deal.status} />
+        {open && unidentified.length > 0 && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-warning-soft px-4 py-3 text-sm text-warning">
+            <ShieldAlert className="size-4 shrink-0" /> Pénzmosás elleni azonosítás hiányzik:
+            {unidentified.map((p) => (
+              <Link key={p.id} href={`/clients/${p.id}/azonositas`} className="font-medium underline">
+                {p.name}
+              </Link>
+            ))}
+          </p>
+        )}
       </header>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">

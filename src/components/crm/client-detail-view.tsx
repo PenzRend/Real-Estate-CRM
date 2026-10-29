@@ -28,8 +28,11 @@ export function ClientDetailView({
   matches,
   viewings,
   deals,
+  identification,
 }: {
   client: ClientDetail;
+  /** The AML identification status. */
+  identification?: ReactNode;
   /** Deals where the client is the buyer or the seller. */
   deals?: ReactNode;
   /** Extra header actions, e.g. archive / restore. */
@@ -181,6 +184,8 @@ export function ClientDetailView({
         </div>
 
         <div className="flex flex-col gap-6">
+          {identification}
+
           <Card>
             <CardHeader title="Keresési igények" action={<ArrowLink href={`/clients/${client.id}/edit`}>Szerkesztés</ArrowLink>} />
             {/* Only what is known: a new client would otherwise show a column of dashes. */}
