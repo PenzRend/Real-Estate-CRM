@@ -27,7 +27,7 @@ export const appGuide: GuideEntry[] = [
     id: "properties",
     screen: "Ingatlanok",
     href: "/properties",
-    how: "Listing list with filters. A listing's page has the description, details, owner, 'Fotók és videók' ('Fotók kezelése' to upload), 'Illő ügyfelek', viewings, tasks, 'Megosztás ügyféllel' (shareable link for a client) and 'Szerkesztés'. The status can be changed on the listing page.",
+    how: "Listing list with filters. A listing's page has the description, details, owner, 'Fotók és videók' ('Fotók kezelése' to upload), 'Illő ügyfelek', viewings, tasks, 'Megosztás ügyféllel' (shareable link for a client), deals ('Ügylet indítása'), 'Heti riport a tulajdonosnak' (switch on 'Hetente automatikusan, hétfő reggel' to email the owner every Monday about the week's viewings, anonymous buyer feedback and offers from the agent's own mailbox; 'Riport most' drafts one to edit and send now; needs an owner with an email address) and 'Szerkesztés'. The status can be changed on the listing page.",
   },
   { id: "property_new", screen: "Új ingatlan", href: "/properties/new", how: "Add a listing by hand: 'Gyors műveletek' → 'Új ingatlan', or 'Ingatlan hozzáadása' on Ingatlanok." },
   {

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncMailbox, type Arrival } from "@/lib/mail/sync";
+import { draftReport, dueWeeklyReports, sendReport } from "@/lib/reports/data";
 import { arrivalsMessage } from "@/lib/push/messages";
 import { pushToUser } from "@/lib/push/server";
 import { asBackgroundJob } from "@/lib/supabase/db";
@@ -53,11 +54,34 @@ async function mailJob(admin: SupabaseClient): Promise<JobResult> {
 
 export async function runCronJob(admin: SupabaseClient, job: CronJob, now: Date): Promise<JobResult> {
   const started = Date.now();
-  const result = job === "mail" ? await mailJob(admin) : await dailyJob(now);
+  const result = job === "mail" ? await mailJob(admin) : await dailyJob(admin, now);
   return { job, ...result, ms: Date.now() - started };
 }
 
-/** Once a morning: filled in by the reminder and report features. */
-async function dailyJob(now: Date): Promise<JobResult> {
-  return { day: now.toISOString().slice(0, 10) };
+/** Monday mornings: the weekly seller reports that are switched on, sent from each listing's agent. */
+async function sellerReportsJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Europe/Budapest" }).format(now);
+  if (weekday !== "Mon") return { sellerReports: "not Monday" };
+  const due = await asBackgroundJob(admin, () => dueWeeklyReports(now));
+  let sent = 0;
+  let failed = 0;
+  for (const d of due) {
+    const user = await jobUser(admin, d.agentId, d.organizationId);
+    if (!user) continue;
+    await asBackgroundJob(admin, async () => {
+      const draft = await draftReport(user, d.propertyId, now);
+      const r = draft.ok ? await sendReport(user, draft.report.id, null, now) : draft;
+      if (r.ok) sent++;
+      else {
+        failed++;
+        await pushToUser(user.id, { title: "Az eladói riport nem ment el", body: r.error, url: `/properties/${d.propertyId}`, tag: `report-${d.propertyId}` });
+      }
+    });
+  }
+  return { sellerReports: sent, sellerReportsFailed: failed };
+}
+
+/** Once a morning (7:00): weekly seller reports on Mondays; the reminders join here. */
+async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  return { ...(await sellerReportsJob(admin, now)) };
 }

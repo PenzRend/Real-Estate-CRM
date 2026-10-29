@@ -47,8 +47,11 @@ export function PropertyDetailView({
   media,
   viewings,
   deals,
+  sellerReport,
 }: {
   property: PropertyDetail;
+  /** The weekly report to the owner. */
+  sellerReport?: ReactNode;
   /** Deals on this listing. */
   deals?: ReactNode;
   actions?: ReactNode;
@@ -198,6 +201,8 @@ export function PropertyDetailView({
               <p className="px-5 py-4 text-sm text-muted">Nincs megadva. A szerkesztésnél választhatsz az ügyfeleid közül.</p>
             )}
           </Card>
+
+          {sellerReport}
 
           <Card>
             <CardHeader title="Részletek" />
