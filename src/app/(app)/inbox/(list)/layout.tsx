@@ -1,8 +1,10 @@
-import { PlugZap } from "lucide-react";
+import { PlugZap, Zap } from "lucide-react";
+import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AllMailToolbar } from "@/components/mail/all-mail-toolbar";
 import { ConnectCard } from "@/components/mail/connect-card";
 import { MailboxBar } from "@/components/mail/mailbox-bar";
+import { buttonClasses } from "@/components/ui/button";
 import { ListSkeleton, PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
 import { ViewTabs } from "@/components/ui/view-tabs";
@@ -64,7 +66,15 @@ async function MailShell({ children }: { children: ReactNode }) {
 export default function InboxLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition className="flex flex-col gap-6">
-      <PageHeader title="Levelek" description="Ügyfelekkel váltott levelek és portálos érdeklődések, feldolgozásra várva." />
+      <PageHeader
+        title="Levelek"
+        description="Ügyfelekkel váltott levelek és portálos érdeklődések, feldolgozásra várva."
+        actions={
+          <Link href="/inbox/automation" className={buttonClasses("secondary", "sm")}>
+            <Zap /> Automatikus levelek
+          </Link>
+        }
+      />
       <Suspense
         fallback={
           <div className="flex flex-col gap-6">

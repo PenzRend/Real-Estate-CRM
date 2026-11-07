@@ -1,6 +1,6 @@
 "use server";
 
-import { runAutomaticTemplates } from "@/lib/office-docs/templates";
+import { onEvent } from "@/lib/automation/events";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { AiError, extractCapture } from "@/lib/ai/extract";
@@ -105,6 +105,6 @@ export async function saveCaptureAction(payload: unknown): Promise<SaveCaptureRe
     if (error instanceof SaveError) return { ok: false, error: error.userMessage };
     throw error;
   }
-  if (parsed.data.client.mode !== "existing") after(() => runAutomaticTemplates(user, "client_created", { kind: "client", id: saved.clientId }));
+  if (parsed.data.client.mode !== "existing") after(() => onEvent(user, { type: "client_created", clientId: saved.clientId }));
   redirect(`/clients/${saved.clientId}?saved=1`);
 }

@@ -1,5 +1,7 @@
 "use server";
 
+import { onEvent } from "@/lib/automation/events";
+import { after } from "next/server";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
@@ -56,6 +58,8 @@ export async function createPropertyAction(_: PropertyFormState, formData: FormD
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
   }
 
+  // An agency agreement draft waits for review on the listing's page.
+  after(() => onEvent(user, { type: "listing_created", propertyId: data.id }));
   // "new": the listing's page offers it to the matching buyers at once.
   redirect(`/properties/${data.id}?new=1`);
 }

@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import { ContractsWaiting } from "@/components/contracts/contracts-waiting";
+import { listDrafts } from "@/lib/contracts/data";
+import { waitingCount } from "@/lib/email-auto/outbox";
+import { OutboxWaiting } from "@/components/email-auto/outbox-waiting";
 import { connection } from "next/server";
 import { DashboardView } from "@/components/crm/dashboard-view";
 import { AwayPanel } from "@/components/dashboard/away-panel";
@@ -52,6 +56,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
   // The agent's own month (numbers and targets).
   const month = await officeStats(user, utcToZonedLocal(now.toISOString()).slice(0, 7)).catch(() => null);
   const me = month?.agents.find((a) => a.userId === user.id) ?? null;
+  const [drafts, emailsWaiting] = await Promise.all([listDrafts(user, { status: "draft" }).catch(() => []), waitingCount(user).catch(() => 0)]);
   // Owners and admins see last week's numbers from Monday to Wednesday.
   const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Europe/Budapest" }).format(now);
   const week = user.organization.role !== "member" && ["Mon", "Tue", "Wed"].includes(weekday) ? await weekSummary(user, now).catch(() => null) : null;
@@ -81,6 +86,8 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
       away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />}
       deals={
         <>
+          {drafts.length > 0 && <ContractsWaiting drafts={drafts} />}
+          {emailsWaiting > 0 && <OutboxWaiting count={emailsWaiting} />}
           {week && <WeekCard summary={week} />}
           {me && <MyMonth me={me} />}
           {(deals.openCount > 0 || deals.upcoming.length > 0) && <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}

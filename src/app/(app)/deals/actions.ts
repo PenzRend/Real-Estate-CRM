@@ -1,6 +1,6 @@
 "use server";
 
-import { runAutomaticTemplates } from "@/lib/office-docs/templates";
+import { onEvent } from "@/lib/automation/events";
 import { after } from "next/server";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
@@ -46,7 +46,7 @@ export async function createDealAction(_prev: FormState, form: FormData): Promis
     offer != null ? { amount: offer, madeBy: form.get("offerBy") === "seller" ? "seller" : "buyer" } : null,
   );
   if (!r.ok) return { error: r.error };
-  after(() => runAutomaticTemplates(user, "deal_created", { kind: "deal", id: r.id }));
+  after(() => onEvent(user, { type: "deal_created", dealId: r.id }));
   redirect(`/deals/${r.id}`);
 }
 
@@ -89,6 +89,8 @@ export async function moveDealAction(dealId: string, stage: string): Promise<For
   const user = await getCurrentUser();
   const r = await moveDeal(user, dealId, stage as DealStage);
   if (!r.ok) return { error: r.error };
+  if (stage === "handover") after(() => onEvent(user, { type: "deal_handover", dealId }));
+  if (stage === "closed") after(() => onEvent(user, { type: "deal_won", dealId }));
   refresh();
   return { ok: true };
 }

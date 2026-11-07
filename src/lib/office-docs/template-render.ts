@@ -11,7 +11,7 @@ import PizZip from "pizzip";
 // Pure, so it is tested: fill the fields, then turn the text into blocks for
 // the on-screen preview (HTML) or a Word file.
 
-export type Run = { text: string; bold: boolean };
+export type Run = { text: string; bold: boolean; italic?: boolean };
 export type Block = { type: "h1" | "h2" | "p" | "li"; runs: Run[] };
 
 const AI_BLOCK = /\[\[\s*AI\s*:\s*([\s\S]*?)\]\]/gi;
@@ -34,10 +34,11 @@ export function fillTemplateText(body: string, values: Record<string, string>, a
 
 function runs(line: string): Run[] {
   const out: Run[] = [];
-  const parts = line.split(/(\*\*[^*]+\*\*)/g);
+  const parts = line.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g);
   for (const p of parts) {
     if (!p) continue;
     if (p.startsWith("**") && p.endsWith("**") && p.length > 4) out.push({ text: p.slice(2, -2), bold: true });
+    else if (p.startsWith("*") && p.endsWith("*") && p.length > 2) out.push({ text: p.slice(1, -1), bold: false, italic: true });
     else out.push({ text: p, bold: false });
   }
   return out;
@@ -70,7 +71,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 /** For the editor's preview. */
 export function toHtml(blocks: Block[]): string {
   const text = (t: string) => esc(t).replace(/\n/g, "<br>");
-  const inner = (b: Block) => b.runs.map((r) => (r.bold ? `<strong>${text(r.text)}</strong>` : text(r.text))).join("");
+  const inner = (b: Block) => b.runs.map((r) => (r.bold ? `<strong>${text(r.text)}</strong>` : r.italic ? `<em>${text(r.text)}</em>` : text(r.text))).join("");
   let html = "";
   let inList = false;
   for (const b of blocks) {
@@ -85,7 +86,7 @@ export function toHtml(blocks: Block[]): string {
 }
 
 const runXml = (r: Run, size: number, bold: boolean) =>
-  `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>${bold || r.bold ? "<w:b/>" : ""}<w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${esc(r.text).replace(/\n/g, '</w:t><w:br/><w:t xml:space="preserve">')}</w:t></w:r>`;
+  `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>${bold || r.bold ? "<w:b/>" : ""}${r.italic ? "<w:i/>" : ""}<w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${esc(r.text).replace(/\n/g, '</w:t><w:br/><w:t xml:space="preserve">')}</w:t></w:r>`;
 
 function paragraphXml(b: Block) {
   if (b.type === "h1") return `<w:p><w:pPr><w:spacing w:before="240" w:after="160"/></w:pPr>${b.runs.map((r) => runXml(r, 36, true)).join("")}</w:p>`;

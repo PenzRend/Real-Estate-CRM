@@ -1,6 +1,6 @@
 "use server";
 
-import { runAutomaticTemplates } from "@/lib/office-docs/templates";
+import { onEvent } from "@/lib/automation/events";
 import { after } from "next/server";
 import { z } from "zod";
 import { AiError } from "@/lib/ai/extract";
@@ -53,7 +53,7 @@ export async function createOwnerAction(input: unknown): Promise<OwnerResult> {
     console.error("createOwnerAction failed", error?.code);
     return { ok: false, errors: {}, formError: "Az ügyfél mentése nem sikerült. Próbáld újra." };
   }
-  after(() => runAutomaticTemplates(user, "client_created", { kind: "client", id: data.id }));
+  after(() => onEvent(user, { type: "client_created", clientId: data.id }));
   return { ok: true, owner: { id: data.id, name: data.full_name, clientType: parsed.data.client_type } };
 }
 

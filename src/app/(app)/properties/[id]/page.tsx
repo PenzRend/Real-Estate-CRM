@@ -1,4 +1,5 @@
 import { ShareToChat } from "@/components/chat/share-to-chat";
+import { ContractsCard } from "@/components/contracts/contracts-card";
 import { LinkedFilesCard } from "@/components/office-docs/linked-files-card";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
@@ -91,6 +92,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
       documents={
         <>
           <DocumentsCard propertyId={property.id} organizationId={user.organization.id} rows={documents} hasOwnerEmail={Boolean(target?.ownerEmail)} />
+          <ContractsCard user={user} from="property" id={property.id} />
           <LinkedFilesCard user={user} kind="property" id={property.id} />
         </>
       }

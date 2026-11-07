@@ -9,7 +9,20 @@ export const recordIcons = { client: UserRound, property: Building2, deal: Hands
 export const recordLabels = { client: "Ügyfél", property: "Ingatlan", deal: "Ügylet" } as const;
 
 /** Search clients, listings and deals and pick one. */
-export function RecordSearch({ onPick, onClose, autoFocus = true }: { onPick: (r: RecordHit) => void; onClose?: () => void; autoFocus?: boolean }) {
+const placeholders: Record<RecordHit["kind"], string> = { client: "Ügyfél keresése", property: "Ingatlan keresése", deal: "Ügylet keresése" };
+
+export function RecordSearch({
+  onPick,
+  onClose,
+  autoFocus = true,
+  only,
+}: {
+  onPick: (r: RecordHit) => void;
+  onClose?: () => void;
+  autoFocus?: boolean;
+  /** Only this kind of record (e.g. a listing when the question is which one was viewed). */
+  only?: RecordHit["kind"];
+}) {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<RecordHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,7 +43,7 @@ export function RecordSearch({ onPick, onClose, autoFocus = true }: { onPick: (r
     };
   }, [query]);
 
-  const shown = query.trim().length < 2 ? [] : hits;
+  const shown = query.trim().length < 2 ? [] : only ? hits.filter((h) => h.kind === only) : hits;
   return (
     <div className="flex flex-col gap-1">
       <label className="relative block">
@@ -40,8 +53,8 @@ export function RecordSearch({ onPick, onClose, autoFocus = true }: { onPick: (r
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && onClose?.()}
-          placeholder="Ügyfél, ingatlan vagy ügylet keresése"
-          aria-label="Ügyfél, ingatlan vagy ügylet keresése"
+          placeholder={only ? placeholders[only] : "Ügyfél, ingatlan vagy ügylet keresése"}
+          aria-label={only ? placeholders[only] : "Ügyfél, ingatlan vagy ügylet keresése"}
           className="h-10 w-full rounded-xl border border-border bg-background pr-9 pl-9 text-sm focus:border-ink focus:outline-none"
         />
         {loading && <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-subtle" />}

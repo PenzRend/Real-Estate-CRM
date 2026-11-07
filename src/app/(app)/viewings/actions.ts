@@ -1,5 +1,8 @@
 "use server";
 
+import { onEvent } from "@/lib/automation/events";
+import { after } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
@@ -40,7 +43,10 @@ export async function bookViewingAction(input: unknown): Promise<BookingResult> 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Hiányos adatok." };
   const user = await getCurrentUser();
   const r = await bookViewing(user, parsed.data, new Date());
-  if (r.ok) refresh();
+  if (r.ok) {
+    after(() => onEvent(user, { type: "viewing_booked", viewingId: r.viewingId, clientId: r.clientId, propertyId: parsed.data.propertyId, startsAt: r.startsAt }));
+    refresh();
+  }
   return r;
 }
 
@@ -78,7 +84,15 @@ export async function saveFeedbackAction(viewingId: string, input: unknown): Pro
   if (!parsed.success || !id.safeParse(viewingId).success) return { ok: false, error: "Válaszd ki, hogyan sikerült." };
   const user = await getCurrentUser();
   const r = await saveFeedback(user, viewingId, parsed.data, new Date());
-  if (r.ok) refresh();
+  if (r.ok) {
+    if (parsed.data.outcome !== "no_show") {
+      after(async () => {
+        const { data: v } = await (await createClient()).from("viewings").select("client_id, property_id").eq("id", viewingId).maybeSingle();
+        if (v) await onEvent(user, { type: "viewing_completed", viewingId, clientId: v.client_id, propertyId: v.property_id, feedback: parsed.data.feedback || null });
+      });
+    }
+    refresh();
+  }
   return r;
 }
 

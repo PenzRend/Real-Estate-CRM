@@ -4,6 +4,7 @@ import { syncMailbox, type Arrival } from "@/lib/mail/sync";
 import { draftReport, dueWeeklyReports, sendReport } from "@/lib/reports/data";
 import { dueReminders, sendViewingReminder } from "@/lib/viewings/reminders";
 import { chatNoticeText, chatRecipients } from "@/lib/chat/notify";
+import { enqueueForEvent, sendOutboxItem } from "@/lib/email-auto/outbox";
 import { arrivalsMessage } from "@/lib/push/messages";
 import { weekSummary } from "@/lib/team/week-summary";
 import { weekLine } from "@/lib/team/week-text";
@@ -60,7 +61,57 @@ async function mailJob(admin: SupabaseClient): Promise<JobResult> {
     notified,
     leadsAnnounced: await announceNewLeads(admin),
     chatNotified: await announceChatMessages(admin),
+    emailsSent: await sendDueOutbox(admin),
   };
+}
+
+/** Automatic emails whose time has come (approved, or set to go by themselves), from each agent's mailbox. */
+async function sendDueOutbox(admin: SupabaseClient): Promise<number> {
+  const { data: due } = await admin
+    .from("email_outbox")
+    .select("id, user_id, organization_id")
+    .eq("status", "queued")
+    .lte("scheduled_at", new Date().toISOString())
+    .order("scheduled_at")
+    .limit(100);
+  let sent = 0;
+  for (const m of due ?? []) {
+    const user = await jobUser(admin, m.user_id, m.organization_id);
+    if (!user) {
+      await admin.from("email_outbox").update({ status: "failed", error: "A küldő már nem tagja a munkaterületnek." }).eq("id", m.id);
+      continue;
+    }
+    const r = await asBackgroundJob(admin, () => sendOutboxItem(user, m.id)).catch(() => ({ ok: false as const }));
+    if (r.ok) sent++;
+  }
+  return sent;
+}
+
+/** "Ha régóta nem beszéltünk": clients past the rule's quiet days get one message per quiet spell. */
+async function noContactJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  const { data: rules } = await admin.from("email_templates").select("organization_id, no_contact_days").eq("active", true).eq("trigger", "no_contact");
+  let queued = 0;
+  for (const rule of rules ?? []) {
+    const days = rule.no_contact_days ?? 21;
+    const before = new Date(now.getTime() - days * 86_400_000).toISOString();
+    const { data: clients } = await admin
+      .from("clients")
+      .select("id, assigned_to, created_by, last_contacted_at")
+      .eq("organization_id", rule.organization_id)
+      .is("archived_at", null)
+      .not("email", "is", null)
+      .not("status", "in", "(converted,lost)")
+      .lt("last_contacted_at", before)
+      .limit(50);
+    for (const c of clients ?? []) {
+      const agent = (c.assigned_to ?? c.created_by) as string | null;
+      if (!agent) continue;
+      const user = await jobUser(admin, agent, rule.organization_id);
+      if (!user) continue;
+      queued += await asBackgroundJob(admin, () => enqueueForEvent(user, "no_contact", { clientId: c.id }, `no-contact:${c.id}:${String(c.last_contacted_at).slice(0, 10)}`)).catch(() => 0);
+    }
+  }
+  return { noContactQueued: queued };
 }
 
 /**
@@ -173,7 +224,7 @@ async function viewingRemindersJob(admin: SupabaseClient, now: Date): Promise<Jo
 
 /** Once a morning (7:00): tomorrow's viewing reminders, and the weekly seller reports on Mondays. */
 async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
-  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)), ...(await officeWeekJob(admin, now)) };
+  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)), ...(await officeWeekJob(admin, now)), ...(await noContactJob(admin, now)) };
 }
 
 /** Monday mornings: last week's office numbers to every owner and admin of a team (two or more members). */

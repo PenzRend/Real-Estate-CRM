@@ -87,7 +87,7 @@ export async function deleteTemplate(user: CurrentUser, id: string) {
 const aiSchema = z.object({ paragraphs: z.array(z.string()) });
 
 /** The [[AI: …]] paragraphs, written from the record's facts only. Null without AI (placeholders stay). */
-async function writeAiParagraphs(user: CurrentUser, instructions: string[], facts: Record<string, string>): Promise<string[] | null> {
+export async function writeAiParagraphs(user: CurrentUser, instructions: string[], facts: Record<string, string>): Promise<string[] | null> {
   if (!instructions.length || !llmConfig() || (await aiLimitMessage(user))) return null;
   try {
     const r = await structuredCall(

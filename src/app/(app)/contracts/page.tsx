@@ -1,0 +1,86 @@
+import { FileSignature, Zap } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { connection } from "next/server";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState, PageHeader } from "@/components/ui/page";
+import { PageSuspense } from "@/components/ui/page-suspense";
+import { getCurrentUser } from "@/lib/auth";
+import { listDrafts } from "@/lib/contracts/data";
+import { CONTRACT_KINDS, CONTRACT_ORDER } from "@/lib/contracts/kinds";
+import { formatDate } from "@/lib/i18n/format";
+
+export const metadata: Metadata = { title: "Szerződések" };
+
+async function Contracts() {
+  await connection();
+  const user = await getCurrentUser();
+  const drafts = await listDrafts(user);
+  const waiting = drafts.filter((d) => d.status === "draft");
+  const approved = drafts.filter((d) => d.status === "approved");
+  const list = (items: typeof drafts) => (
+    <ul className="divide-y divide-border rounded-3xl border border-border bg-background">
+      {items.map((d) => (
+        <li key={d.id}>
+          <Link href={`/contracts/${d.id}`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+              <FileSignature className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-ink">{d.title}</span>
+              <span className="block text-xs text-muted">
+                {d.label} · {formatDate(d.createdAt)}
+              </span>
+            </span>
+            {d.origin === "auto" && (
+              <Badge tone="accent">
+                <Zap className="size-3" /> automatikus
+              </Badge>
+            )}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Szerződések"
+        description="Flavio megírja a szerződéseket az ügylet, az ingatlan és az ügyfelek adataiból – te átnézed, kiegészíted és jóváhagyod. Új szerződést az ügylet, az ingatlan vagy az ügyfél oldalán indíthatsz."
+      />
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base tracking-tight">Felülvizsgálatra vár · {waiting.length}</h2>
+        {waiting.length ? (
+          list(waiting)
+        ) : (
+          <EmptyState icon={FileSignature} title="Nincs átnézendő tervezet" description="Ügylet indításakor, megtekintés foglalásakor és új ingatlan felvételekor a tervezet magától elkészül." />
+        )}
+      </section>
+      {approved.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base tracking-tight">Jóváhagyott · {approved.length}</h2>
+          {list(approved)}
+        </section>
+      )}
+      <section className="rounded-3xl border border-border bg-background p-5">
+        <h2 className="text-sm font-medium text-ink">Amit Flavio megír</h2>
+        <ul className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          {CONTRACT_ORDER.map((k) => (
+            <li key={k}>
+              <span className="font-medium text-ink">{CONTRACT_KINDS[k].label}</span>
+              <span className="block text-muted">{CONTRACT_KINDS[k].short}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+export default function ContractsPage() {
+  return (
+    <PageSuspense>
+      <Contracts />
+    </PageSuspense>
+  );
+}
