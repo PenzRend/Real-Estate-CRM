@@ -146,9 +146,10 @@ export default function PrivacyPage() {
             <li>Supabase: adatbázis, fájltárolás és bejelentkezés.</li>
             <li>A tárhelyszolgáltató, ahol a Flavio fut.</li>
             <li>
-              AI-szolgáltató (a beállítástól függően pl. Anthropic vagy egy OpenAI-kompatibilis szolgáltató): az ingatlanos által indított AI-funkciókhoz –
-              kitöltés, összefoglaló, válaszvázlat, diktálás – megkapja az ehhez szükséges szöveget. Az eredményt az ingatlanos ellenőrzi, mielőtt bármi mentődne
-              vagy elmenne.
+              AI-szolgáltatók: a Groq (diktálás szövegre írása és az AI-funkciók), tartaléknak pedig a Google Gemini, ha a Groq épp nem érhető el. Az ingatlanos
+              által indított AI-funkciókhoz – kitöltés, összefoglaló, válaszvázlat, diktálás – megkapják az ehhez szükséges szöveget vagy hangfelvételt. A Groq a
+              kéréseket nem tárolja (nulla adatmegőrzés), a hangfelvételt mi sem mentjük el. Mindkét szolgáltató amerikai cég, ezért az adat az EU-n kívül is
+              feldolgozásra kerülhet, az uniós adatvédelmi szabályok szerinti garanciákkal. Az eredményt az ingatlanos ellenőrzi, mielőtt bármi mentődne vagy elmenne.
             </li>
             <li>Google és Microsoft: csak összekapcsolt fiók esetén, a fenti célokra.</li>
             <li>Az ingatlanos saját levelezési szolgáltatója (céges tárhely, iCloud…): csak bekötött postafiók esetén, a levelek lekéréséhez és küldéséhez.</li>

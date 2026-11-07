@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/app-shell/logo";
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
@@ -8,7 +9,12 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         <div className="flex flex-1 items-center justify-center py-12">
           <div className="w-full max-w-sm">{children}</div>
         </div>
-        <p className="text-xs text-muted">Az adataidat csak a saját munkaterületed tagjai látják.</p>
+        <p className="text-xs text-muted">
+          Az adataidat csak a saját munkaterületed tagjai látják.{" "}
+          <Link href="/adatvedelem" className="underline underline-offset-2 hover:text-ink">
+            Adatvédelem
+          </Link>
+        </p>
       </div>
 
       <aside className="relative hidden overflow-hidden bg-surface lg:flex lg:flex-col lg:justify-center lg:px-16">
