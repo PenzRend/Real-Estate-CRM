@@ -1,8 +1,8 @@
 import { Suspense, type ReactNode } from "react";
-import { TasksPageForm } from "@/components/crm/new-task-form";
+import { NewTaskForm, TasksPageForm } from "@/components/crm/new-task-form";
 import { PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
-import { ViewTabs } from "@/components/ui/view-tabs";
+import { ViewTabs, ViewTabsPlaceholder } from "@/components/ui/view-tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { listClientOptions } from "@/lib/db/activity";
 import { taskViews } from "@/lib/tasks/views";
@@ -17,10 +17,17 @@ export default function TasksLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition className="flex flex-col gap-6">
       <PageHeader title="Feladatok" description="Visszahívások és utánkövetések, ügyfelekhez és ingatlanokhoz kötve." />
-      <Suspense fallback={<div className="h-14 shimmer rounded-2xl bg-surface" />}>
+      {/* The form itself, inert and without clients, while they load: same size, so nothing below moves. */}
+      <Suspense
+        fallback={
+          <div inert>
+            <NewTaskForm clients={[]} />
+          </div>
+        }
+      >
         <TaskForm />
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<ViewTabsPlaceholder label="Nézetek" items={taskViews} />}>
         <ViewTabs label="Nézetek" items={taskViews} />
       </Suspense>
       {children}

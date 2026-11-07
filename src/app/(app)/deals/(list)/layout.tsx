@@ -4,20 +4,28 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
-import { ViewTabs } from "@/components/ui/view-tabs";
+import { ViewTabs, ViewTabsPlaceholder } from "@/components/ui/view-tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { dealSummary } from "@/lib/deals/data";
 import { formatPrice } from "@/lib/i18n/format";
 
+const DEAL_VIEWS = [
+  { value: "open", label: "Folyamatban" },
+  { value: "won", label: "Sikeres" },
+  { value: "lost", label: "Meghiúsult" },
+];
+
+const STAT_LABELS = ["Folyamatban lévő ügylet", "Jutalék a folyamatban lévőkben", "Várható jutalék ebben a hónapban", "Sikeres lezárás ebben a hónapban"];
+
 async function Summary() {
   const user = await getCurrentUser();
   const s = await dealSummary(user, new Date());
-  const stats = [
-    { label: "Folyamatban lévő ügylet", value: String(s.openCount) },
-    { label: "Jutalék a folyamatban lévőkben", value: formatPrice(s.pipelineCommission) },
-    { label: "Várható jutalék ebben a hónapban", value: formatPrice(s.thisMonthCommission) },
-    { label: "Sikeres lezárás ebben a hónapban", value: String(s.wonThisMonth) },
-  ];
+  return <SummaryPanel values={[String(s.openCount), formatPrice(s.pipelineCommission), formatPrice(s.thisMonthCommission), String(s.wonThisMonth)]} />;
+}
+
+/** The totals; with no values (while loading) the same panel with dashes, so nothing below moves. */
+function SummaryPanel({ values }: { values?: string[] }) {
+  const stats = STAT_LABELS.map((label, i) => ({ label, value: values?.[i] ?? "–" }));
   return (
     <Panel className="grid grid-cols-2 lg:grid-cols-4">
       {stats.map((x, i) => (
@@ -44,18 +52,11 @@ export default function DealsLayout({ children }: { children: ReactNode }) {
             </ButtonLink>
           }
         />
-        <Suspense fallback={<div className="h-[88px] shimmer rounded-2xl bg-surface" />}>
+        <Suspense fallback={<SummaryPanel />}>
           <Summary />
         </Suspense>
-        <Suspense>
-          <ViewTabs
-            label="Nézetek"
-            items={[
-              { value: "open", label: "Folyamatban" },
-              { value: "won", label: "Sikeres" },
-              { value: "lost", label: "Meghiúsult" },
-            ]}
-          />
+        <Suspense fallback={<ViewTabsPlaceholder label="Nézetek" items={DEAL_VIEWS} />}>
+          <ViewTabs label="Nézetek" items={DEAL_VIEWS} />
         </Suspense>
         {children}
       </div>

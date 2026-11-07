@@ -11,6 +11,19 @@ import { cn } from "@/lib/cn";
  * content below loads. `keep` names other URL values a tab switch carries
  * over (e.g. the chosen mailbox).
  */
+/** The tabs as they look before the URL is read (first tab active): same size, so nothing below moves. */
+export function ViewTabsPlaceholder({ items, label }: { items: { value: string; label: string }[]; label: string }) {
+  return (
+    <nav aria-label={label} className="relative isolate flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-full border border-border p-1">
+      {items.map((t, i) => (
+        <span key={t.value} className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm whitespace-nowrap", i === 0 ? "bg-primary font-medium text-white" : "text-muted")}>
+          {t.label}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 export function ViewTabs({
   param = "view",
   items,

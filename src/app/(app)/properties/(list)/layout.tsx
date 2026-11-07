@@ -1,6 +1,6 @@
 import { Download, Plus } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
-import { PropertyFiltersFromUrl } from "@/components/crm/filter-bars";
+import { PropertyFiltersFromUrl, PropertyFiltersPlaceholder } from "@/components/crm/filter-bars";
 import { ButtonLink } from "@/components/ui/button";
 import { PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
@@ -23,7 +23,7 @@ export default function PropertiesLayout({ children }: { children: ReactNode }) 
           </>
         }
       />
-      <Suspense fallback={<div className="h-11 shimmer rounded-xl bg-surface" />}>
+      <Suspense fallback={<PropertyFiltersPlaceholder />}>
         <PropertyFiltersFromUrl />
       </Suspense>
       {children}

@@ -20,6 +20,15 @@ function read<K extends string>(params: URLSearchParams, keys: readonly K[]) {
   return out;
 }
 
+/** Stand-ins while the URL is read: the same bars, empty, so the page below doesn't move. */
+export function ClientFiltersPlaceholder() {
+  return <ClientFilterBar filters={{}} />;
+}
+
+export function PropertyFiltersPlaceholder() {
+  return <PropertyFilterBar filters={{}} />;
+}
+
 export function ClientFiltersFromUrl() {
   const params = useSearchParams();
   return <ClientFilterBar key={params.toString()} filters={read(params, CLIENT_KEYS) as ClientFilters} />;
