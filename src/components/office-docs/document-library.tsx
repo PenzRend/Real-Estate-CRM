@@ -1,7 +1,7 @@
 "use client";
 
-import { Download, File, FileImage, FileSpreadsheet, FileText, FolderOpen, Loader2, MoreHorizontal, Pin, PinOff, Search, Trash2, Upload } from "lucide-react";
-import { useMemo, useRef, useState, useTransition, type DragEvent } from "react";
+import { ChevronRight, Download, File, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, GripVertical, Loader2, MoreHorizontal, Pin, PinOff, Search, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { addOfficeDocumentAction, deleteOfficeDocumentAction, updateOfficeDocumentAction } from "@/app/(app)/documents/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
@@ -11,7 +11,8 @@ import { formatDate } from "@/lib/i18n/format";
 import type { OfficeDocument, OfficeFolder } from "@/lib/office-docs/data";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { FillTemplate } from "./fill-template";
-import { FolderBar, type FolderPick } from "./folder-bar";
+import { DOC_DRAG, FolderActions, FolderNav, folderLabel, type FolderPick } from "./folder-nav";
+import { UploadDialog, type PlannedUpload } from "./upload-dialog";
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv";
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -22,6 +23,12 @@ const safeName = (name: string) =>
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\w.-]+/g, "-")
     .slice(-120) || "dokumentum";
+
+const fold = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
 function size(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -40,16 +47,30 @@ function kind(d: OfficeDocument) {
   return { Icon: File, cls: "bg-surface-strong text-muted", label: "Fájl" };
 }
 
-function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: OfficeFolder[] }) {
+function DocumentRow({ doc, folders, highlighted = false }: { doc: OfficeDocument; folders: OfficeFolder[]; highlighted?: boolean }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, start] = useTransition();
   const k = kind(doc);
   const update = (patch: { title?: string; folderId?: string; pinned?: boolean }) => start(() => updateOfficeDocumentAction(doc.id, patch).catch(actionFailed).then(() => undefined));
+  const row = useRef<HTMLLIElement>(null);
+  // Opened from a link (e.g. the assistant): bring it into view.
+  useEffect(() => {
+    if (highlighted) row.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlighted]);
 
   return (
-    <li className="group relative flex items-center gap-3 px-4 py-3 sm:px-5">
+    <li
+      ref={row}
+      draggable={doc.canEdit}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(DOC_DRAG, doc.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className={cn("group relative flex items-center gap-3 px-4 py-3 sm:px-5", highlighted && "bg-accent-soft/60 ring-2 ring-accent/40 ring-inset")}
+    >
+      {doc.canEdit && <GripVertical className="absolute left-0.5 hidden size-3.5 cursor-grab text-subtle opacity-0 transition-opacity group-hover:opacity-100 sm:block" aria-hidden />}
       <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", k.cls)}>
         <k.Icon className="size-5" />
       </span>
@@ -157,15 +178,31 @@ function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: OfficeFol
   );
 }
 
-/** The office's shared files: folders, search, drag-and-drop upload. */
-export function DocumentLibrary({ organizationId, documents, folders }: { organizationId: string; documents: OfficeDocument[]; folders: OfficeFolder[] }) {
-  const [picked, setFolder] = useState<FolderPick>("all");
+/** The office's shared files as an explorer: folders on the side, the open folder's files, search, drag-and-drop. */
+export function DocumentLibrary({
+  organizationId,
+  documents,
+  folders,
+  initialFolder = "all",
+  highlight = null,
+}: {
+  organizationId: string;
+  documents: OfficeDocument[];
+  folders: OfficeFolder[];
+  initialFolder?: FolderPick;
+  /** A document to show and point at (a link from the assistant or elsewhere). */
+  highlight?: string | null;
+}) {
+  const [picked, setFolder] = useState<FolderPick>(initialFolder);
   // A folder that was just removed (by anyone) falls back to "all".
   const folder = picked === "all" || picked === "none" || folders.some((f) => f.id === picked) ? picked : "all";
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [pending, setPending] = useState<File[] | null>(null);
+  const [, startMove] = useTransition();
   const input = useRef<HTMLInputElement>(null);
+  const current = folders.find((f) => f.id === folder) ?? null;
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: documents.length };
@@ -173,15 +210,20 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
     return c;
   }, [documents]);
 
-  const q = query.trim().toLowerCase();
-  const shown = documents.filter((d) => (folder === "all" || (d.folderId ?? "none") === folder) && (!q || `${d.title} ${d.fileName} ${d.uploader ?? ""}`.toLowerCase().includes(q)));
+  const q = fold(query.trim());
+  // A search looks through every folder.
+  const shown = documents.filter((d) => (q ? fold(`${d.title} ${d.fileName} ${d.uploader ?? ""} ${folderLabel(folders, d.folderId ?? "none")}`).includes(q) : folder === "all" || (d.folderId ?? "none") === folder));
 
-  async function upload(files: FileList | File[] | null) {
-    const list = Array.from(files ?? []);
-    if (!list.length) return;
+  const move = (docId: string, folderId: string) =>
+    startMove(async () => {
+      await updateOfficeDocumentAction(docId, { folderId }).catch(actionFailed);
+      toast({ message: `Áthelyezve: ${folderId ? folderLabel(folders, folderId) : "Egyéb"}.` });
+    });
+
+  async function upload(plan: PlannedUpload[]) {
     const supabase = createBrowserSupabase();
     let done = 0;
-    for (const file of list) {
+    for (const { file, title, folderId } of plan) {
       if (file.size > MAX_BYTES) {
         toast({ message: `${file.name}: legfeljebb 20 MB lehet.` });
         continue;
@@ -193,7 +235,7 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
         toast({ message: `${file.name}: a feltöltés nem sikerült (PDF, Word, Excel, kép vagy szöveg lehet).` });
         continue;
       }
-      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folderId: folder === "all" || folder === "none" ? null : folder }).catch(actionFailed);
+      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folderId, title }).catch(actionFailed);
       if (r.ok) done++;
       else toast({ message: r.error });
     }
@@ -202,73 +244,172 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
     if (done) toast({ message: done === 1 ? "Feltöltve." : `${done} fájl feltöltve.` });
   }
 
-  const drop = (e: DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    void upload(e.dataTransfer.files);
+  const choose = (files: FileList | File[] | null) => {
+    const list = Array.from(files ?? []);
+    if (list.length) setPending(list);
   };
 
+  const drop = (e: DragEvent) => {
+    setDragging(false);
+    if (e.dataTransfer.types.includes(DOC_DRAG)) return; // a file moved inside the list, not an upload
+    e.preventDefault();
+    choose(e.dataTransfer.files);
+  };
+
+  const folderTiles = folder === "all" && !q && folders.length > 0;
+
   return (
-    <div
-      className="flex flex-col gap-4"
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
-      onDrop={drop}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Keresés név vagy feltöltő szerint"
-            aria-label="Keresés a dokumentumok között"
-            className="h-11 w-full rounded-full border border-border bg-background pr-4 pl-10 text-sm focus:border-ink focus:outline-none"
-          />
-        </label>
-        <button type="button" onClick={() => input.current?.click()} disabled={uploading != null} className={buttonClasses("primary", "md", "h-11")}>
-          {uploading ? <Loader2 className="animate-spin" /> : <Upload />} {uploading ? "Feltöltés…" : "Feltöltés"}
-        </button>
-        <input ref={input} type="file" accept={ACCEPT} multiple hidden onChange={(e) => upload(e.target.files)} />
-      </div>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-[14rem_1fr]">
+      <aside className="hidden md:block">
+        <div className="sticky top-6">
+          <FolderNav folders={folders} counts={counts} value={folder} onChange={setFolder} onMove={move} layout="sidebar" />
+        </div>
+      </aside>
 
-      <FolderBar folders={folders} counts={counts} value={folder} onChange={setFolder} />
+      <div
+        className="flex min-w-0 flex-col gap-4"
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(DOC_DRAG)) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
+        onDrop={drop}
+      >
+        <div className="md:hidden">
+          <FolderNav folders={folders} counts={counts} value={folder} onChange={setFolder} onMove={move} layout="chips" />
+        </div>
 
-      <div className={cn("relative rounded-3xl border bg-background transition-colors", dragging ? "border-accent bg-accent-soft/40" : "border-border")}>
-        {uploading && (
-          <p className="reveal flex items-center gap-2 border-b border-border px-5 py-3 text-sm text-muted">
-            <Loader2 className="size-4 animate-spin" /> Feltöltés: {uploading}
-          </p>
-        )}
-        {shown.length ? (
-          <ul className="divide-y divide-border">
-            {shown.map((d) => (
-              <DocumentRow key={d.id} doc={d} folders={folders} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Keresés az összes mappában: név, feltöltő, mappa"
+              aria-label="Keresés a dokumentumok között"
+              className="h-11 w-full rounded-full border border-border bg-background pr-4 pl-10 text-sm focus:border-ink focus:outline-none"
+            />
+          </label>
+          <button type="button" onClick={() => input.current?.click()} disabled={uploading != null} className={buttonClasses("primary", "md", "h-11")}>
+            {uploading ? <Loader2 className="animate-spin" /> : <Upload />} {uploading ? "Feltöltés…" : current ? `Feltöltés ide` : "Feltöltés"}
+          </button>
+          <input ref={input} type="file" accept={ACCEPT} multiple hidden onChange={(e) => choose(e.target.files)} />
+        </div>
+
+        <div className="flex min-h-9 flex-wrap items-center justify-between gap-2">
+          <nav aria-label="Hely" className="flex min-w-0 items-center gap-1.5 text-sm">
+            <button type="button" onClick={() => setFolder("all")} className="text-muted hover:text-ink">
+              Dokumentumok
+            </button>
+            {(folder !== "all" || q) && (
+              <>
+                <ChevronRight className="size-3.5 shrink-0 text-subtle" />
+                <span className="truncate font-medium text-ink">{q ? `Keresés: „${query.trim()}”` : folderLabel(folders, folder)}</span>
+              </>
+            )}
+            <span className="text-xs text-subtle">· {shown.length} fájl</span>
+          </nav>
+          {current && !q && <FolderActions key={current.id} folder={current} onRemoved={() => setFolder("all")} />}
+        </div>
+
+        {folderTiles && (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {folders.map((f) => (
+              <li key={f.id}>
+                <FolderTile folder={f} count={counts[f.id] ?? 0} onOpen={() => setFolder(f.id)} onMove={move} />
+              </li>
             ))}
           </ul>
-        ) : (
-          <button type="button" onClick={() => input.current?.click()} className="flex w-full flex-col items-center gap-3 px-6 py-14 text-center">
-            <span className="grid size-14 place-items-center rounded-2xl bg-surface text-muted">
-              <Upload className="size-6" />
-            </span>
-            <span className="text-sm font-medium text-ink">{documents.length ? "Nincs találat" : "Még nincs közös dokumentum"}</span>
-            <span className="max-w-sm text-sm text-muted">
-              {documents.length
-                ? "Próbálj más keresést vagy mappát."
-                : "Húzd ide a fájlokat, vagy kattints: szerződésminták, árlisták, bemutató anyagok – az egész iroda eléri őket."}
-            </span>
-          </button>
         )}
-        {dragging && (
-          <div className="pop-in pointer-events-none absolute inset-0 grid place-items-center rounded-3xl bg-accent-soft/80 text-sm font-medium text-accent">
-            Engedd el a feltöltéshez{folders.find((f) => f.id === folder) && ` – ${folders.find((f) => f.id === folder)!.name}`}
-          </div>
-        )}
+
+        <div className={cn("relative rounded-3xl border bg-background transition-colors", dragging ? "border-accent bg-accent-soft/40" : "border-border")}>
+          {folderTiles && shown.length > 0 && <p className="border-b border-border px-5 py-3 text-xs font-medium tracking-wide text-subtle uppercase">Legutóbbi fájlok</p>}
+          {uploading && (
+            <p className="reveal flex items-center gap-2 border-b border-border px-5 py-3 text-sm text-muted">
+              <Loader2 className="size-4 animate-spin" /> Feltöltés: {uploading}
+            </p>
+          )}
+          {shown.length ? (
+            <ul className="divide-y divide-border">
+              {(folderTiles ? shown.slice(0, 12) : shown).map((d) => (
+                <DocumentRow key={d.id} doc={d} folders={folders} highlighted={d.id === highlight} />
+              ))}
+            </ul>
+          ) : (
+            <button type="button" onClick={() => input.current?.click()} className="flex w-full flex-col items-center gap-3 px-6 py-14 text-center">
+              <span className="grid size-14 place-items-center rounded-2xl bg-surface text-muted">
+                <Upload className="size-6" />
+              </span>
+              <span className="text-sm font-medium text-ink">{q ? "Nincs találat" : documents.length ? "Ez a mappa üres" : "Még nincs közös dokumentum"}</span>
+              <span className="max-w-sm text-sm text-muted">
+                {q
+                  ? "Próbálj más szót – a keresés minden mappában néz."
+                  : "Húzd ide a fájlokat, vagy kattints: szerződésminták, árlisták, bemutató anyagok – az egész iroda eléri őket."}
+              </span>
+            </button>
+          )}
+          {dragging && (
+            <div className="pop-in pointer-events-none absolute inset-0 grid place-items-center rounded-3xl bg-accent-soft/80 text-sm font-medium text-accent">
+              Engedd el a feltöltéshez{current && ` – ${current.name}`}
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-subtle">
+          PDF, Word, Excel, PowerPoint, kép vagy szöveg, fájlonként legfeljebb 20 MB. Egy fájlt a mappájára húzva áthelyezhetsz. Csak az irodád tagjai látják.
+        </p>
       </div>
-      <p className="text-xs text-subtle">PDF, Word, Excel, PowerPoint, kép vagy szöveg, fájlonként legfeljebb 20 MB. Csak az irodád tagjai látják.</p>
+
+      {pending && (
+        <UploadDialog
+          files={pending}
+          folders={folders}
+          defaultFolder={current?.id ?? null}
+          onCancel={() => setPending(null)}
+          onConfirm={(plan) => {
+            setPending(null);
+            void upload(plan);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** A folder on the "Minden fájl" view: opens on click, takes files dropped on it. */
+function FolderTile({ folder, count, onOpen, onMove }: { folder: OfficeFolder; count: number; onOpen: () => void; onMove: (docId: string, folderId: string) => void }) {
+  const [over, setOver] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes(DOC_DRAG)) return;
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData(DOC_DRAG);
+        setOver(false);
+        if (id) {
+          e.preventDefault();
+          e.stopPropagation();
+          onMove(id, folder.id);
+        }
+      }}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-2xl border bg-background p-4 text-left transition-colors hover:border-border-strong",
+        over ? "border-accent bg-accent-soft ring-2 ring-accent/30" : "border-border",
+      )}
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning">
+        <Folder className="size-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-ink">{folder.name}</span>
+        <span className="block text-xs text-muted">{count} fájl</span>
+      </span>
+    </button>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Building2, CheckSquare, Compass, Loader2, Mail, MessageSquareText, RotateCcw, Sparkles, UserRound } from "lucide-react";
+import { ArrowUp, Building2, CheckSquare, Compass, FileText, Loader2, Mail, MessageSquareText, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { askAssistantAction } from "@/app/(app)/assistant/actions";
@@ -26,6 +26,7 @@ const icons: Record<SourceType, typeof UserRound> = {
   interaction: MessageSquareText,
   email: Mail,
   page: Compass,
+  document: FileText,
 };
 
 function Cite({ source, n }: { source: Source | undefined; n: number }) {

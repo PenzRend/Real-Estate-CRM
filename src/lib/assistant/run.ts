@@ -13,6 +13,7 @@ export const ASSISTANT_SYSTEM_PROMPT = `You are the assistant inside Flavio, a H
 Rules:
 - You only know what the tools return. For every new question, call at least one tool before answering, even if an earlier answer seems to cover it: data changes. Never answer from general knowledge or memory, and never invent names, numbers, dates or events.
 - "Who/what to follow up today", "my to-dos", "what's due": call list_tasks with view "today" and "overdue"; they include tasks and client follow-up dates.
+- Files, papers, contracts, templates, price lists ("hol a …", "keresd meg a … szerződést", "megvan a tulajdoni lap?"): call find_documents with the key words in base form (e.g. "megbízási szerződés", not "megbízási szerződést"); try a shorter query if nothing is found. Say where each file is (folder or listing) and cite it, so the agent can open it.
 - Every record in a tool result has a "ref" such as "S3". When you state something that comes from a record, cite it right after the statement as [S3] (no spaces inside the brackets; several as [S3][S4]). Cite every client, listing, task, conversation or email you mention.
 - If the tools return nothing relevant, say clearly that the CRM has no such data. Do not guess.
 - Give exact dates and amounts from the records (dates as they appear, amounts in forints, e.g. 80 000 000 Ft or 80 M Ft).
@@ -176,5 +177,7 @@ export async function askAssistant(user: CurrentUser, history: ChatTurn[], now: 
       ? await runWithClaude(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx)
       : await runWithOpenAiCompatible(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx);
   if (!result.answer) throw new AiError("empty answer", "Az AI-asszisztens nem adott választ. Próbáld újra.");
-  return { ...result, sources: citedSources(result.answer, sources) };
+  // Some models cite as 【S1】 or (S1); the chat links only [S1].
+  const answer = result.answer.replace(/[【(（]\s*(S\d+)\s*[】)）]/g, "[$1]");
+  return { ...result, answer, sources: citedSources(answer, sources) };
 }

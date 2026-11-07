@@ -8,22 +8,29 @@ import { listFolders, listOfficeDocuments } from "@/lib/office-docs/data";
 
 export const metadata: Metadata = { title: "Dokumentumok" };
 
-async function Documents() {
+async function Documents({ searchParams }: Pick<PageProps<"/documents">, "searchParams">) {
   await connection();
+  const params = await searchParams;
   const user = await getCurrentUser();
   const [documents, folders] = await Promise.all([listOfficeDocuments(user), listFolders(user)]);
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Dokumentumok" description="Az iroda közös fájljai: szerződésminták, sablonok, árlisták, marketinganyagok – egy helyen, mindenkinek." />
-      <DocumentLibrary organizationId={user.organization.id} documents={documents} folders={folders} />
+      <DocumentLibrary
+        organizationId={user.organization.id}
+        documents={documents}
+        folders={folders}
+        initialFolder={typeof params.folder === "string" ? params.folder : (documents.find((d) => d.id === params.doc)?.folderId ?? "all")}
+        highlight={typeof params.doc === "string" ? params.doc : null}
+      />
     </div>
   );
 }
 
-export default function DocumentsPage() {
+export default function DocumentsPage({ searchParams }: PageProps<"/documents">) {
   return (
     <PageSuspense>
-      <Documents />
+      <Documents searchParams={searchParams} />
     </PageSuspense>
   );
 }
