@@ -152,19 +152,11 @@ html[data-navigating] [data-list-content] {
     opacity: 0;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(*),
-  ::view-transition-new(*),
-  ::view-transition-group(*) {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-  }
-}
 
 /* Feedback on every click. One easing for the whole app: quick to react,
    soft to settle. Things that appear arrive with a short blur, as if moving
    fast, instead of popping in; things that leave do the same in reverse.
-   Everything here switches off with "reduce motion" (bottom of this block). */
+   With "reduce motion" only the fades stay (the reduce-motion block further down). */
 :root {
   --ease-out-soft: cubic-bezier(0.2, 0.9, 0.25, 1);
   /* Lets height animate to and from "auto" (Chrome; elsewhere it just opens). */
@@ -320,17 +312,143 @@ dialog[open]::backdrop {
   }
 }
 
+/* "Reduce motion": things still fade in and out, but nothing moves, scales
+   or blurs. Same selectors as above, so these win by coming later. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after,
-  ::backdrop {
-    transition-duration: 0s !important;
-    animation-duration: 0s !important;
-    animation-iteration-count: 1 !important;
+  .pop-in,
+  .menu-motion,
+  .menu-motion.hidden,
+  dialog,
+  dialog[open],
+  .drawer-panel {
+    translate: none;
+    scale: none;
+    filter: none;
+    @starting-style {
+      translate: none;
+      scale: none;
+      filter: none;
+    }
   }
-  button:active,
-  a[href]:active {
-    scale: none !important;
+  .drawer-panel {
+    transition: opacity 240ms var(--ease-out-soft);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+  .reveal {
+    filter: none;
+    @starting-style {
+      height: auto;
+      filter: none;
+    }
+  }
+  button:not(:disabled):active,
+  [role="button"]:active,
+  summary:active,
+  a[href][class*="rounded-"]:active {
+    scale: none;
+  }
+  .shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 0s;
+  }
+  ::view-transition-old(*) {
+    animation-name: vt-fade-out-plain !important;
+  }
+  ::view-transition-new(*) {
+    animation-name: vt-fade-in-plain !important;
+    animation-delay: 0s !important;
+  }
+}
+@keyframes vt-fade-out-plain {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in-plain {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The loading screen between pages (components/ui/loading-screen.tsx). It
+   waits 150 ms before fading in, so quick pages never flash it; then the
+   house is drawn, held, and drawn again while the mark breathes. */
+.loading-screen {
+  animation: loading-in 420ms var(--ease-out-soft) 150ms both;
+}
+.loading-mark {
+  animation: loading-breathe 2.4s ease-in-out infinite;
+}
+.loading-roof,
+.loading-walls {
+  stroke-dasharray: 1;
+  animation: loading-draw 2.4s var(--ease-out-soft) infinite;
+}
+.loading-walls {
+  animation-delay: 0.25s;
+}
+.loading-dots > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--subtle);
+  animation: loading-dot 1.2s ease-in-out infinite;
+}
+.loading-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.loading-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes loading-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    filter: blur(8px);
+  }
+}
+@keyframes loading-breathe {
+  50% {
+    scale: 1.06;
+    box-shadow: 0 12px 32px -8px rgb(11 22 25 / 0.35);
+  }
+}
+@keyframes loading-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  45%,
+  80% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+@keyframes loading-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    translate: 0 0;
+  }
+  40% {
+    opacity: 1;
+    translate: 0 -3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen {
+    animation-name: vt-fade-in-plain;
+  }
+  .loading-mark,
+  .loading-roof,
+  .loading-walls,
+  .loading-dots > span {
+    animation: none;
   }
 }

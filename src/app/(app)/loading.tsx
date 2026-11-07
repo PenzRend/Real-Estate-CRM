@@ -1,6 +1,6 @@
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 // Suspense fallback for per-request pages (everything in the app is per user).
 export default function Loading() {
-  return <PageSkeleton />;
+  return <LoadingScreen />;
 }
