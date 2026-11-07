@@ -1,12 +1,14 @@
 "use client";
 
-import { Loader2, Sparkles, Upload } from "lucide-react";
+import { Link2, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { suggestFoldersAction } from "@/app/(app)/documents/actions";
+import { suggestFoldersAction, suggestLinksAction } from "@/app/(app)/documents/actions";
 import { Button } from "@/components/ui/button";
 import type { OfficeFolder } from "@/lib/office-docs/data";
+import { RecordSearch, recordIcons } from "./record-search";
 
-export type PlannedUpload = { file: File; title: string; folderId: string | null };
+type PlannedLink = { kind: "client" | "property" | "deal"; id: string; title: string; source: "manual" | "ai" };
+export type PlannedUpload = { file: File; title: string; folderId: string | null; links: PlannedLink[] };
 
 const titleOf = (name: string) => name.replace(/\.[a-z0-9]{1,5}$/i, "").replace(/[_-]+/g, " ").trim() || "Dokumentum";
 
@@ -29,9 +31,11 @@ export function UploadDialog({
   onConfirm: (plan: PlannedUpload[]) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [plan, setPlan] = useState<PlannedUpload[]>(() => files.map((file) => ({ file, title: titleOf(file.name), folderId: defaultFolder })));
+  const [plan, setPlan] = useState<PlannedUpload[]>(() => files.map((file) => ({ file, title: titleOf(file.name), folderId: defaultFolder, links: [] })));
   const [suggesting, setSuggesting] = useState(defaultFolder == null && folders.length > 0);
   const [suggested, setSuggested] = useState<Set<number>>(new Set());
+  const [linking, setLinking] = useState(true);
+  const [picking, setPicking] = useState<number | null>(null);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -52,6 +56,26 @@ export function UploadDialog({
       live = false;
     };
   }, [files, folders, defaultFolder]);
+
+  // Which clients, listings or deals each file is about (AI, from the names).
+  useEffect(() => {
+    let live = true;
+    void suggestLinksAction(files.map((f) => f.name))
+      .then((byName) => {
+        if (!live) return;
+        setPlan((p) =>
+          p.map((x) => {
+            const found = (byName[x.file.name] ?? []).map((l) => ({ kind: l.kind, id: l.id, title: l.title, source: "ai" as const }));
+            return found.length ? { ...x, links: [...x.links, ...found.filter((f) => !x.links.some((l) => l.id === f.id))] } : x;
+          }),
+        );
+      })
+      .catch(() => {})
+      .finally(() => live && setLinking(false));
+    return () => {
+      live = false;
+    };
+  }, [files]);
 
   const set = (i: number, patch: Partial<PlannedUpload>) => setPlan((p) => p.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
@@ -113,6 +137,41 @@ export function UploadDialog({
                   <option value="">Egyéb (mappa nélkül)</option>
                 </select>
               </label>
+              <div className="relative flex flex-wrap items-center gap-1.5 sm:col-span-2">
+                <span className="text-xs text-muted">Kapcsolódik:</span>
+                {p.links.map((l) => {
+                  const Icon = recordIcons[l.kind];
+                  return (
+                    <span key={`${l.kind}-${l.id}`} className="pop-in inline-flex items-center gap-1 rounded-full bg-background py-0.5 pr-1 pl-2 text-xs text-ink">
+                      <Icon className="size-3 text-accent" />
+                      <span className="max-w-40 truncate">{l.title}</span>
+                      {l.source === "ai" && <Sparkles className="size-3 text-accent" aria-label="AI-javaslat" />}
+                      <button type="button" onClick={() => set(i, { links: p.links.filter((x) => x !== l) })} className="grid size-4 place-items-center rounded-full text-subtle hover:text-danger" aria-label={`${l.title} elvetése`}>
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+                {linking && !p.links.length && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted">
+                    <Loader2 className="size-3 animate-spin" /> keresem…
+                  </span>
+                )}
+                <button type="button" onClick={() => setPicking(picking === i ? null : i)} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted hover:bg-background hover:text-ink">
+                  <Link2 className="size-3" /> Ügyfél, ingatlan, ügylet
+                </button>
+                {picking === i && (
+                  <div className="pop-in absolute top-full left-0 z-30 mt-1 w-80 max-w-full rounded-2xl border border-border bg-background p-2 shadow-float [--pop-from:-4px]">
+                    <RecordSearch
+                      onClose={() => setPicking(null)}
+                      onPick={(r) => {
+                        setPicking(null);
+                        if (!p.links.some((l) => l.id === r.id)) set(i, { links: [...p.links, { kind: r.kind, id: r.id, title: r.title, source: "manual" }] });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/i18n/format";
 import type { OfficeDocument, OfficeFolder } from "@/lib/office-docs/data";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { DocLinks } from "./doc-links";
 import { FillTemplate } from "./fill-template";
 import { DOC_DRAG, FolderActions, FolderNav, folderLabel, type FolderPick } from "./folder-nav";
 import { UploadDialog, type PlannedUpload } from "./upload-dialog";
@@ -105,6 +106,7 @@ function DocumentRow({ doc, folders, highlighted = false }: { doc: OfficeDocumen
           {k.label} · {size(doc.sizeBytes)} · {folders.find((f) => f.id === doc.folderId)?.name ?? "Egyéb"} · {doc.uploader ? `${doc.uploader}, ` : ""}
           {formatDate(doc.createdAt)}
         </p>
+        <DocLinks documentId={doc.id} links={doc.links} canEdit={doc.canEdit} />
       </div>
       {busy && <Loader2 className="size-4 animate-spin text-subtle" />}
       {/\.docx$/i.test(doc.fileName) && <FillTemplate documentId={doc.id} title={doc.title} />}
@@ -212,7 +214,7 @@ export function DocumentLibrary({
 
   const q = fold(query.trim());
   // A search looks through every folder.
-  const shown = documents.filter((d) => (q ? fold(`${d.title} ${d.fileName} ${d.uploader ?? ""} ${folderLabel(folders, d.folderId ?? "none")}`).includes(q) : folder === "all" || (d.folderId ?? "none") === folder));
+  const shown = documents.filter((d) => (q ? fold(`${d.title} ${d.fileName} ${d.uploader ?? ""} ${folderLabel(folders, d.folderId ?? "none")} ${d.links.map((l) => l.title).join(" ")}`).includes(q) : folder === "all" || (d.folderId ?? "none") === folder));
 
   const move = (docId: string, folderId: string) =>
     startMove(async () => {
@@ -223,7 +225,7 @@ export function DocumentLibrary({
   async function upload(plan: PlannedUpload[]) {
     const supabase = createBrowserSupabase();
     let done = 0;
-    for (const { file, title, folderId } of plan) {
+    for (const { file, title, folderId, links } of plan) {
       if (file.size > MAX_BYTES) {
         toast({ message: `${file.name}: legfeljebb 20 MB lehet.` });
         continue;
@@ -235,7 +237,7 @@ export function DocumentLibrary({
         toast({ message: `${file.name}: a feltöltés nem sikerült (PDF, Word, Excel, kép vagy szöveg lehet).` });
         continue;
       }
-      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folderId, title }).catch(actionFailed);
+      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folderId, title, links }).catch(actionFailed);
       if (r.ok) done++;
       else toast({ message: r.error });
     }
@@ -286,7 +288,7 @@ export function DocumentLibrary({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Keresés az összes mappában: név, feltöltő, mappa"
+              placeholder="Keresés az összes mappában: név, ügyfél, ingatlan, feltöltő"
               aria-label="Keresés a dokumentumok között"
               className="h-11 w-full rounded-full border border-border bg-background pr-4 pl-10 text-sm focus:border-ink focus:outline-none"
             />

@@ -1,4 +1,5 @@
 import { HandOffClient } from "@/components/chat/hand-off-client";
+import { LinkedFilesCard } from "@/components/office-docs/linked-files-card";
 import { ShareToChat } from "@/components/chat/share-to-chat";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
@@ -98,7 +99,12 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
         ) : null
       }
       identification={
-        client.archivedAt ? null : <IdentificationCard clientId={client.id} summary={identifications.get(client.id) ?? null} today={new Date().toISOString().slice(0, 10)} />
+        client.archivedAt ? null : (
+          <>
+            <IdentificationCard clientId={client.id} summary={identifications.get(client.id) ?? null} today={new Date().toISOString().slice(0, 10)} />
+            <LinkedFilesCard user={user} kind="client" id={client.id} />
+          </>
+        )
       }
       deals={
         deals.length || (!client.archivedAt && wantsListings) ? (

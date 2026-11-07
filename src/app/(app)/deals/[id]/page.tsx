@@ -1,4 +1,5 @@
 import { ShareToChat } from "@/components/chat/share-to-chat";
+import { LinkedFilesCard } from "@/components/office-docs/linked-files-card";
 import { ChevronLeft, Mail, MapPin, Phone, ShieldAlert, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -167,6 +168,8 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
               </div>
             </div>
           </Card>
+
+          <LinkedFilesCard user={user} kind="deal" id={deal.id} />
 
           <Card>
             <CardHeader title="Felek" />

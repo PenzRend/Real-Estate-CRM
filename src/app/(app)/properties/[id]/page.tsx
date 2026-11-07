@@ -1,4 +1,5 @@
 import { ShareToChat } from "@/components/chat/share-to-chat";
+import { LinkedFilesCard } from "@/components/office-docs/linked-files-card";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -87,7 +88,12 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
       }
       priceCheck={study ? <PriceCheckCard propertyId={property.id} study={study} /> : null}
       descriptionAction={property.archived_at ? null : <AdWriter propertyId={property.id} currentTitle={property.title} />}
-      documents={<DocumentsCard propertyId={property.id} organizationId={user.organization.id} rows={documents} hasOwnerEmail={Boolean(target?.ownerEmail)} />}
+      documents={
+        <>
+          <DocumentsCard propertyId={property.id} organizationId={user.organization.id} rows={documents} hasOwnerEmail={Boolean(target?.ownerEmail)} />
+          <LinkedFilesCard user={user} kind="property" id={property.id} />
+        </>
+      }
       sellerReport={
         property.archived_at || !target ? null : (
           <SellerReportCard

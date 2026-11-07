@@ -126,7 +126,7 @@ export const toolDescriptions: Record<ToolName, string> = {
   search_emails: "The user's imported emails (client emails and portal inquiries) by subject or sender, optionally by status (new = waiting to be processed).",
   find_matches: "Rule-based matches with reasons: listings for a client, or clients for a listing.",
   find_documents:
-    "Find files: the office's shared documents (Dokumentumok: templates, contracts, price lists… with their folder) and each listing's papers (tulajdoni lap, energetikai tanúsítvány, megbízási szerződés, alaprajz…). Every word must match the name, folder, kind or listing; returns up to 20 with where they are and a link to open them.",
+    "Find files: the office's shared documents (Dokumentumok: templates, contracts, price lists… with their folder) and each listing's papers (tulajdoni lap, energetikai tanúsítvány, megbízási szerződés, alaprajz…). Every word must match the name, folder, kind, listing, or a client/listing/deal the file is linked to (so 'Kovács Anna' finds her files); returns up to 20 with where they are and a link to open them.",
   get_app_help: "Where things are in Flavio and how to do them: every screen with its buttons. Use for 'where/how can I…' questions and when pointing the agent to a feature.",
 };
 
@@ -407,6 +407,7 @@ async function documents(ctx: Ctx, a: z.infer<typeof toolSchemas.find_documents>
       title: d.title,
       file: d.fileName,
       where: d.where === "library" ? `Dokumentumok → ${d.folder}` : `${d.listing?.title ?? "ingatlan"} → Dokumentumok`,
+      linked_to: d.linkedTo,
       uploaded: when(d.uploadedAt),
     })),
   };

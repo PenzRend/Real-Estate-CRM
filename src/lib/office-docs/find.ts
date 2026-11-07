@@ -1,4 +1,5 @@
 import "server-only";
+import { linksOf } from "./links";
 import type { CurrentUser } from "@/lib/auth";
 import { documentKinds, type DocumentKind } from "@/lib/documents/checklist";
 import { createClient } from "@/lib/supabase/server";
@@ -15,6 +16,8 @@ export type FoundDocument = {
   fileName: string;
   folder: string | null;
   listing: { id: string; title: string } | null;
+  /** The clients, listings and deals a library file is linked to. */
+  linkedTo: string[];
   uploadedAt: string;
   href: string;
 };
@@ -43,6 +46,10 @@ export async function findDocuments(user: CurrentUser, query: string, limit = 20
       .limit(1000),
   ]);
   const folderName = new Map((folders.data ?? []).map((f) => [f.id as string, f.name as string]));
+  const linked = await linksOf(
+    user,
+    (library.data ?? []).map((d) => d.id as string),
+  );
   const propertyIds = [...new Set((papers.data ?? []).map((p) => p.property_id as string))];
   const { data: properties } = propertyIds.length ? await supabase.from("properties").select("id, title, address, city").eq("organization_id", org).in("id", propertyIds) : { data: [] };
   const property = new Map((properties ?? []).map((p) => [p.id as string, p]));
@@ -50,6 +57,7 @@ export async function findDocuments(user: CurrentUser, query: string, limit = 20
   const all: (FoundDocument & { text: string })[] = [
     ...(library.data ?? []).map((d) => {
       const folder = d.folder_id ? (folderName.get(d.folder_id) ?? null) : null;
+      const links = (linked.get(d.id) ?? []).map((l) => l.title);
       return {
         id: d.id,
         where: "library" as const,
@@ -57,9 +65,10 @@ export async function findDocuments(user: CurrentUser, query: string, limit = 20
         fileName: d.file_name,
         folder: folder ?? "Egyéb",
         listing: null,
+        linkedTo: links,
         uploadedAt: d.created_at,
         href: `/documents?doc=${d.id}`,
-        text: fold(`${d.title} ${d.file_name} ${folder ?? "egyeb"} dokumentum`),
+        text: fold(`${d.title} ${d.file_name} ${folder ?? "egyeb"} ${links.join(" ")} dokumentum`),
       };
     }),
     ...(papers.data ?? []).map((d) => {
@@ -72,6 +81,7 @@ export async function findDocuments(user: CurrentUser, query: string, limit = 20
         fileName: d.file_name ?? "",
         folder: null,
         listing: p ? { id: p.id as string, title: p.title as string } : null,
+        linkedTo: [],
         uploadedAt: d.created_at,
         href: p ? `/properties/${p.id}` : "/properties",
         text: fold(`${kind} ${d.file_name ?? ""} ${p?.title ?? ""} ${p?.address ?? ""} ${p?.city ?? ""} ingatlan dokumentum`),
@@ -82,5 +92,5 @@ export async function findDocuments(user: CurrentUser, query: string, limit = 20
     // Hungarian endings: "szerződést" still finds "szerződés" (a long word may lose its last two letters).
     .filter((d) => words.every((w) => d.text.includes(w.length > 5 ? w.slice(0, -2) : w)))
     .slice(0, limit)
-    .map((d) => ({ id: d.id, where: d.where, title: d.title, fileName: d.fileName, folder: d.folder, listing: d.listing, uploadedAt: d.uploadedAt, href: d.href }));
+    .map((d) => ({ id: d.id, where: d.where, title: d.title, fileName: d.fileName, folder: d.folder, listing: d.listing, linkedTo: d.linkedTo, uploadedAt: d.uploadedAt, href: d.href }));
 }

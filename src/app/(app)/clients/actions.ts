@@ -1,5 +1,7 @@
 "use server";
 
+import { runAutomaticTemplates } from "@/lib/office-docs/templates";
+import { after } from "next/server";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { retentionFor } from "@/lib/aml/data";
@@ -44,6 +46,8 @@ export async function createClientAction(_: ClientFormState, formData: FormData)
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
   }
 
+  // Templates set to run for a new client write their documents after the response.
+  after(() => runAutomaticTemplates(user, "client_created", { kind: "client", id: data.id }));
   redirect(`/clients/${data.id}`);
 }
 

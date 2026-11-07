@@ -7,10 +7,20 @@ import { llmConfig } from "@/lib/ai/config";
 import { structuredCall } from "@/lib/ai/structured";
 import { aiLimitMessage, logAiUsage } from "@/lib/ai/usage";
 import { addOfficeDocument, createFolder, deleteFolder, deleteOfficeDocument, listFolders, renameFolder, updateOfficeDocument } from "@/lib/office-docs/data";
+import { linkDocument, unlinkDocument } from "@/lib/office-docs/links";
 import { suggestFolder } from "@/lib/office-docs/suggest";
+import { globalSearch } from "@/lib/search/global";
 import { fillTemplate } from "@/lib/office-docs/fill";
 
-export async function addOfficeDocumentAction(d: { path: string; fileName: string; size: number; mimeType: string; folderId: string | null; title?: string }) {
+export async function addOfficeDocumentAction(d: {
+  path: string;
+  fileName: string;
+  size: number;
+  mimeType: string;
+  folderId: string | null;
+  title?: string;
+  links?: { kind: string; id: string; source: "manual" | "ai" }[];
+}) {
   const user = await getCurrentUser();
   const r = await addOfficeDocument(user, {
     path: String(d.path),
@@ -20,6 +30,7 @@ export async function addOfficeDocumentAction(d: { path: string; fileName: strin
     folderId: d.folderId ? String(d.folderId) : null,
     title: d.title == null ? undefined : String(d.title),
   });
+  if (r.ok) for (const l of (d.links ?? []).slice(0, 10)) await linkDocument(user, r.id, String(l.kind), String(l.id), l.source === "ai" ? "ai" : "manual");
   if (r.ok) refresh();
   return r;
 }
@@ -96,4 +107,76 @@ export async function suggestFoldersAction(fileNames: string[]): Promise<Record<
   } catch {
     return fallback;
   }
+}
+
+export async function linkDocumentAction(documentId: string, ref: { kind: string; id: string }) {
+  const user = await getCurrentUser();
+  const r = await linkDocument(user, String(documentId), String(ref?.kind), String(ref?.id));
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function unlinkDocumentAction(linkId: string) {
+  const user = await getCurrentUser();
+  await unlinkDocument(user, String(linkId));
+  refresh();
+}
+
+export type LinkSuggestion = { kind: "client" | "property" | "deal"; id: string; title: string; detail: string | null };
+
+const linkChoiceSchema = z.object({ choices: z.array(z.object({ file: z.string(), records: z.array(z.string()) })) });
+
+/**
+ * Which clients, listings or deals each file to upload is about: names in
+ * the file name are looked up, then the AI keeps the ones the file really
+ * concerns (without AI, only records whose whole name is in the file name).
+ */
+export async function suggestLinksAction(fileNames: string[]): Promise<Record<string, LinkSuggestion[]>> {
+  const user = await getCurrentUser();
+  const kinds = { clients: "client", properties: "property", deals: "deal" } as const;
+  const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const out: Record<string, LinkSuggestion[]> = {};
+  const candidates: Record<string, LinkSuggestion[]> = {};
+  for (const name of fileNames.slice(0, 10).map((n) => String(n).slice(0, 200))) {
+    const words = name
+      .replace(/\.[a-z0-9]{1,5}$/i, "")
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length >= 3 && !/^\d+$/.test(w))
+      .slice(0, 5);
+    const seen = new Map<string, LinkSuggestion>();
+    for (const q of [words.join(" "), ...words]) {
+      if (q.length < 3) continue;
+      for (const h of await globalSearch(user, q)) {
+        if (!(h.group in kinds)) continue;
+        const kind = kinds[h.group as keyof typeof kinds];
+        seen.set(`${kind}:${h.id}`, { kind, id: h.id, title: h.title, detail: h.detail });
+      }
+      if (seen.size >= 12) break;
+    }
+    candidates[name] = [...seen.values()].slice(0, 12);
+    // Without AI: a record counts when every word of its name is in the file name.
+    const file = fold(name);
+    out[name] = candidates[name].filter((c) => fold(c.title).split(/[^a-z0-9]+/).filter((w) => w.length >= 3).every((w) => file.includes(w))).slice(0, 3);
+  }
+  const any = Object.values(candidates).some((c) => c.length);
+  if (!any || !llmConfig() || (await aiLimitMessage(user))) return out;
+  try {
+    const r = await structuredCall(
+      linkChoiceSchema,
+      "You file documents for a Hungarian real estate office. For each file name, pick which of its candidate records (clients, listings, deals) the file is about, by key, only when the name clearly refers to them. An empty list is fine.",
+      Object.entries(candidates)
+        .map(([file, cs]) => `File: ${file}\n${cs.map((c) => `  ${c.kind}:${c.id} = ${c.title}${c.detail ? ` (${c.detail})` : ""}`).join("\n") || "  (no candidates)"}`)
+        .join("\n\n"),
+      { maxTokens: 800, failMessage: "" },
+    );
+    await logAiUsage(user, { status: "success", operation: "assistant", model: r.model, inputTokens: r.inputTokens, outputTokens: r.outputTokens });
+    for (const c of r.data.choices) {
+      if (!candidates[c.file]) continue;
+      const keys = new Set(c.records);
+      out[c.file] = candidates[c.file].filter((x) => keys.has(`${x.kind}:${x.id}`)).slice(0, 4);
+    }
+  } catch {
+    // keep the plain matches
+  }
+  return out;
 }

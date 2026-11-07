@@ -3,6 +3,7 @@ import type { CurrentUser } from "@/lib/auth";
 import { DOCUMENTS_BUCKET } from "@/lib/documents/data";
 import { createClient } from "@/lib/supabase/server";
 import { listTeam } from "@/lib/team";
+import { linksOf, type DocLink } from "./links";
 
 // Dokumentumok: the office's shared files in the private "documents" bucket,
 // under "<workspace>/office/". The browser uploads straight into that folder;
@@ -25,6 +26,8 @@ export type OfficeDocument = {
   uploader: string | null;
   url: string | null;
   canEdit: boolean;
+  /** The clients, listings and deals it belongs to. */
+  links: DocLink[];
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,6 +100,10 @@ export async function listOfficeDocuments(user: CurrentUser): Promise<OfficeDocu
   const url = new Map((links ?? []).map((l) => [l.path, l.signedUrl]));
   const names = new Map(members.map((m) => [m.userId, m.name]));
   const manager = user.organization.role !== "member";
+  const linked = await linksOf(
+    user,
+    rows.map((r) => r.id),
+  );
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -109,6 +116,7 @@ export async function listOfficeDocuments(user: CurrentUser): Promise<OfficeDocu
     uploader: r.created_by ? (names.get(r.created_by) ?? null) : null,
     url: url.get(r.storage_path) ?? null,
     canEdit: manager || r.created_by === user.id,
+    links: linked.get(r.id) ?? [],
   }));
 }
 
@@ -117,7 +125,7 @@ export async function addOfficeDocument(user: CurrentUser, d: { path: string; fi
   if (!d.path.startsWith(`${user.organization.id}/office/`) || d.path.includes("..") || d.path.length > 500) return { ok: false as const, error: "Érvénytelen fájl." };
   const supabase = await createClient();
   const title = d.title?.trim().slice(0, 200) || d.fileName.replace(/\.[a-z0-9]{1,5}$/i, "").replace(/[_-]+/g, " ").trim().slice(0, 200) || "Dokumentum";
-  const { error } = await supabase.from("office_documents").insert({
+  const { data: inserted, error } = await supabase.from("office_documents").insert({
     organization_id: user.organization.id,
     folder_id: d.folderId && UUID.test(d.folderId) ? d.folderId : null,
     title,
@@ -125,13 +133,13 @@ export async function addOfficeDocument(user: CurrentUser, d: { path: string; fi
     file_name: d.fileName.slice(0, 300),
     size_bytes: Math.max(0, Math.round(d.size)),
     mime_type: d.mimeType.slice(0, 200) || null,
-  });
-  if (error) {
+  }).select("id").single();
+  if (error || !inserted) {
     await supabase.storage.from(DOCUMENTS_BUCKET).remove([d.path]);
-    console.error("office document save failed", error.code);
+    console.error("office document save failed", error?.code);
     return { ok: false as const, error: "A fájlt nem sikerült menteni." };
   }
-  return { ok: true as const };
+  return { ok: true as const, id: inserted.id as string };
 }
 
 /** `folderId`: a folder, or "" for none ("Egyéb"). */

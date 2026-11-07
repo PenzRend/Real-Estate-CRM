@@ -1,5 +1,7 @@
 "use server";
 
+import { runAutomaticTemplates } from "@/lib/office-docs/templates";
+import { after } from "next/server";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -44,6 +46,7 @@ export async function createDealAction(_prev: FormState, form: FormData): Promis
     offer != null ? { amount: offer, madeBy: form.get("offerBy") === "seller" ? "seller" : "buyer" } : null,
   );
   if (!r.ok) return { error: r.error };
+  after(() => runAutomaticTemplates(user, "deal_created", { kind: "deal", id: r.id }));
   redirect(`/deals/${r.id}`);
 }
 

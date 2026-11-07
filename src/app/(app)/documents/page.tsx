@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Wand2 } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { connection } from "next/server";
 import { DocumentLibrary } from "@/components/office-docs/document-library";
 import { PageHeader } from "@/components/ui/page";
@@ -15,7 +17,15 @@ async function Documents({ searchParams }: Pick<PageProps<"/documents">, "search
   const [documents, folders] = await Promise.all([listOfficeDocuments(user), listFolders(user)]);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Dokumentumok" description="Az iroda közös fájljai: szerződésminták, sablonok, árlisták, marketinganyagok – egy helyen, mindenkinek." />
+      <PageHeader
+        title="Dokumentumok"
+        description="Az iroda közös fájljai: szerződésminták, sablonok, árlisták, marketinganyagok – egy helyen, mindenkinek, ügyfelekhez, ingatlanokhoz és ügyletekhez kapcsolva."
+        actions={
+          <ButtonLink href="/documents/templates" variant="secondary">
+            <Wand2 /> Dokumentumkészítő
+          </ButtonLink>
+        }
+      />
       <DocumentLibrary
         organizationId={user.organization.id}
         documents={documents}

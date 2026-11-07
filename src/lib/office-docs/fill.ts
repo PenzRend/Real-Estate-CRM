@@ -17,7 +17,7 @@ const num = (v: unknown) => (v == null ? null : Number(v));
 
 export type FillChoice = { clientId?: string | null; propertyId?: string | null; dealId?: string | null };
 
-async function records(user: CurrentUser, choice: FillChoice): Promise<FillRecords> {
+export async function loadRecords(user: CurrentUser, choice: FillChoice): Promise<FillRecords> {
   const supabase = await createClient();
   const org = user.organization.id;
   const client = async (id: string | null | undefined) => {
@@ -81,7 +81,7 @@ export async function fillTemplate(user: CurrentUser, documentId: string, choice
   if (!doc || !/\.docx$/i.test(doc.file_name)) return { ok: false, error: "Csak Word (.docx) sablon tölthető ki." };
   const { data: file } = await supabase.storage.from(DOCUMENTS_BUCKET).download(doc.storage_path);
   if (!file) return { ok: false, error: "A sablont nem sikerült megnyitni." };
-  const r = await records(user, choice);
+  const r = await loadRecords(user, choice);
   let out: Buffer;
   try {
     const doc_ = new Docxtemplater(new PizZip(Buffer.from(await file.arrayBuffer())), { paragraphLoop: true, linebreaks: true, nullGetter: () => "" });

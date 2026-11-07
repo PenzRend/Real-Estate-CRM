@@ -115,6 +115,12 @@ export const appGuide: GuideEntry[] = [
     how: "Handing a client to a colleague: the client's page → '…' → 'Átadás kollégának', pick the colleague and add a note; they become the client's agent and get a message with the client's card. Adding a client or listing that may already exist (same phone, email or name; same portal link or address) shows a warning with whose it is – it never blocks saving. Naptár shows colleagues' viewings with their name ('Iroda'); 'Csak az enyéim' shows only your own. Owners and admins see 'Múlt hét az irodában' on the dashboard from Monday to Wednesday (last week against the week before, the week's star) and get it as a Monday notification. Everyone can upload a profile picture in Beállítások → Profil.",
   },
   {
+    id: "document-creator",
+    screen: "Dokumentumkészítő",
+    href: "/documents/templates",
+    how: "Templates the office writes once and Flavio fills in: Dokumentumok → 'Dokumentumkészítő' → 'Új sablon' (or 'Példasablonok' for a welcome letter, a reservation agreement draft and a listing presentation). In the editor: '# címsor', '## alcím', '**félkövér**', '- felsorolás', 'Mező beszúrása' for fields such as {vevo_nev}, {ingatlan_cim}, {vetelar}, and 'AI-bekezdés' for a [[AI: …]] paragraph the AI writes from the record's data only. The right side previews it filled for a chosen client, listing or deal ('AI-val is' writes the AI paragraphs too); 'Dokumentum készítése' makes the Word file. 'Mikor készüljön?': 'Csak kézzel', 'Új ügyfélnél magától' or 'Új ügyletnél magától' – then it is made by itself and linked. 'Melyik mappába?' chooses the folder in Dokumentumok. On a client's, listing's or deal's page, 'Kapcsolódó fájlok' lists the files linked to it, and 'Sablonból' makes one there. Files are linked to clients, listings and deals in Dokumentumok ('Kapcsolás' under a file; when uploading, the AI suggests which ones the file is about).",
+  },
+  {
     id: "messages",
     screen: "Üzenetek",
     href: "/messages",
