@@ -15,6 +15,8 @@ import { dealSummary } from "@/lib/deals/data";
 import { MyMonth } from "@/components/team/my-month";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
 import { officeStats } from "@/lib/team/office-data";
+import { TodayStrip } from "@/components/dashboard/today-strip";
+import { awaitingFeedback } from "@/lib/viewings/logic";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
@@ -48,18 +50,37 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
   // The agent's own month (numbers and targets).
   const month = await officeStats(user, utcToZonedLocal(now.toISOString()).slice(0, 7)).catch(() => null);
   const me = month?.agents.find((a) => a.userId === user.id) ?? null;
+  // Emails still to answer: not replied, and not ones the AI found need no answer.
+  const mailsWaiting = away.mailbox
+    ? away.items.filter((i) => !i.repliedAt && !(i.draft && !i.draft.body)).length + away.olderNewCount
+    : null;
+  const upcoming = viewings.filter((v) => new Date(v.startsAt) > now).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return (
     <DashboardView
       now={now}
       data={data}
+      strip={
+        <TodayStrip
+          c={{
+            overdue: data.overdue.length,
+            dueToday: data.tasksToday.length,
+            viewings: viewings.length,
+            viewingsWaiting: viewings.filter((v) => awaitingFeedback(v, now)).length,
+            nextViewing: upcoming[0]?.startsAt ?? null,
+            mailsWaiting,
+            openDeals: deals.openCount,
+            pipeline: deals.pipelineCommission,
+          }}
+        />
+      }
       away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />}
       deals={
         <>
-          <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />
           {me && <MyMonth me={me} />}
+          {(deals.openCount > 0 || deals.upcoming.length > 0) && <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
         </>
       }
-      viewings={<ViewingsCard viewings={viewings} now={now.toISOString()} empty="Nincs foglalt megtekintés a következő két hétben. Egy ügyfél levelénél vagy az ingatlan oldalán foglalhatsz." />}
+      viewings={viewings.length > 0 && <ViewingsCard viewings={viewings} now={now.toISOString()} empty="" />}
     />
   );
 }

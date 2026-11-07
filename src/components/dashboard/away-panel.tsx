@@ -390,10 +390,20 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
 
   const quiet = !summary.headline;
   const shown = notice ? notices[notice] : null;
+  // Older emails the AI found need no answer (price alerts, notices) are not "waiting".
+  const items = summary.items.filter((i) => i.isNew || i.repliedAt || !(i.draft && !i.draft.body));
+  // Nothing new and nothing waiting: one calm line instead of a whole card.
+  if (quiet && !items.length && !shown && summary.mailbox) {
+    return (
+      <p className="flex items-center gap-2 rounded-2xl border border-border px-5 py-3.5 text-sm text-muted">
+        <CheckCircle2 className="size-4 text-success" /> Nincs megválaszolatlan levél. A levelek frissítve: {formatDateTime(summary.mailbox.lastSyncedAt ?? summary.since)}.
+      </p>
+    );
+  }
   return (
     <Card>
       <div className="flex flex-col gap-1 border-b border-border px-5 py-4 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-lg">{summary.firstVisit ? "Az elmúlt 24 órában" : "Mi történt, amíg távol voltál"}</h2>
+        <h2 className="text-base tracking-tight">{summary.firstVisit ? "Levelek az elmúlt 24 órából" : "Levelek, amíg távol voltál"}</h2>
         <p className="text-xs text-muted">
           {formatDateTime(summary.since)} óta
           {summary.mailbox?.lastSyncedAt && ` · levelek frissítve: ${formatDateTime(summary.mailbox.lastSyncedAt)}`}
@@ -407,7 +417,7 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
       <div className="px-5 pt-4">
         <p className={cn("text-[15px]", quiet ? "text-muted" : "text-ink")}>
           {summary.headline ?? "Nyugis időszak: azóta nem érkezett új levél, és nem lett esedékes feladat."}
-          {summary.items.some((i) => !i.isNew && !i.repliedAt) && <span className="text-muted"> Korábbról még válaszra vár:</span>}
+          {items.some((i) => !i.isNew && !i.repliedAt) && <span className="text-muted"> Korábbról még válaszra vár:</span>}
         </p>
         {!summary.mailbox && (
           <p className="mt-1 text-sm text-muted">
@@ -418,9 +428,9 @@ export function AwayPanel({ summary, aiEnabled, notice }: { summary: AwaySummary
           </p>
         )}
       </div>
-      {summary.items.length > 0 ? (
+      {items.length > 0 ? (
         <ul className="mt-2 divide-y divide-border">
-          {summary.items.map((item) => (
+          {items.map((item) => (
             <AwayRow
               key={item.id}
               item={item}
