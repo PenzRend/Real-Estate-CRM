@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { relativeDayTable } from "@/lib/ai/capture-prompt";
 import { llmConfig, type LlmConfig } from "@/lib/ai/config";
-import { AiError, postWithRetry, readJson } from "@/lib/ai/extract";
+import { AiError, postChat, readJson } from "@/lib/ai/extract";
 import type { CurrentUser } from "@/lib/auth";
 import { runTool, SourceRegistry, toolJsonSchemas, type Source } from "./tools";
 
@@ -114,12 +114,9 @@ async function runWithOpenAiCompatible(
   let forceTool = true;
 
   for (let step = 0; step < MAX_STEPS; step++) {
-    const res = await postWithRetry(`${config.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-      // The first step must look something up, so an answer is never made from nothing.
-      body: JSON.stringify({ model: config.model, messages, tools, tool_choice: step === 0 && forceTool ? "required" : "auto" }),
-    });
+    // The first step must look something up, so an answer is never made from nothing.
+    const toolChoice = step === 0 && forceTool ? "required" : "auto";
+    const res = await postChat(config, () => ({ messages, tools, tool_choice: toolChoice }));
     if (res.status === 429) {
       console.error("assistant 429", (await res.text()).slice(0, 300));
       throw new AiError("rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");

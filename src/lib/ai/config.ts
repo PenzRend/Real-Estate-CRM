@@ -19,6 +19,13 @@ export function llmConfig(): LlmConfig | null {
   return null;
 }
 
+/** A second OpenAI-compatible provider, used when the main one is out of quota or down. */
+export function llmFallbackConfig(): Extract<LlmConfig, { provider: "openai-compatible" }> | null {
+  const { AI_FALLBACK_BASE_URL, AI_FALLBACK_API_KEY, AI_FALLBACK_MODEL } = process.env;
+  if (!AI_FALLBACK_BASE_URL || !AI_FALLBACK_API_KEY || !AI_FALLBACK_MODEL) return null;
+  return { provider: "openai-compatible", baseUrl: AI_FALLBACK_BASE_URL.replace(/\/$/, ""), apiKey: AI_FALLBACK_API_KEY, model: AI_FALLBACK_MODEL };
+}
+
 export function transcriptionConfig(): TranscriptionConfig | null {
   const baseUrl = process.env.TRANSCRIBE_BASE_URL || process.env.AI_BASE_URL;
   const apiKey = process.env.TRANSCRIBE_API_KEY || process.env.AI_API_KEY;

@@ -102,6 +102,7 @@ They usually take effect within an hour.
 | `APP_URL` | | `https://flavio.hu`. Required: links and sign-in redirects are built from it |
 | `ANTHROPIC_API_KEY` or `AI_BASE_URL` + `AI_API_KEY` | | the production AI provider: a paid plan with a data processing agreement, never a free tier, for real clients' data |
 | `AI_MODEL` | | the model name |
+| `AI_FALLBACK_BASE_URL`, `AI_FALLBACK_API_KEY`, `AI_FALLBACK_MODEL` | | optional backup provider, used when the main one is out of quota or down (e.g. Gemini's free tier; see `.env.example`) |
 | `TRANSCRIBE_BASE_URL`, `TRANSCRIBE_API_KEY`, `TRANSCRIBE_MODEL` | | speech-to-text for dictation |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | the Google OAuth client (step 6) |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | | the Microsoft app registration for Outlook (step 6b) |

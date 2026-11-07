@@ -4,7 +4,7 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { CAPTURE_SYSTEM_PROMPT, captureUserPrompt, type CaptureHint } from "./capture-prompt";
 import { captureExtractionSchema, cleanExtraction, type CaptureExtraction } from "./capture-schema";
-import { llmConfig, type LlmConfig } from "./config";
+import { llmConfig, llmFallbackConfig, type LlmConfig } from "./config";
 
 export class AiError extends Error {
   constructor(
@@ -95,26 +95,57 @@ export async function postWithRetry(url: string, init: RequestInit, maxWaitSecon
   }
 }
 
+type OpenAiCompatibleConfig = Extract<LlmConfig, { provider: "openai-compatible" }>;
+
+/** Out of quota (429; 498 is Groq's "over capacity") or down: worth trying the fallback provider. */
+export const shouldFallBack = (status: number) => status === 429 || status === 498 || status >= 500;
+
+/**
+ * POST to /chat/completions. `body` gets the model's name, as provider-specific
+ * fields depend on it. When the main provider is out of quota or unreachable
+ * and a fallback provider is configured, the same request goes there instead,
+ * so a free tier's daily limit doesn't stop the agents' work.
+ */
+export async function postChat(config: OpenAiCompatibleConfig, body: (model: string) => object, maxWaitSeconds?: number) {
+  const send = (c: OpenAiCompatibleConfig) =>
+    postWithRetry(
+      `${c.baseUrl}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${c.apiKey}` },
+        body: JSON.stringify({ model: c.model, ...body(c.model) }),
+      },
+      maxWaitSeconds,
+    );
+  const fallback = llmFallbackConfig();
+  if (!fallback) return send(config);
+  try {
+    const res = await send(config);
+    if (!shouldFallBack(res.status)) return res;
+    console.warn(`ai ${res.status} from ${config.model}, using ${fallback.model}`);
+    await res.body?.cancel();
+  } catch (error) {
+    if (!(error instanceof AiError)) throw error;
+    console.warn(`ai ${config.model} unreachable, using ${fallback.model}`);
+  }
+  return send(fallback);
+}
+
 export async function callChatCompletions(
-  config: Extract<LlmConfig, { provider: "openai-compatible" }>,
+  config: OpenAiCompatibleConfig,
   messages: { role: "system" | "user"; content: string }[],
   responseFormat: object,
   opts: { maxTokens?: number; maxWaitSeconds?: number } = {},
 ) {
-  return postWithRetry(
-    `${config.baseUrl}/chat/completions`,
-    {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-    body: JSON.stringify({
-      model: config.model,
+  return postChat(
+    config,
+    (model) => ({
       messages,
       response_format: responseFormat,
       ...(opts.maxTokens ? { max_completion_tokens: opts.maxTokens } : {}),
       // Reasoning models spend part of the token budget thinking; field extraction needs little.
-      ...(/gpt-oss/i.test(config.model) ? { reasoning_effort: "low" } : {}),
+      ...(/gpt-oss/i.test(model) ? { reasoning_effort: "low" } : {}),
     }),
-    },
     opts.maxWaitSeconds,
   );
 }
