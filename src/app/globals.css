@@ -455,3 +455,23 @@ dialog[open]::backdrop {
     animation: none;
   }
 }
+
+/* Progress rings and bars (Iroda, A hónapom) fill up when they appear. */
+.ring-progress {
+  transition: stroke-dashoffset 900ms var(--ease-out-soft);
+  @starting-style {
+    stroke-dashoffset: var(--ring-length);
+  }
+}
+.bar-progress {
+  transition: width 800ms var(--ease-out-soft);
+  @starting-style {
+    width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress,
+  .bar-progress {
+    transition: none;
+  }
+}
