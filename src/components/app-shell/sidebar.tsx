@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { openSearch } from "./command-palette";
 import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
+import { useChatUnread } from "@/components/chat/use-chat-unread";
 import { navItems } from "./nav-items";
 
 /** A small spinner on the clicked item while its page is still loading (only shows when that takes a moment). */
@@ -20,6 +21,7 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
   // The clicked item lights up at once, before its page has loaded; it is dropped as soon as the URL changes.
   const [clicked, setClicked] = useState<{ href: string; on: string | null } | null>(null);
   const current = clicked && clicked.on === pathname ? clicked.href : pathname;
+  const unread = useChatUnread(pathname);
   return (
     <nav aria-label="Fő navigáció" className="flex flex-col gap-0.5">
       {navItems.map(({ href, label, icon: Icon }) => {
@@ -40,6 +42,11 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
           >
             <Icon className="size-[18px]" strokeWidth={active ? 2 : 1.75} />
             {label}
+            {href === "/messages" && unread > 0 && (
+              <span className="pop-in grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-medium text-white" aria-label={`${unread} olvasatlan`}>
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
             <PendingDot />
           </Link>
         );

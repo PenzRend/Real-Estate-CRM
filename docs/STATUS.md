@@ -371,8 +371,19 @@ Branch `feat/mvp-foundation`.
   - **Android call capture groundwork** (`docs/ANDROID-CALLS.md`): phone
     keys and `POST /api/calls`; the phone app itself is still to be built.
 
+- **Üzenetek** (`/messages`): office-wide channel and one-to-one chats, live via
+  Supabase Realtime (`chat_messages` in the `supabase_realtime` publication),
+  unread counts (`chat_unread`) as a badge in the menu. Tested: send, delete,
+  unread badge; live delivery between two people not yet (one-member workspace).
+- **Dokumentumok** (`/documents`): the office's shared files in the private
+  `documents` bucket under `<workspace>/office/`; folders, search, drag-and-drop
+  upload, rename, pin, move, delete (uploader or manager). Tested end to end.
+
 ## Known gaps / next
 
+- Run `supabase/checks/workspace-isolation.sql` again: it now also covers
+  `chat_messages`, `chat_reads` and `office_documents` (not run since they were added).
+- Chat: no phone notification for new messages yet; no attachments.
 - Supabase advisor: enable leaked password protection (dashboard setting);
   add covering indexes for composite foreign keys when data grows.
 - Client page title is generic ("Ügyfél"); no hard delete yet (needs a retention decision).

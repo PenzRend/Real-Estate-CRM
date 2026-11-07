@@ -100,13 +100,25 @@ export const appGuide: GuideEntry[] = [
     id: "phone-calls",
     screen: "Hívásnapló Androidról",
     href: "/settings",
-    how: "Calls with clients on an Android phone can go onto the client's timeline by themselves ('Kimenő hívás (2 perc)', 'Nem fogadott hívás'); calls with numbers that are not a client's are not recorded. It needs the Flavio Android app, which is not available yet; the key for it is made in Beállítások → Kapcsolatok → 'Hívásnapló Androidról' → 'Telefon hozzáadása' (shown once; 'Kikapcsolás' switches a phone off). On iPhone this is not possible: use the 'Hívás' button on the client's page and 'Hogy ment?'.",
+    how: "Calls with clients on an Android phone can go onto the client's timeline by themselves ('Kimenő hívás (2 perc)', 'Nem fogadott hívás'); calls with numbers that are not a client's are not recorded. It needs the Flavio Android app, which is not available yet ('Hamarosan' in Beállítások → Kapcsolatok → 'Hívásnapló Androidról'; once it is, 'Telefon hozzáadása' there makes the key for it). On iPhone this is not possible: use the 'Hívás' button on the client's page and 'Hogy ment?'.",
   },
   {
     id: "office",
     screen: "Iroda",
     href: "/office",
-    how: "The month's numbers per agent: 'Jutalék' (commission of deals won this month), 'Lezárt ügylet', 'Új megbízás' (listings taken), 'Megtekintés' (viewings held), 'Új ügyfél' (clients assigned) and 'Folyamatban' (commission of open deals), with the office's totals on top and the arrows to switch month. The owner and admins type each agent's monthly target ('cél') into the table – it saves when the field is left – and see everyone; an agent sees the office totals and their own row. The dashboard's 'A hónapom' card shows the agent's own month against the targets. New clients are shared out in Beállítások → Csapat → 'Új ügyfelek kiosztása': 'Aki felveszi' (the agent who adds it) or 'Sorban kiosztva' (in turn among the ticked colleagues); whoever gets a client from someone else is notified. On Ügyfelek, 'Csak az enyéim' shows only the agent's own clients.",
+    how: "How the month is going. On top, the office's commission ('Jutalék', from deals won this month) with a ring toward the target, what is still in open deals ('Folyamatban'), the days left and a forecast at the current pace; below it 'Lezárt ügylet', 'Új megbízás' (listings taken), 'Megtekintés' (viewings held) and 'Új ügyfél' (clients assigned). Then one card per agent ('Munkatársak') with progress bars against their own targets; the month's leader has a crown. The owner and admins set an agent's monthly targets with 'Havi célok megadása' / 'Célok módosítása' on the card (each saves when the field is left) and see everyone; an agent sees the office totals and their own card. The arrows switch month. The dashboard's 'A hónapom' card shows the agent's own month against the targets. New clients are shared out in Beállítások → Csapat → 'Új ügyfelek kiosztása': 'Aki felveszi' (the agent who adds it) or 'Sorban kiosztva' (in turn among the ticked colleagues); whoever gets a client from someone else is notified. On Ügyfelek, 'Csak az enyéim' shows only the agent's own clients.",
+  },
+  {
+    id: "messages",
+    screen: "Üzenetek",
+    href: "/messages",
+    how: "Chat inside Flavio. On the left the conversations: the whole office ('<iroda neve> – mindenki', everyone in the workspace reads it) and each colleague one to one (only the two of them see it). Write in the box at the bottom; Enter sends, Shift+Enter starts a new line. New messages arrive live; the menu shows how many are unread. Your own message can be deleted with the bin icon next to it. Colleagues are invited in Beállítások → Csapat.",
+  },
+  {
+    id: "documents",
+    screen: "Dokumentumok",
+    href: "/documents",
+    how: "The office's shared files – contract templates, price lists, marketing material – for every member. 'Feltöltés' or drag files onto the list (PDF, Word, Excel, PowerPoint, image or text, up to 20 MB each); folders 'Sablonok', 'Szerződésminták', 'Marketing', 'Irodai ügyek', 'Egyéb' with a search box. Click a file or the download icon to open it. The '…' menu (for the uploader, the owner and admins): 'Átnevezés', 'Kitűzés felülre' (pinned files come first), 'Mappa' (move), 'Törlés'. A listing's own papers (tulajdoni lap, energetikai tanúsítvány…) are on the listing's page under 'Dokumentumok'.",
   },
   {
     id: "settings",

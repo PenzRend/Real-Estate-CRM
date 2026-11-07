@@ -25,8 +25,8 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // The full-page assistant is already on screen there.
-  if (pathname === "/assistant") return null;
+  // Its own page has the chat already; on Üzenetek it would cover the send button.
+  if (pathname === "/assistant" || pathname === "/messages") return null;
 
   return (
     <>
