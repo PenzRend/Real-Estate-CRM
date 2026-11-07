@@ -17,7 +17,7 @@ export default function TasksLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition className="flex flex-col gap-6">
       <PageHeader title="Feladatok" description="Visszahívások és utánkövetések, ügyfelekhez és ingatlanokhoz kötve." />
-      <Suspense fallback={<div className="h-14 animate-pulse rounded-2xl bg-surface" />}>
+      <Suspense fallback={<div className="h-14 shimmer rounded-2xl bg-surface" />}>
         <TaskForm />
       </Suspense>
       <Suspense>

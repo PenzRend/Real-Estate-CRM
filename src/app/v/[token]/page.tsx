@@ -115,7 +115,7 @@ export default function ViewingResponsePage({ params }: PageProps<"/v/[token]">)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-10 px-5 py-10">
       <Logo href="/" />
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-surface" />}>
+      <Suspense fallback={<div className="h-64 shimmer rounded-2xl bg-surface" />}>
         <Viewing params={params} />
       </Suspense>
     </main>

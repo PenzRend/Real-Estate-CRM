@@ -26,10 +26,10 @@ export default function CalendarLayout({ children }: { children: ReactNode }) {
     <PageTransition>
       <div data-wide className="flex flex-col gap-6">
         <PageHeader title="Naptár" description="Megtekintések, feladatok, a Google-, Apple- és Outlook-naptárad egy helyen – és a Flavio a többi naptáradban is." />
-        <Suspense fallback={<div className="h-10 animate-pulse rounded-xl bg-surface" />}>
+        <Suspense fallback={<div className="h-10 shimmer rounded-xl bg-surface" />}>
           <CalendarToolbar
             connections={
-              <Suspense fallback={<div className="h-8 w-28 animate-pulse rounded-full bg-surface" />}>
+              <Suspense fallback={<div className="h-8 w-28 shimmer rounded-full bg-surface" />}>
                 <Connections />
               </Suspense>
             }

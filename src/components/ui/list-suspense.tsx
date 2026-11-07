@@ -3,7 +3,7 @@ import { Suspense, ViewTransition, type ReactNode } from "react";
 /** Placeholder rows while a list loads. */
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="animate-pulse rounded-2xl border border-border" aria-busy="true" aria-label="Betöltés">
+    <div className="shimmer rounded-2xl border border-border" aria-busy="true" aria-label="Betöltés">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex flex-col gap-2 border-b border-border px-5 py-4 last:border-b-0">
           <div className="h-3.5 rounded bg-surface-strong" style={{ width: `${35 + ((i * 17) % 30)}%` }} />

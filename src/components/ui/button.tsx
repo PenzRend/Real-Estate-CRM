@@ -22,7 +22,7 @@ const sizes: Record<Size, string> = {
 /** Button looks for elements that aren't a <Button>: plain <a>, form submits. */
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-full font-medium whitespace-nowrap transition-colors",
+    "inline-flex shrink-0 items-center justify-center rounded-full font-medium whitespace-nowrap",
     "disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
     variants[variant],
     sizes[size],

@@ -39,5 +39,5 @@ export async function AccountMenu() {
 }
 
 export function AccountMenuSkeleton() {
-  return <div className="h-[62px] animate-pulse rounded-2xl bg-surface" />;
+  return <div className="h-[62px] shimmer rounded-2xl bg-surface" />;
 }

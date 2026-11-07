@@ -97,13 +97,13 @@ h3 {
 ::view-transition-old(.page-exit),
 ::view-transition-old(.skeleton-exit),
 ::view-transition-old(.list-exit) {
-  animation: 120ms ease-in both vt-fade-out;
+  animation: 160ms ease-in both vt-fade-out;
 }
 ::view-transition-new(.page-enter) {
-  animation: 220ms ease-out 60ms both vt-rise-in;
+  animation: 380ms var(--ease-out-soft) 60ms both vt-rise-in;
 }
 ::view-transition-new(.content-enter) {
-  animation: 260ms ease-out both vt-rise-in;
+  animation: 360ms var(--ease-out-soft) both vt-rise-in;
 }
 /* The list that is about to change, while its new content loads. */
 [data-list-content] {
@@ -115,12 +115,14 @@ html[data-navigating] [data-list-content] {
 @keyframes vt-fade-out {
   to {
     opacity: 0;
+    filter: blur(4px);
   }
 }
 @keyframes vt-rise-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px) scale(0.995);
+    filter: blur(8px);
   }
 }
 @keyframes nav-progress {
@@ -156,5 +158,179 @@ html[data-navigating] [data-list-content] {
   ::view-transition-group(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
+  }
+}
+
+/* Feedback on every click. One easing for the whole app: quick to react,
+   soft to settle. Things that appear arrive with a short blur, as if moving
+   fast, instead of popping in; things that leave do the same in reverse.
+   Everything here switches off with "reduce motion" (bottom of this block). */
+:root {
+  --ease-out-soft: cubic-bezier(0.2, 0.9, 0.25, 1);
+  /* Lets height animate to and from "auto" (Chrome; elsewhere it just opens). */
+  interpolate-size: allow-keywords;
+}
+
+/* Pressing: buttons and pill or card links sink slightly under the finger. */
+button:not(:disabled),
+[role="button"],
+summary,
+a[href][class*="rounded-"] {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, filter;
+  transition-timing-function: var(--tw-ease, var(--ease-out-soft));
+  transition-duration: var(--tw-duration, 180ms);
+}
+button:not(:disabled):active,
+[role="button"]:active,
+summary:active,
+a[href][class*="rounded-"]:active {
+  scale: 0.97;
+  transition-duration: 60ms;
+}
+/* Full-width rows (list items) darken instead of shrinking. */
+li > a[href]:not([class*="rounded-"]):active {
+  background-color: var(--surface-strong);
+}
+
+/* Appearing: add "pop-in" to anything rendered on demand (menus, panels). */
+.pop-in {
+  transition:
+    opacity 220ms var(--ease-out-soft),
+    translate 320ms var(--ease-out-soft),
+    scale 320ms var(--ease-out-soft),
+    filter 320ms var(--ease-out-soft);
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--pop-from, -6px);
+    scale: 0.97;
+    filter: blur(8px);
+  }
+}
+/* Opening downwards: add "reveal" to a section that expands in place. */
+.reveal {
+  overflow: clip;
+  transition:
+    height 340ms var(--ease-out-soft),
+    opacity 260ms var(--ease-out-soft),
+    filter 340ms var(--ease-out-soft);
+  @starting-style {
+    height: 0;
+    opacity: 0;
+    filter: blur(10px);
+  }
+}
+/* Menus that stay mounted and toggle "hidden": animate both ways. */
+.menu-motion {
+  transition:
+    opacity 200ms var(--ease-out-soft),
+    scale 260ms var(--ease-out-soft),
+    translate 260ms var(--ease-out-soft),
+    filter 260ms var(--ease-out-soft),
+    display 260ms allow-discrete;
+  transform-origin: top right;
+  @starting-style {
+    opacity: 0;
+    scale: 0.94;
+    translate: 0 -4px;
+    filter: blur(8px);
+  }
+  &.hidden {
+    opacity: 0;
+    scale: 0.96;
+    filter: blur(6px);
+  }
+}
+
+/* Every dialog (native <dialog>) and its dimmed backdrop. */
+dialog {
+  transition:
+    opacity 220ms var(--ease-out-soft),
+    translate 340ms var(--ease-out-soft),
+    scale 340ms var(--ease-out-soft),
+    filter 340ms var(--ease-out-soft),
+    overlay 340ms allow-discrete,
+    display 340ms allow-discrete;
+  opacity: 0;
+  translate: 0 10px;
+  scale: 0.97;
+  filter: blur(10px);
+}
+dialog[open] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  filter: blur(0);
+  @starting-style {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.97;
+    filter: blur(10px);
+  }
+}
+dialog::backdrop {
+  transition:
+    background-color 260ms var(--ease-out-soft),
+    backdrop-filter 260ms var(--ease-out-soft),
+    overlay 260ms allow-discrete,
+    display 260ms allow-discrete;
+  backdrop-filter: blur(0);
+}
+dialog[open]::backdrop {
+  backdrop-filter: blur(3px);
+  @starting-style {
+    background-color: transparent;
+    backdrop-filter: blur(0);
+  }
+}
+
+/* The phone menu: the dim layer fades, the panel slides in from the left. */
+.drawer-backdrop {
+  transition: opacity 240ms var(--ease-out-soft);
+  @starting-style {
+    opacity: 0;
+  }
+}
+.drawer-panel {
+  transition:
+    translate 360ms var(--ease-out-soft),
+    filter 360ms var(--ease-out-soft);
+  @starting-style {
+    translate: -100% 0;
+    filter: blur(6px);
+  }
+}
+
+/* Loading placeholders: a light sweep instead of blinking. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  translate: -100% 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+  animation: shimmer 1.4s var(--ease-out-soft) infinite;
+}
+@keyframes shimmer {
+  to {
+    translate: 100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::backdrop {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  button:active,
+  a[href]:active {
+    scale: none !important;
   }
 }

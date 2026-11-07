@@ -97,7 +97,7 @@ async function Sheet({ params }: Pick<PageProps<"/clients/[id]/adatlap">, "param
 
 export default function DueDiligenceSheetPage({ params }: PageProps<"/clients/[id]/adatlap">) {
   return (
-    <Suspense fallback={<div className="mx-auto mt-10 h-96 max-w-3xl animate-pulse rounded-2xl bg-surface" />}>
+    <Suspense fallback={<div className="mx-auto mt-10 h-96 max-w-3xl shimmer rounded-2xl bg-surface" />}>
       <Sheet params={params} />
     </Suspense>
   );

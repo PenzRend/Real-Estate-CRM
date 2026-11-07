@@ -84,7 +84,7 @@ function DraftEditor({
 
   const field = "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none";
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-2xl bg-surface p-3 sm:p-4">
+    <div className="reveal mt-3 flex flex-col gap-2 rounded-2xl bg-surface p-3 sm:p-4">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Címzett
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="Add meg a címzettet" className={field} />

@@ -176,11 +176,11 @@ export function MobileNav({ account }: { account: ReactNode }) {
         <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menü">
           <button
             type="button"
-            className="absolute inset-0 bg-ink/20"
+            className="drawer-backdrop absolute inset-0 bg-ink/20"
             aria-label="Menü bezárása"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 bg-background px-4 py-5 shadow-float">
+          <div className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 bg-background px-4 py-5 shadow-float">
             <div className="flex items-center justify-between px-2">
               <Logo />
               <button

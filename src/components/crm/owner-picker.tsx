@@ -97,7 +97,7 @@ export function OwnerPicker({
       </div>
 
       {open && (
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4" onKeyDown={noSubmit}>
+        <div className="reveal flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4" onKeyDown={noSubmit}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-ink">Új tulajdonos felvétele</p>

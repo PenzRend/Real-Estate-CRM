@@ -121,7 +121,7 @@ export function CaptureReview({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="pop-in flex flex-col gap-6 [--pop-from:12px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
           <ArrowLeft className="size-4" /> Vissza a jegyzethez

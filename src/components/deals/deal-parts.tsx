@@ -67,7 +67,7 @@ export function StageBar({ dealId, stage, status }: { dealId: string; stage: Dea
         })}
       </ol>
       {open && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="pop-in flex flex-wrap items-center gap-2">
           {back && (
             <Button variant="ghost" size="sm" disabled={pending} onClick={() => go(back)}>
               <ArrowLeft /> Vissza: {stageLabels[back]}
@@ -179,7 +179,7 @@ export function OffersList({ dealId, offers, currency, open }: { dealId: string;
         </ul>
       )}
       {open && (
-        <form ref={form} action={action} className={cn("flex flex-wrap items-end gap-2 px-5 py-4", offers.length > 0 && "border-t border-border")}>
+        <form ref={form} action={action} className={cn("reveal flex flex-wrap items-end gap-2 px-5 py-4", offers.length > 0 && "border-t border-border")}>
           <div className="w-36">
             <Field label="Összeg" htmlFor="offer-amount">
               <Input id="offer-amount" name="amount" inputMode="decimal" placeholder="78M" required className="h-10" />

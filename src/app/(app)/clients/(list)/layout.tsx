@@ -18,7 +18,7 @@ export default function ClientsLayout({ children }: { children: ReactNode }) {
           </ButtonLink>
         }
       />
-      <Suspense fallback={<div className="h-11 animate-pulse rounded-xl bg-surface" />}>
+      <Suspense fallback={<div className="h-11 shimmer rounded-xl bg-surface" />}>
         <ClientFiltersFromUrl />
       </Suspense>
       {children}

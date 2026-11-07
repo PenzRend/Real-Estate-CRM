@@ -97,7 +97,7 @@ async function Invite({ params }: { params: PageProps<"/invite/[token]">["params
 
 export default function InvitePage({ params }: PageProps<"/invite/[token]">) {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-3xl bg-surface" />}>
+    <Suspense fallback={<div className="h-64 shimmer rounded-3xl bg-surface" />}>
       <Invite params={params} />
     </Suspense>
   );

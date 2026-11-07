@@ -223,7 +223,7 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
 
 export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   return (
-    <ListSuspense fallback={<div className="h-[36rem] animate-pulse rounded-2xl border border-border bg-surface/60" />}>
+    <ListSuspense fallback={<div className="h-[36rem] shimmer rounded-2xl border border-border bg-surface/60" />}>
       <CalendarContent searchParams={searchParams} />
     </ListSuspense>
   );

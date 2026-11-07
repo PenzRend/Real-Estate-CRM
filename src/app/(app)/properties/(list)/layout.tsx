@@ -23,7 +23,7 @@ export default function PropertiesLayout({ children }: { children: ReactNode }) 
           </>
         }
       />
-      <Suspense fallback={<div className="h-11 animate-pulse rounded-xl bg-surface" />}>
+      <Suspense fallback={<div className="h-11 shimmer rounded-xl bg-surface" />}>
         <PropertyFiltersFromUrl />
       </Suspense>
       {children}

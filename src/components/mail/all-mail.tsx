@@ -67,7 +67,7 @@ function Row({ mailboxId, m, ownEmail }: { mailboxId: string; m: BrowsedMail; ow
         </div>
       </div>
       {open && (
-        <div className="rounded-xl bg-surface px-4 py-3 text-sm text-text">
+        <div className="reveal rounded-xl bg-surface px-4 py-3 text-sm text-text">
           {reading ? (
             <p className="flex items-center gap-2 text-muted">
               <Loader2 className="size-4 animate-spin" /> Betöltés…

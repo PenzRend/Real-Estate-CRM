@@ -68,7 +68,7 @@ export default function InboxLayout({ children }: { children: ReactNode }) {
       <Suspense
         fallback={
           <div className="flex flex-col gap-6">
-            <div className="h-24 animate-pulse rounded-2xl bg-surface" />
+            <div className="h-24 shimmer rounded-2xl bg-surface" />
             <ListSkeleton />
           </div>
         }

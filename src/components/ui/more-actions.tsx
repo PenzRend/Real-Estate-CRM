@@ -36,7 +36,7 @@ export function MoreActions({ children, label = "További műveletek" }: { child
         // A click on an item closes the menu once the item's own handler has run.
         onClick={() => setTimeout(() => setOpen(false))}
         className={cn(
-          "absolute right-0 z-30 mt-2 flex min-w-48 flex-col gap-1 rounded-2xl border border-border bg-background p-1.5 shadow-float",
+          "menu-motion absolute right-0 z-30 mt-2 flex min-w-48 flex-col gap-1 rounded-2xl border border-border bg-background p-1.5 shadow-float",
           "[&_button]:w-full [&_button]:justify-start [&_button]:border-transparent [&_button]:shadow-none",
           !open && "hidden",
         )}

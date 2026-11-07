@@ -147,7 +147,7 @@ async function Sheet({ params }: Pick<PageProps<"/properties/[id]/ertekeles">, "
 
 export default function ValuationSheetPage({ params }: PageProps<"/properties/[id]/ertekeles">) {
   return (
-    <Suspense fallback={<div className="mx-auto mt-10 h-96 max-w-3xl animate-pulse rounded-2xl bg-surface" />}>
+    <Suspense fallback={<div className="mx-auto mt-10 h-96 max-w-3xl shimmer rounded-2xl bg-surface" />}>
       <Sheet params={params} />
     </Suspense>
   );

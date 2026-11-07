@@ -44,7 +44,7 @@ export default function DealsLayout({ children }: { children: ReactNode }) {
             </ButtonLink>
           }
         />
-        <Suspense fallback={<div className="h-[88px] animate-pulse rounded-2xl bg-surface" />}>
+        <Suspense fallback={<div className="h-[88px] shimmer rounded-2xl bg-surface" />}>
           <Summary />
         </Suspense>
         <Suspense>

@@ -1,7 +1,7 @@
 // Placeholder while per-request page content streams in.
 export function PageSkeleton() {
   return (
-    <div className="flex animate-pulse flex-col gap-8" aria-busy="true" aria-label="Betöltés">
+    <div className="flex shimmer flex-col gap-8" aria-busy="true" aria-label="Betöltés">
       <div className="flex flex-col gap-3">
         <div className="h-6 w-32 rounded-md bg-surface" />
         <div className="h-9 w-64 rounded-lg bg-surface-strong" />
