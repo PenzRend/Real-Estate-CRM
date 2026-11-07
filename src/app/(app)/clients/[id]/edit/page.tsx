@@ -52,6 +52,7 @@ async function EditClientContent({ params }: Pick<PageProps<"/clients/[id]/edit"
         initialValues={toFormValues(row, user.timezone)}
         submitLabel="Változások mentése"
         cancelHref={`/clients/${row.id}`}
+        clientId={row.id}
       />
     </div>
   );

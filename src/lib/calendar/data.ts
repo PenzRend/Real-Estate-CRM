@@ -240,22 +240,30 @@ async function davEvents(id: string, url: string, login: { username: string; pas
 
 export type WeekData = { events: CalendarEvent[]; problems: string[]; connected: { email: string; label: string }[] };
 
-/** Everything in the calendar between two instants; a calendar that can't be read is named in `problems`, the rest still shows. */
-export async function calendarEvents(user: CurrentUser, from: Date, to: Date): Promise<WeekData> {
+/**
+ * Everything in the calendar between two instants; a calendar that can't be
+ * read is named in `problems`, the rest still shows. Viewings are the whole
+ * office's (colleagues' ones marked with their name, so two agents don't book
+ * the same flat at once), or only the agent's own with `scope: "mine"`.
+ */
+export async function calendarEvents(user: CurrentUser, from: Date, to: Date, scope: "office" | "mine" = "office"): Promise<WeekData> {
   const supabase = await createClient();
   const problems: string[] = [];
   const range = { from: from.toISOString(), to: to.toISOString() };
 
   const [viewings, tasks, mailboxes, subscriptions] = await Promise.all([
-    supabase
-      .from("viewings")
-      .select("id, client_id, property_id, starts_at, duration_minutes, location, status, calendar_event_id")
-      .eq("organization_id", user.organization.id)
-      .neq("status", "cancelled")
-      .gte("starts_at", new Date(from.getTime() - 86_400_000).toISOString())
-      .lt("starts_at", range.to)
-      .order("starts_at")
-      .limit(500),
+    (() => {
+      const q = supabase
+        .from("viewings")
+        .select("id, client_id, property_id, starts_at, duration_minutes, location, status, calendar_event_id, created_by")
+        .eq("organization_id", user.organization.id)
+        .neq("status", "cancelled")
+        .gte("starts_at", new Date(from.getTime() - 86_400_000).toISOString())
+        .lt("starts_at", range.to)
+        .order("starts_at")
+        .limit(500);
+      return scope === "mine" ? q.eq("created_by", user.id) : q;
+    })(),
     supabase
       .from("tasks")
       .select("id, title, due_at, client_id")
@@ -273,24 +281,28 @@ export async function calendarEvents(user: CurrentUser, from: Date, to: Date): P
   const viewingRows = viewings.data ?? [];
   const flavioEventIds = new Set(viewingRows.map((v) => v.calendar_event_id).filter(Boolean));
   if (viewingRows.length) {
-    const [{ data: clients }, { data: properties }] = await Promise.all([
+    const others = [...new Set(viewingRows.map((v) => v.created_by).filter((id): id is string => Boolean(id) && id !== user.id))];
+    const [{ data: clients }, { data: properties }, { data: agents }] = await Promise.all([
       supabase.from("clients").select("id, full_name").in("id", [...new Set(viewingRows.map((v) => v.client_id))]),
       supabase.from("properties").select("id, title").in("id", [...new Set(viewingRows.map((v) => v.property_id))]),
+      others.length ? supabase.from("profiles").select("id, full_name, email").in("id", others) : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string }[] }),
     ]);
     const clientName = new Map((clients ?? []).map((c) => [c.id, c.full_name as string]));
     const propertyName = new Map((properties ?? []).map((p) => [p.id, p.title as string]));
+    const agentName = new Map((agents ?? []).map((a) => [a.id, ((a.full_name as string | null) ?? (a.email as string)).split(" ").slice(-1)[0]]));
     for (const v of viewingRows) {
       const end = new Date(Date.parse(v.starts_at) + v.duration_minutes * 60_000).toISOString();
       if (end <= range.from) continue;
+      const colleague = v.created_by && v.created_by !== user.id ? (agentName.get(v.created_by) ?? "kolléga") : null;
       events.push({
         id: `viewing:${v.id}`,
-        title: `Megtekintés: ${clientName.get(v.client_id) ?? "ügyfél"} – ${propertyName.get(v.property_id) ?? "ingatlan"}`,
+        title: `${colleague ? `${colleague}: ` : "Megtekintés: "}${clientName.get(v.client_id) ?? "ügyfél"} – ${propertyName.get(v.property_id) ?? "ingatlan"}`,
         start: v.starts_at,
         end,
         allDay: false,
         source: "viewing",
-        calendar: v.status === "done" ? "Megtekintés (lezárva)" : "Megtekintés",
-        color: "accent",
+        calendar: colleague ? `${colleague} megtekintése` : v.status === "done" ? "Megtekintés (lezárva)" : "Megtekintés",
+        color: colleague ? "slate" : "accent",
         location: v.location,
         href: `/clients/${v.client_id}`,
       });

@@ -80,7 +80,8 @@ async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "s
   const week = weekDays(weekStart(typeof params.week === "string" ? params.week : null, now));
   const range = view === "month" ? month : week;
 
-  const [data, subscriptions] = await Promise.all([calendarEvents(user, range.from, range.to), listSubscriptions(user)]);
+  const scope = params.who === "mine" ? "mine" : "office";
+  const [data, subscriptions] = await Promise.all([calendarEvents(user, range.from, range.to, scope), listSubscriptions(user)]);
   const byDay = eventsByDay(data.events, range.days);
 
   return (

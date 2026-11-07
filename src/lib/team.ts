@@ -3,6 +3,7 @@ import type { CurrentUser } from "@/lib/auth";
 import { appOrigin } from "@/lib/origin";
 import { hashSecretToken as hashInviteToken } from "@/lib/secret-token";
 import { avatarUrl } from "@/lib/avatar";
+import { db } from "@/lib/supabase/db";
 import { createClient } from "@/lib/supabase/server";
 
 export type Role = CurrentUser["organization"]["role"];
@@ -23,7 +24,8 @@ export type TeamMember = { userId: string; name: string; email: string; username
 export type PendingInvite = { id: string; email: string; role: Role; expiresAt: string; expired: boolean };
 
 export async function listTeam(user: CurrentUser, now = new Date()) {
-  const supabase = await createClient();
+  // db(): also used by background jobs (the weekly summary).
+  const supabase = await db();
   const [{ data: rows, error }, invites] = await Promise.all([
     supabase
       .from("organization_members")

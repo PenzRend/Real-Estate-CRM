@@ -1,4 +1,5 @@
 import "server-only";
+import { sendMessage } from "@/lib/chat/data";
 import type { CurrentUser } from "@/lib/auth";
 import { zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { createClient } from "@/lib/supabase/server";
@@ -308,6 +309,8 @@ export async function moveDeal(user: CurrentUser, id: string, stage: DealStage):
     return { ok: false, error: "A mentés nem sikerült. Próbáld újra." };
   }
   if (closing && before.buyer_client_id) await supabase.from("clients").update({ status: "converted" }).eq("id", before.buyer_client_id);
+  // A deal won is news for the whole office.
+  if (closing && before.status !== "won") await sendMessage(user, "office", "🎉 Lezártam egy ügyletet!", { kind: "deal", id }).catch(() => null);
   await afterChange(user, id, closing ? "Ügylet lezárva: sikeres adásvétel, jutalék rendezve." : `Ügylet: ${stageLabels[stage]} szakasz.`);
   return { ok: true, id };
 }

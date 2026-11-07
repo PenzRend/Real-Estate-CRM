@@ -6,6 +6,7 @@ import type { ClientFormState } from "@/app/(app)/clients/actions";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { FormSection } from "@/components/ui/form-section";
+import { DuplicateWatch } from "./duplicate-watch";
 import { clientStatusLabels, clientTypeLabels, propertyTypeLabels } from "@/lib/i18n/labels";
 
 export type ClientFormValues = Record<string, string | string[]>;
@@ -15,9 +16,11 @@ type Props = {
   initialValues?: ClientFormValues;
   submitLabel: string;
   cancelHref: string;
+  /** When editing: this client is not its own duplicate. */
+  clientId?: string;
 };
 
-export function ClientForm({ action, initialValues = {}, submitLabel, cancelHref }: Props) {
+export function ClientForm({ action, initialValues = {}, submitLabel, cancelHref, clientId }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const values = state.values ?? initialValues;
   const errors = state.errors ?? {};
@@ -48,6 +51,7 @@ export function ClientForm({ action, initialValues = {}, submitLabel, cancelHref
         <Field label="E-mail-cím" htmlFor="email" error={err("email")}>
           <Input id="email" name="email" type="email" defaultValue={text("email")} aria-invalid={invalid("email")} />
         </Field>
+        <DuplicateWatch kind="client" excludeId={clientId} />
         <Field label="Ügyféltípus" htmlFor="client_type" error={err("client_type")}>
           <Select id="client_type" name="client_type" defaultValue={text("client_type") || "buyer"}>
             {Object.entries(clientTypeLabels).map(([v, l]) => (

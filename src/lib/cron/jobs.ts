@@ -5,6 +5,8 @@ import { draftReport, dueWeeklyReports, sendReport } from "@/lib/reports/data";
 import { dueReminders, sendViewingReminder } from "@/lib/viewings/reminders";
 import { chatNoticeText, chatRecipients } from "@/lib/chat/notify";
 import { arrivalsMessage } from "@/lib/push/messages";
+import { weekSummary } from "@/lib/team/week-summary";
+import { weekLine } from "@/lib/team/week-text";
 import { pushToUser } from "@/lib/push/server";
 import { asBackgroundJob } from "@/lib/supabase/db";
 import { jobUser } from "./job-user";
@@ -167,5 +169,29 @@ async function viewingRemindersJob(admin: SupabaseClient, now: Date): Promise<Jo
 
 /** Once a morning (7:00): tomorrow's viewing reminders, and the weekly seller reports on Mondays. */
 async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
-  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)) };
+  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)), ...(await officeWeekJob(admin, now)) };
+}
+
+/** Monday mornings: last week's office numbers to every owner and admin of a team (two or more members). */
+async function officeWeekJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Europe/Budapest" }).format(now);
+  if (weekday !== "Mon") return { officeWeek: "not Monday" };
+  const { data: members } = await admin.from("organization_members").select("organization_id, user_id, role").limit(10_000);
+  const size = new Map<string, number>();
+  for (const m of members ?? []) size.set(m.organization_id, (size.get(m.organization_id) ?? 0) + 1);
+  let sent = 0;
+  for (const m of (members ?? []).filter((x) => x.role !== "member" && (size.get(x.organization_id) ?? 0) > 1)) {
+    const user = await jobUser(admin, m.user_id, m.organization_id);
+    if (!user) continue;
+    await asBackgroundJob(admin, async () => {
+      const s = await weekSummary(user, now);
+      sent += await pushToUser(user.id, {
+        title: s.star ? `Múlt hét az irodában – a hét csillaga: ${s.star.name}` : "Múlt hét az irodában",
+        body: weekLine(s.week),
+        url: "/dashboard",
+        tag: `office-week-${s.from}`,
+      });
+    }).catch((e) => console.error("office week failed", e instanceof Error ? e.message : e));
+  }
+  return { officeWeek: sent };
 }

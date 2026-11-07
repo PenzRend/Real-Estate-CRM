@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import type { PropertyFormState } from "@/app/(app)/properties/actions";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
+import { DuplicateWatch } from "./duplicate-watch";
 import { FormSection } from "@/components/ui/form-section";
 import {
   clientTypeLabels,
@@ -28,6 +29,8 @@ type Props = {
   cancelHref: string;
   /** Voice dictation (transcription) is configured on the server. */
   canDictate?: boolean;
+  /** When editing: this listing is not its own duplicate. */
+  propertyId?: string;
 };
 
 /** Yes / no / not stated: an unknown feature must not be saved as "no". */
@@ -43,7 +46,7 @@ function FeatureSelect({ name, label, value }: { name: string; label: string; va
   );
 }
 
-export function PropertyForm({ action, owners, initialValues = {}, submitLabel, cancelHref, canDictate = false }: Props) {
+export function PropertyForm({ action, owners, initialValues = {}, submitLabel, cancelHref, canDictate = false, propertyId }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const values = state.values ?? initialValues;
   const errors: PropertyFieldErrors = state.errors ?? {};
@@ -105,6 +108,7 @@ export function PropertyForm({ action, owners, initialValues = {}, submitLabel, 
         <Field label="Irányítószám" htmlFor="postal_code" error={errors.postal_code}>
           <Input id="postal_code" name="postal_code" inputMode="numeric" maxLength={4} defaultValue={v("postal_code")} aria-invalid={invalid("postal_code")} />
         </Field>
+        <DuplicateWatch kind="property" excludeId={propertyId} />
       </FormSection>
 
       <FormSection number="03" title="Paraméterek">

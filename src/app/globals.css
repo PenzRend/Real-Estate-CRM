@@ -475,3 +475,34 @@ dialog[open]::backdrop {
     transition: none;
   }
 }
+
+/* A deal won: confetti (components/ui/celebrate.ts). */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti-layer > span {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  border-radius: 2px;
+  animation: confetti var(--d) cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+@keyframes confetti {
+  0% {
+    translate: 0 0;
+    rotate: 0deg;
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    translate: var(--x) calc(var(--y) + 260px);
+    rotate: var(--r);
+    opacity: 0;
+  }
+}

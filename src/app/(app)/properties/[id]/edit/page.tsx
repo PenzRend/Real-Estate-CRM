@@ -64,6 +64,7 @@ async function EditPropertyContent({ params }: Pick<PageProps<"/properties/[id]/
         initialValues={toFormValues(row)}
         submitLabel="Változások mentése"
         cancelHref={`/properties/${row.id}`}
+        propertyId={row.id}
       />
     </div>
   );

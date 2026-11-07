@@ -25,10 +25,13 @@ export function CalendarToolbar({ connections }: { connections: ReactNode }) {
   const month = monthGrid(params.get("month"), now);
   const week = weekDays(weekStart(params.get("week"), now));
   const title = view === "month" ? monthTitle.format(asDate(month.first)) : `${fullDate.format(asDate(week.days[0]))} – ${dayMonth.format(asDate(week.days[6]))}`;
+  // "Csak az enyéim" stays on while paging.
+  const who = params.get("who") === "mine" ? "who=mine" : "";
+  const withWho = (href: string) => (who ? `${href}${href.includes("?") ? "&" : "?"}${who}` : href);
   const nav =
     view === "month"
-      ? { previous: `/calendar?month=${month.previous}`, next: `/calendar?month=${month.next}`, today: "/calendar" }
-      : { previous: `/calendar?view=week&week=${week.previous}`, next: `/calendar?view=week&week=${week.next}`, today: "/calendar?view=week" };
+      ? { previous: withWho(`/calendar?month=${month.previous}`), next: withWho(`/calendar?month=${month.next}`), today: withWho("/calendar") }
+      : { previous: withWho(`/calendar?view=week&week=${week.previous}`), next: withWho(`/calendar?view=week&week=${week.next}`), today: withWho("/calendar?view=week") };
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -36,9 +39,19 @@ export function CalendarToolbar({ connections }: { connections: ReactNode }) {
       <div className="flex flex-wrap items-center gap-2">
         <ViewTabs
           label="Nézet"
+          keep={["who"]}
           items={[
             { value: "month", label: "Hónap" },
             { value: "week", label: "Hét" },
+          ]}
+        />
+        <ViewTabs
+          param="who"
+          label="Kié"
+          keep={["view", "month", "week"]}
+          items={[
+            { value: "office", label: "Iroda" },
+            { value: "mine", label: "Csak az enyéim" },
           ]}
         />
         {connections}

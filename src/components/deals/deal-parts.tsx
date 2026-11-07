@@ -15,6 +15,7 @@ import {
 } from "@/app/(app)/deals/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { celebrate } from "@/components/ui/celebrate";
 import { Field, Input, Select } from "@/components/ui/form";
 import { actionFailed } from "@/lib/action-failed";
 import { cn } from "@/lib/cn";
@@ -36,6 +37,7 @@ export function StageBar({ dealId, stage, status }: { dealId: string; stage: Dea
       setError(null);
       const r = await moveDealAction(dealId, s).catch(actionFailed);
       if ("error" in r && r.error) setError(r.error);
+      else if (s === "closed") celebrate();
     });
   const open = status === "open";
 

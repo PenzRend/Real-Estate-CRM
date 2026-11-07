@@ -16,6 +16,8 @@ import { MyMonth } from "@/components/team/my-month";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
 import { officeStats } from "@/lib/team/office-data";
 import { TodayStrip } from "@/components/dashboard/today-strip";
+import { WeekCard } from "@/components/team/week-card";
+import { weekSummary } from "@/lib/team/week-summary";
 import { awaitingFeedback } from "@/lib/viewings/logic";
 
 export const metadata: Metadata = { title: "Áttekintés" };
@@ -50,6 +52,9 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
   // The agent's own month (numbers and targets).
   const month = await officeStats(user, utcToZonedLocal(now.toISOString()).slice(0, 7)).catch(() => null);
   const me = month?.agents.find((a) => a.userId === user.id) ?? null;
+  // Owners and admins see last week's numbers from Monday to Wednesday.
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Europe/Budapest" }).format(now);
+  const week = user.organization.role !== "member" && ["Mon", "Tue", "Wed"].includes(weekday) ? await weekSummary(user, now).catch(() => null) : null;
   // Emails still to answer: not replied, and not ones the AI found need no answer.
   const mailsWaiting = away.mailbox
     ? away.items.filter((i) => !i.repliedAt && !(i.draft && !i.draft.body)).length + away.olderNewCount
@@ -76,6 +81,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
       away={<AwayPanel summary={away} aiEnabled={llmConfig() != null} notice={shown} />}
       deals={
         <>
+          {week && <WeekCard summary={week} />}
           {me && <MyMonth me={me} />}
           {(deals.openCount > 0 || deals.upcoming.length > 0) && <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
         </>

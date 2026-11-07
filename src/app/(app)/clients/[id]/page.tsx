@@ -1,3 +1,4 @@
+import { HandOffClient } from "@/components/chat/hand-off-client";
 import { ShareToChat } from "@/components/chat/share-to-chat";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
@@ -64,7 +65,14 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
     <>
       {!client.archivedAt && <BookViewingButton clientId={client.id} variant="secondary" />}
       {!client.archivedAt && <ShareToChat kind="client" id={client.id} title={client.fullName} />}
-      {client.archivedAt ? archiveAction : <MoreActions>{archiveAction}</MoreActions>}
+      {client.archivedAt ? (
+        archiveAction
+      ) : (
+        <MoreActions>
+          <HandOffClient clientId={client.id} name={client.fullName} />
+          {archiveAction}
+        </MoreActions>
+      )}
     </>
   );
 
