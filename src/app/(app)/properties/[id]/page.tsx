@@ -7,6 +7,7 @@ import { ShareButton } from "@/components/shares/share-button";
 import { PortalToggle } from "@/components/portal/portal-toggle";
 import { portalExportOf } from "@/lib/portal/feed";
 import { buttonClasses } from "@/components/ui/button";
+import { MoreActions } from "@/components/ui/more-actions";
 import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
@@ -64,11 +65,13 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
     </form>
   ) : (
     <>
-      <PortalToggle propertyId={property.id} on={onPortals} listed={["active", "reserved", "under_negotiation"].includes(property.status)} />
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
-      <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">
-        <Archive /> Archiválás
-      </UndoableButton>
+      <MoreActions>
+        <PortalToggle propertyId={property.id} on={onPortals} listed={["active", "reserved", "under_negotiation"].includes(property.status)} />
+        <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">
+          <Archive /> Archiválás
+        </UndoableButton>
+      </MoreActions>
     </>
   );
 

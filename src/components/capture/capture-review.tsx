@@ -357,7 +357,7 @@ export function CaptureReview({
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-background/90 px-4 py-4 backdrop-blur sm:-mx-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <div className="sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-border bg-background/90 pl-4 pr-[5.5rem] py-4 backdrop-blur sm:-mx-8 sm:flex-row sm:items-center sm:justify-between sm:pl-8 sm:pr-24">
         <div className="min-h-5 text-sm">
           {error && (
             <p role="alert" className="flex items-center gap-1.5 text-danger">

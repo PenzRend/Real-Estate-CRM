@@ -213,7 +213,7 @@ async function SettingsContent() {
             href="/settings/calendars"
             cta={calendarParts.length ? "Kezelés" : "Beállítás"}
           />
-          <PhoneKeys keys={phoneKeys} />
+          <PhoneKeys keys={phoneKeys} appUrl={process.env.ANDROID_APP_URL || null} />
           <ListingFeed active={feed.exists} listings={feed.listings} lastFetchedAt={feed.lastFetchedAt} canManage={canManageTeam(user)} />
         </FormSection>
 

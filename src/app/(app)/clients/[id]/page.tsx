@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ClientDetailView } from "@/components/crm/client-detail-view";
 import { EraseClientButton } from "@/components/crm/erase-client";
 import { buttonClasses } from "@/components/ui/button";
+import { MoreActions } from "@/components/ui/more-actions";
 import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
@@ -60,8 +61,8 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
   );
   const actions = (
     <>
-      {archiveAction}
       {!client.archivedAt && <BookViewingButton clientId={client.id} variant="secondary" />}
+      {client.archivedAt ? archiveAction : <MoreActions>{archiveAction}</MoreActions>}
     </>
   );
 

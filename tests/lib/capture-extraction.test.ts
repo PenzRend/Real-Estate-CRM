@@ -66,6 +66,14 @@ describe("cleanExtraction", () => {
     expect(x.requirements.desired_move_date).toBeNull();
   });
 
+  it("keeps one reminder when a call-back falls on the follow-up day", () => {
+    expect(cleanExtraction(extraction()).tasks.map((t) => t.title)).toEqual(["Megfelelő ingatlanok küldése"]);
+    const otherDay = cleanExtraction(extraction({ follow_up_date: "2026-11-02" }));
+    expect(otherDay.tasks.map((t) => t.title)).toEqual(["Megfelelő ingatlanok küldése", "Visszahívni"]);
+    const noFollowUp = cleanExtraction(extraction({ follow_up_date: null }));
+    expect(noFollowUp.tasks).toHaveLength(2);
+  });
+
   it("swaps an inverted budget range", () => {
     const x = cleanExtraction(
       extraction({ requirements: { ...extraction().requirements, budget_min: 90_000_000, budget_max: 70_000_000 } }),

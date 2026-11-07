@@ -3,6 +3,7 @@
 import { Check, CircleAlert, Copy, Smartphone } from "lucide-react";
 import { useState, useTransition } from "react";
 import { createPhoneKeyAction, revokePhoneKeyAction } from "@/app/(app)/settings/phone-actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { actionFailed } from "@/lib/action-failed";
@@ -14,7 +15,8 @@ const when = new Intl.DateTimeFormat("hu-HU", { dateStyle: "medium", timeStyle: 
  * Keys for the Android call-capture app: calls with clients land on their
  * timeline by themselves. The key is shown once; each phone gets its own.
  */
-export function PhoneKeys({ keys }: { keys: PhoneKey[] }) {
+/** `appUrl`: where agents get the Android app; until it is set the card says "Hamarosan" and offers no keys. */
+export function PhoneKeys({ keys, appUrl }: { keys: PhoneKey[]; appUrl: string | null }) {
   const [label, setLabel] = useState("");
   const [created, setCreated] = useState<{ key: string; server: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -35,8 +37,19 @@ export function PhoneKeys({ keys }: { keys: PhoneKey[] }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">Hívásnapló Androidról</p>
-          <p className="mt-0.5 text-sm text-muted">Az ügyfeleiddel folytatott hívások maguktól bekerülnek az előzményeik közé. Ehhez a Flavio Android-alkalmazás kell (hamarosan).</p>
+          <p className="mt-0.5 text-sm text-muted">
+            Az ügyfeleiddel folytatott hívások maguktól bekerülnek az előzményeik közé. Ehhez a{" "}
+            {appUrl ? (
+              <a href={appUrl} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+                Flavio Android-alkalmazás
+              </a>
+            ) : (
+              "Flavio Android-alkalmazás"
+            )}{" "}
+            kell.
+          </p>
         </div>
+        {!appUrl && <Badge>Hamarosan</Badge>}
       </div>
 
       {keys.length > 0 && (
@@ -73,26 +86,35 @@ export function PhoneKeys({ keys }: { keys: PhoneKey[] }) {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="pl. Samsung telefon" aria-label="A telefon neve" className="h-9 max-w-56 text-sm" maxLength={100} />
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={busy}
-            onClick={() =>
-              start(async () => {
-                const r = await createPhoneKeyAction(label).catch(actionFailed);
-                if (r.ok) {
-                  setCreated({ key: r.key, server: r.server });
-                  setLabel("");
-                  setError(null);
-                } else setError(r.error);
-              })
-            }
-          >
-            {busy ? "Létrehozás…" : "Telefon hozzáadása"}
-          </Button>
-        </div>
+        appUrl && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="pl. Samsung telefon"
+              aria-label="A telefon neve"
+              className="h-9 max-w-56 text-sm"
+              maxLength={100}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  const r = await createPhoneKeyAction(label).catch(actionFailed);
+                  if (r.ok) {
+                    setCreated({ key: r.key, server: r.server });
+                    setLabel("");
+                    setError(null);
+                  } else setError(r.error);
+                })
+              }
+            >
+              {busy ? "Létrehozás…" : "Telefon hozzáadása"}
+            </Button>
+          </div>
+        )
       )}
       {error && (
         <p role="alert" className="flex items-center gap-1.5 text-sm text-danger">

@@ -207,6 +207,8 @@ function AwayRow({
   const router = useRouter();
   const draft = state.draft;
   const sender = item.fromName ?? item.fromEmail ?? "Ismeretlen";
+  // The AI found nothing to answer (a price alert, a notice): not a person, so no lead actions.
+  const noReply = Boolean(draft && !draft.body);
   return (
     <li className="px-5 py-4">
       <div className="flex flex-col gap-1">
@@ -220,7 +222,7 @@ function AwayRow({
               </Badge>
             </Link>
           ) : (
-            <Badge tone="warning">Új érdeklődő?</Badge>
+            !noReply && <Badge tone="warning">Új érdeklődő?</Badge>
           )}
           <span className="ml-auto text-xs text-subtle">
             {!item.isNew && "korábbi · "}
@@ -272,7 +274,7 @@ function AwayRow({
               </button>
             )
           )}
-          {!booked && (
+          {!booked && !noReply && (
             <button
               type="button"
               onClick={() => setBooking(true)}
@@ -284,9 +286,11 @@ function AwayRow({
               <CalendarPlus className="size-3.5" /> {draft?.viewing?.requested ? "Megtekintést kér – foglalás" : "Megtekintés"}
             </button>
           )}
-          <Link href={`/interactions/new?email=${item.id}`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
-            Rögzítés a Flavióban
-          </Link>
+          {!noReply && (
+            <Link href={`/interactions/new?email=${item.id}`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-ink">
+              Rögzítés a Flavióban
+            </Link>
+          )}
           {state.status === "error" && <span className="text-xs text-danger">{state.error}</span>}
         </div>
       )}

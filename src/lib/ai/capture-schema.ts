@@ -47,6 +47,8 @@ const date = (v: string | null) => (v && DATE.test(v) && !Number.isNaN(Date.pars
 const time = (v: string | null) => (v && TIME.test(v) ? v : null);
 const positive = (v: number | null) => (v != null && Number.isFinite(v) && v > 0 ? v : null);
 const text = (v: string | null) => (v && v.trim() ? v.trim() : null);
+// "Visszahívni", "hívd fel", "felhívni", "hívjam vissza"…
+const CALL_BACK = /visszahív|hív(ja|d|jam|ni)? (fel|vissza)|felhív/i;
 
 /**
  * Normalizes a schema-valid extraction: drops malformed dates and numbers,
@@ -62,6 +64,7 @@ export function cleanExtraction(x: CaptureExtraction): CaptureExtraction {
   max_area_sqm = positive(max_area_sqm);
   if (min_area_sqm != null && max_area_sqm != null && min_area_sqm > max_area_sqm) [min_area_sqm, max_area_sqm] = [max_area_sqm, min_area_sqm];
 
+  const followUpDate = date(x.follow_up_date);
   const strings = (list: string[]) => [...new Set(list.map((s) => s.trim()).filter(Boolean))];
 
   return {
@@ -94,9 +97,10 @@ export function cleanExtraction(x: CaptureExtraction): CaptureExtraction {
     promised_actions: strings(x.promised_actions),
     tasks: x.tasks
       .map((t) => ({ title: t.title.trim(), due_date: date(t.due_date), due_time: date(t.due_date) ? time(t.due_time) : null }))
-      .filter((t) => t.title.length > 0),
-    follow_up_date: date(x.follow_up_date),
-    follow_up_time: date(x.follow_up_date) ? time(x.follow_up_time) : null,
+      // A call-back on the follow-up day is the follow-up itself: one reminder, not two.
+      .filter((t) => t.title.length > 0 && !(followUpDate && t.due_date === followUpDate && CALL_BACK.test(t.title))),
+    follow_up_date: followUpDate,
+    follow_up_time: followUpDate ? time(x.follow_up_time) : null,
     outcome: text(x.outcome),
   };
 }
