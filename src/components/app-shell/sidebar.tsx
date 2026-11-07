@@ -150,7 +150,19 @@ export function MobileNav({ account }: { account: ReactNode }) {
   return (
     <div className="lg:hidden">
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
-        <Logo />
+        {/* The menu button sits on the left, where the menu slides in from. */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="grid size-9 place-items-center rounded-full border border-border text-ink"
+            aria-label="Menü megnyitása"
+            aria-expanded={open}
+          >
+            <Menu className="size-4" />
+          </button>
+          <Logo />
+        </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={openSearch} className="grid size-9 place-items-center rounded-full border border-border text-ink" aria-label="Keresés">
             <Search className="size-4" />
@@ -161,15 +173,6 @@ export function MobileNav({ account }: { account: ReactNode }) {
           >
             <Mic className="size-4" /> Rögzítés
           </Link>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="grid size-9 place-items-center rounded-full border border-border text-ink"
-            aria-label="Menü megnyitása"
-            aria-expanded={open}
-          >
-            <Menu className="size-4" />
-          </button>
         </div>
       </div>
       {open && (

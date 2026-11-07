@@ -90,20 +90,24 @@ h3 {
 /* Motion between pages: React view transitions (components/ui/page-suspense.tsx)
    and the navigation bar (components/app-shell/navigation-progress.tsx).
    Leaving is quick, arriving a little slower, so the new page reads as the one
-   that matters. */
+   that matters. They take turns: the new content waits until the old one is
+   gone (--vt-out), so two pages are never on screen at once. */
+:root {
+  --vt-out: 130ms;
+}
 ::view-transition {
   pointer-events: none; /* clicks during a transition still reach the page */
 }
 ::view-transition-old(.page-exit),
 ::view-transition-old(.skeleton-exit),
 ::view-transition-old(.list-exit) {
-  animation: 160ms ease-in both vt-fade-out;
+  animation: var(--vt-out) ease-in both vt-fade-out;
 }
 ::view-transition-new(.page-enter) {
-  animation: 380ms var(--ease-out-soft) 60ms both vt-rise-in;
+  animation: 340ms var(--ease-out-soft) var(--vt-out) both vt-rise-in;
 }
 ::view-transition-new(.content-enter) {
-  animation: 360ms var(--ease-out-soft) both vt-rise-in;
+  animation: 320ms var(--ease-out-soft) var(--vt-out) both vt-rise-in;
 }
 /* The list that is about to change, while its new content loads. */
 [data-list-content] {
@@ -361,7 +365,6 @@ dialog[open]::backdrop {
   }
   ::view-transition-new(*) {
     animation-name: vt-fade-in-plain !important;
-    animation-delay: 0s !important;
   }
 }
 @keyframes vt-fade-out-plain {
