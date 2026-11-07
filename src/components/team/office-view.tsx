@@ -1,8 +1,10 @@
-import { CalendarDays, Crown, Handshake, Home, TrendingUp, UserPlus } from "lucide-react";
+import { CalendarDays, Crown, Handshake, Home, MessageSquare, TrendingUp, UserPlus } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/i18n/format";
 import { progressPercent, type AgentMonth, type AgentTarget } from "@/lib/team/stats";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { TargetEditor } from "./target-editor";
 
 // The Iroda page: the month at a glance (a ring for commission, smaller rings
@@ -133,14 +135,6 @@ export function OfficeGoals({ total }: { total: Totals }) {
   );
 }
 
-const initials = (name: string) =>
-  name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
 const rows = [
   { key: "commission", label: "Jutalék", value: (a: AgentMonth) => a.commission, money: true },
   { key: "deals", label: "Lezárt ügylet", value: (a: AgentMonth) => a.dealsWon },
@@ -148,12 +142,31 @@ const rows = [
   { key: "viewings", label: "Megtekintés", value: (a: AgentMonth) => a.viewings },
 ] as const;
 
-export function AgentCard({ agent, rank, leader, month, editable, me }: { agent: AgentMonth; /** Null when there is no one to compare with. */ rank: number | null; leader: boolean; month: string; editable: boolean; me: boolean }) {
+export function AgentCard({
+  agent,
+  rank,
+  leader,
+  month,
+  editable,
+  me,
+  avatarUrl,
+  username,
+}: {
+  agent: AgentMonth;
+  /** Null when there is no one to compare with. */
+  rank: number | null;
+  leader: boolean;
+  month: string;
+  editable: boolean;
+  me: boolean;
+  avatarUrl: string | null;
+  username: string | null;
+}) {
   return (
     <article className={cn("flex flex-col gap-5 rounded-3xl border bg-background p-5", leader ? "border-accent/40 shadow-float" : "border-border")}>
       <header className="flex items-center gap-3">
-        <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-primary text-sm font-medium text-white">
-          {initials(agent.name)}
+        <span className="relative shrink-0">
+          <UserAvatar name={agent.name} url={avatarUrl} size="lg" />
           {leader && (
             <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-warning text-white ring-2 ring-background" title="A hónap vezetője">
               <Crown className="size-3" />
@@ -166,11 +179,17 @@ export function AgentCard({ agent, rank, leader, month, editable, me }: { agent:
             {me && <span className="font-normal text-muted"> (te)</span>}
           </p>
           <p className="text-xs text-muted">
+            {username && `@${username} · `}
             {rank != null && `${rank}. hely · `}
             {agent.leads} új ügyfél
             {agent.pipeline > 0 && ` · ${formatPrice(agent.pipeline)} folyamatban`}
           </p>
         </div>
+        {!me && (
+          <Link href={`/messages?with=${agent.userId}`} className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink" aria-label={`Üzenet ${agent.name} részére`} title="Üzenet">
+            <MessageSquare className="size-4" />
+          </Link>
+        )}
       </header>
 
       <ul className="flex flex-col gap-3">

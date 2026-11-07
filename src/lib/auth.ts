@@ -1,4 +1,5 @@
 import "server-only";
+import { avatarUrl } from "@/lib/avatar";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -12,6 +13,9 @@ export type CurrentUser = {
   id: string;
   email: string;
   fullName: string | null;
+  /** Unique, for @mentions. */
+  username: string | null;
+  avatarUrl: string | null;
   firstName: string | null;
   timezone: string;
   organization: { id: string; name: string; role: "owner" | "admin" | "member" };
@@ -32,7 +36,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   if (!userId) redirect("/login");
 
   const [{ data: profile }, { data: memberships }, cookieStore] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, timezone").eq("id", userId).single(),
+    supabase.from("profiles").select("full_name, email, timezone, username, avatar_path").eq("id", userId).single(),
     supabase.from("organization_members").select("role, organizations (id, name, is_personal)").eq("user_id", userId).order("created_at"),
     cookies(),
   ]);
@@ -58,6 +62,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
     id: userId,
     email: profile.email,
     fullName: profile.full_name,
+    username: profile.username,
+    avatarUrl: avatarUrl(profile.avatar_path),
     firstName: parts.length > 1 ? parts[parts.length - 1] : (parts[0] ?? null),
     timezone: profile.timezone,
     organization: {

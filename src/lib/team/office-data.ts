@@ -29,7 +29,7 @@ export async function officeStats(user: CurrentUser, month: string) {
     agentId: d.assigned_to,
     commission: commission({ agreed_price: num(d.agreed_price), commission_percent: num(d.commission_percent), commission_amount: num(d.commission_amount) }),
   });
-  return officeMonth({
+  const stats = officeMonth({
     members: team.members.map((m) => ({ userId: m.userId, name: m.name })),
     leads: (leads.data ?? []).map((r) => r.assigned_to),
     viewings: (viewings.data ?? []).map((r) => r.created_by),
@@ -38,6 +38,8 @@ export async function officeStats(user: CurrentUser, month: string) {
     openDeals: (open.data ?? []).map(deal),
     targets: (targets.data ?? []).map((t) => ({ userId: t.user_id, commission: num(t.commission), deals: t.deals, listings: t.listings, viewings: t.viewings })),
   });
+  // Pictures and usernames for the agent cards.
+  return { ...stats, people: new Map(team.members.map((m) => [m.userId, m])) };
 }
 
 export type TargetField = keyof AgentTarget;

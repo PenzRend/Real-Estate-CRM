@@ -1,3 +1,4 @@
+import { ShareToChat } from "@/components/chat/share-to-chat";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -62,6 +63,7 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
   const actions = (
     <>
       {!client.archivedAt && <BookViewingButton clientId={client.id} variant="secondary" />}
+      {!client.archivedAt && <ShareToChat kind="client" id={client.id} title={client.fullName} />}
       {client.archivedAt ? archiveAction : <MoreActions>{archiveAction}</MoreActions>}
     </>
   );

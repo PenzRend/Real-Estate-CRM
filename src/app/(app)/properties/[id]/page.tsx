@@ -1,3 +1,4 @@
+import { ShareToChat } from "@/components/chat/share-to-chat";
 import { Archive, ArchiveRestore } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -66,6 +67,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   ) : (
     <>
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
+      <ShareToChat kind="property" id={property.id} title={property.title} />
       <MoreActions>
         <PortalToggle propertyId={property.id} on={onPortals} listed={["active", "reserved", "under_negotiation"].includes(property.status)} />
         <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">

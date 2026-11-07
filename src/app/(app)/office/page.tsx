@@ -32,7 +32,7 @@ async function Office({ searchParams }: Pick<PageProps<"/office">, "searchParams
   const current = today.slice(0, 7);
   const month = typeof params.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : current;
   const b = monthBounds(month);
-  const { agents, total } = await officeStats(user, month);
+  const { agents, total, people } = await officeStats(user, month);
   const manager = user.organization.role !== "member";
   // Agents see the office's totals and their own card; owners and admins see everyone.
   const shown = manager ? agents : agents.filter((a) => a.userId === user.id);
@@ -72,6 +72,8 @@ async function Office({ searchParams }: Pick<PageProps<"/office">, "searchParams
               month={month}
               editable={manager}
               me={a.userId === user.id}
+              avatarUrl={people.get(a.userId)?.avatarUrl ?? null}
+              username={people.get(a.userId)?.username ?? null}
             />
           ))}
         </div>

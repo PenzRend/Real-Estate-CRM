@@ -1,3 +1,4 @@
+import { ShareToChat } from "@/components/chat/share-to-chat";
 import { ChevronLeft, Mail, MapPin, Phone, ShieldAlert, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -85,7 +86,10 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
               {deal.closed_at && <span>Lezárva: {formatDate(deal.closed_at)}</span>}
             </p>
           </div>
-          <DealOutcome dealId={deal.id} status={deal.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ShareToChat kind="deal" id={deal.id} title={deal.property.name} />
+            <DealOutcome dealId={deal.id} status={deal.status} />
+          </div>
         </div>
         <StageBar dealId={deal.id} stage={deal.stage} status={deal.status} />
         {open && unidentified.length > 0 && (

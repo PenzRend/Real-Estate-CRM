@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Download, LogOut, Mail, Puzzle } from "lucide-react";
+import { ArrowRight, CalendarDays, Download, LogOut, Mail, MessageSquare, Puzzle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -10,6 +10,7 @@ import { leadSettings } from "@/lib/team/office-data";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { FormSubmit } from "@/components/ui/form-submit";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { buttonClasses } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
 import { ListingFeed } from "@/components/portal/listing-feed";
@@ -46,13 +47,6 @@ function Connection({ icon: Icon, title, status, href, cta }: { icon: typeof Mai
   );
 }
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
 async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
   const [{ members, pending }, workspaces, leads] = await Promise.all([listTeam(user), listWorkspaces(user), leadSettings(user)]);
@@ -69,14 +63,22 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
       <ul className="divide-y divide-border rounded-2xl border border-border sm:col-span-2">
         {members.map((m) => (
           <li key={m.userId} className="flex items-center gap-3 px-4 py-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-strong text-xs font-medium text-ink">{initials(m.name)}</span>
+            <UserAvatar name={m.name} url={m.avatarUrl} size="sm" className="size-9" />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 truncate text-sm font-medium text-ink">
                 {m.name}
                 {m.userId === user.id && <span className="text-xs font-normal text-muted">(te)</span>}
               </p>
-              <p className="truncate text-xs text-muted">{m.email}</p>
+              <p className="truncate text-xs text-muted">
+                {m.username && `@${m.username} · `}
+                {m.email}
+              </p>
             </div>
+            {m.userId !== user.id && (
+              <Link href={`/messages?with=${m.userId}`} className={buttonClasses("ghost", "xs")}>
+                <MessageSquare /> Üzenet
+              </Link>
+            )}
             <Badge tone={m.role === "member" ? "neutral" : "accent"}>{roleLabels[m.role]}</Badge>
             {m.userId !== user.id && canRemove(m.role) && (
               <ConfirmAction
@@ -166,8 +168,11 @@ async function SettingsContent() {
         <FormSection number="01" title="Profil">
           <div className="sm:col-span-2">
             <ProfileForm
+              userId={user.id}
               fullName={user.fullName ?? ""}
               email={user.email}
+              username={user.username ?? ""}
+              avatarUrl={user.avatarUrl}
               workspaceName={user.organization.name}
               canRename={user.organization.role !== "member"}
             />
