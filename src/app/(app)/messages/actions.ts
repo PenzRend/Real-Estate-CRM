@@ -51,6 +51,6 @@ export async function chatTargetsAction() {
   const { members } = await listTeam(user);
   return {
     office: user.organization.name,
-    colleagues: members.filter((m) => m.userId !== user.id).map((m) => ({ userId: m.userId, name: m.name, username: m.username, avatarUrl: m.avatarUrl })),
+    colleagues: members.filter((m) => m.userId !== user.id).map((m) => ({ userId: m.userId, name: m.name, avatarUrl: m.avatarUrl })),
   };
 }

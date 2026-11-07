@@ -2,6 +2,7 @@ import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listTeam } from "@/lib/team";
+import { plainText } from "./text";
 import { isRefKind, refKey, resolveRefs, type RefCard, type RefKind } from "./refs";
 
 // Üzenetek: the office channel ("office") and one-to-one conversations (the
@@ -9,7 +10,7 @@ import { isRefKind, refKey, resolveRefs, type RefCard, type RefKind } from "./re
 // only the office channel and their own direct messages.
 
 export type ChatMessage = { id: string; senderId: string; recipientId: string | null; body: string; createdAt: string; ref: RefCard | { kind: RefKind; id: string; missing: true } | null };
-export type ChatMember = { userId: string; name: string; username: string | null; avatarUrl: string | null };
+export type ChatMember = { userId: string; name: string; avatarUrl: string | null };
 export type Conversation = { peer: string; name: string; unread: number; last: { body: string; at: string; mine: boolean } | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,10 +32,11 @@ export async function listConversations(user: CurrentUser): Promise<{ conversati
       .limit(300),
   ]);
   const unreadBy = new Map(((unread.data ?? []) as { peer: string; unread: number }[]).map((u) => [u.peer, Number(u.unread)]));
+  const nameOf = new Map(members.map((m) => [m.userId, m.name]));
   const lastBy = new Map<string, Conversation["last"]>();
   for (const m of recent.data ?? []) {
     const peer = m.recipient_id == null ? "office" : m.sender_id === user.id ? m.recipient_id : m.sender_id;
-    if (!lastBy.has(peer)) lastBy.set(peer, { body: m.body || "Megosztott egy rekordot", at: m.created_at, mine: m.sender_id === user.id });
+    if (!lastBy.has(peer)) lastBy.set(peer, { body: plainText(m.body, (id) => nameOf.get(id)) || "Megosztott egy rekordot", at: m.created_at, mine: m.sender_id === user.id });
   }
   const others = members.filter((m) => m.userId !== user.id);
   const direct = others
@@ -42,7 +44,7 @@ export async function listConversations(user: CurrentUser): Promise<{ conversati
     .sort((a, b) => (b.last?.at ?? "").localeCompare(a.last?.at ?? "") || a.name.localeCompare(b.name, "hu"));
   return {
     conversations: [{ peer: "office", name: user.organization.name, unread: unreadBy.get("office") ?? 0, last: lastBy.get("office") ?? null }, ...direct],
-    members: members.map((m) => ({ userId: m.userId, name: m.name, username: m.username, avatarUrl: m.avatarUrl })),
+    members: members.map((m) => ({ userId: m.userId, name: m.name, avatarUrl: m.avatarUrl })),
   };
 }
 

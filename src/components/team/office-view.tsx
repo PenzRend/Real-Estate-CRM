@@ -150,7 +150,6 @@ export function AgentCard({
   editable,
   me,
   avatarUrl,
-  username,
 }: {
   agent: AgentMonth;
   /** Null when there is no one to compare with. */
@@ -160,7 +159,6 @@ export function AgentCard({
   editable: boolean;
   me: boolean;
   avatarUrl: string | null;
-  username: string | null;
 }) {
   return (
     <article className={cn("flex flex-col gap-5 rounded-3xl border bg-background p-5", leader ? "border-accent/40 shadow-float" : "border-border")}>
@@ -179,7 +177,6 @@ export function AgentCard({
             {me && <span className="font-normal text-muted"> (te)</span>}
           </p>
           <p className="text-xs text-muted">
-            {username && `@${username} · `}
             {rank != null && `${rank}. hely · `}
             {agent.leads} új ügyfél
             {agent.pipeline > 0 && ` · ${formatPrice(agent.pipeline)} folyamatban`}

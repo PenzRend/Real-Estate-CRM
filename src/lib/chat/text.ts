@@ -1,35 +1,47 @@
-// Chat text: @mentions. Pure, so it is tested; used by the chat (to show
-// mentions as names) and by the notification job (to know whom to tell).
+// Chat text and @mentions, the way Slack does them: you type "@" and pick a
+// colleague by name, the message keeps who was meant ("<@user-id>"), and it
+// is always shown with their current name. Pure, so it is tested; used by the
+// chat (to write and show mentions) and the notification job (whom to tell).
 
-const MENTION = /(^|[^\w@.])@([a-z0-9._]{3,30})/g;
+const TOKEN = /<@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/gi;
 
-/** The usernames mentioned in a message, each once ("@kata" → "kata"). */
-export function mentionedUsernames(body: string): string[] {
-  const out = new Set<string>();
-  for (const m of body.toLowerCase().matchAll(MENTION)) out.add(m[2].replace(/\.+$/, ""));
-  return [...out];
+/** The members mentioned in a message, each once. */
+export function mentionedIds(body: string): string[] {
+  return [...new Set([...body.matchAll(TOKEN)].map((m) => m[1].toLowerCase()))];
 }
 
 export type TextPart = { text: string; mention?: string };
 
-/** A message cut into plain text and @mentions, for showing mentions highlighted. */
+/** A message cut into plain text and mentions (the mentioned member's id). */
 export function splitMentions(body: string): TextPart[] {
   const parts: TextPart[] = [];
   let last = 0;
-  for (const m of body.matchAll(MENTION)) {
-    const name = m[2].toLowerCase().replace(/\.+$/, "");
-    const start = (m.index ?? 0) + m[1].length;
-    const end = start + 1 + name.length;
+  for (const m of body.matchAll(TOKEN)) {
+    const start = m.index ?? 0;
     if (start > last) parts.push({ text: body.slice(last, start) });
-    parts.push({ text: body.slice(start, end), mention: name });
-    last = end;
+    parts.push({ text: m[0], mention: m[1].toLowerCase() });
+    last = start + m[0].length;
   }
   if (last < body.length) parts.push({ text: body.slice(last) });
   return parts;
 }
 
-/** The "@ab" being typed at the cursor, for suggestions; null when the cursor isn't in a mention. */
+/** The message as plain text, mentions written as "@Name" (previews, notifications). */
+export function plainText(body: string, nameOf: (id: string) => string | undefined) {
+  return body.replace(TOKEN, (_, id: string) => `@${nameOf(id.toLowerCase()) ?? "kolléga"}`);
+}
+
+/** Before sending: each "@Name" picked from the suggestions becomes that member's token. */
+export function encodeMentions(text: string, picked: { id: string; name: string }[]) {
+  let out = text;
+  // Longest names first, so "@Kovács Anna Mária" isn't cut at "@Kovács Anna".
+  for (const p of [...picked].sort((a, b) => b.name.length - a.name.length)) out = out.split(`@${p.name}`).join(`<@${p.id}>`);
+  return out;
+}
+
+/** The "@Ann" being typed at the cursor (names have spaces), for suggestions; null when not in a mention. */
 export function mentionAtCursor(text: string, cursor: number): { query: string; start: number } | null {
-  const m = /(^|[\s(])@([a-z0-9._]{0,30})$/i.exec(text.slice(0, cursor));
-  return m ? { query: m[2].toLowerCase(), start: cursor - m[2].length - 1 } : null;
+  const m = /(^|[\s(])@([\p{L}\p{N}.' -]{0,30})$/u.exec(text.slice(0, cursor));
+  if (!m || /\s{2}|^\s/.test(m[2])) return null;
+  return { query: m[2].toLowerCase(), start: cursor - m[2].length - 1 };
 }

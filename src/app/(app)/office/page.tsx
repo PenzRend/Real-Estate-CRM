@@ -73,7 +73,6 @@ async function Office({ searchParams }: Pick<PageProps<"/office">, "searchParams
               editable={manager}
               me={a.userId === user.id}
               avatarUrl={people.get(a.userId)?.avatarUrl ?? null}
-              username={people.get(a.userId)?.username ?? null}
             />
           ))}
         </div>

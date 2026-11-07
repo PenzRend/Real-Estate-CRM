@@ -76,7 +76,6 @@ export function HandOffClient({ clientId, name }: { clientId: string; name: stri
                         <UserAvatar name={c.name} url={c.avatarUrl} size="sm" />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm text-ink">{c.name}</span>
-                          {c.username && <span className="block truncate text-xs text-muted">@{c.username}</span>}
                         </span>
                         {to === c.userId && <Check className="size-4 text-accent" />}
                       </button>

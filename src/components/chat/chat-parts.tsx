@@ -50,18 +50,18 @@ export function RefCardView({ refCard, mine }: { refCard: NonNullable<ChatMessag
   );
 }
 
-/** Message text with @mentions shown as the colleague's name; a mention of the reader stands out. */
+/** Message text with @mentions shown as the colleague's current name; a mention of the reader stands out. */
 export function MessageText({ body, members, me, mine }: { body: string; members: ChatMember[]; me: string; mine: boolean }) {
-  const byUsername = new Map(members.filter((m) => m.username).map((m) => [m.username as string, m]));
+  const byId = new Map(members.map((m) => [m.userId, m]));
   return (
     <>
       {splitMentions(body).map((p, i) => {
-        const who = p.mention ? byUsername.get(p.mention) : undefined;
-        if (!who) return <span key={i}>{p.text}</span>;
+        if (!p.mention) return <span key={i}>{p.text}</span>;
+        const who = byId.get(p.mention);
+        if (!who) return <span key={i}>@volt kolléga</span>;
         return (
           <span
             key={i}
-            title={`@${who.username}`}
             className={cn(
               "rounded-md px-1 font-medium",
               who.userId === me ? "bg-warning-soft text-warning" : mine ? "bg-white/15 text-white" : "bg-accent-soft text-accent",

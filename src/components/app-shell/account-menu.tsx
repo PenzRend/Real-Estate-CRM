@@ -17,8 +17,7 @@ export async function AccountMenu() {
           <p className="truncate text-sm font-medium text-ink">{user.fullName ?? user.email}</p>
           {/* A personal workspace is named after its owner; repeating the name says nothing. */}
           <p className="truncate text-xs text-muted">
-            {user.username ? `@${user.username}` : user.email}
-            {user.organization.name !== user.fullName && ` · ${user.organization.name}`}
+            {user.organization.name === user.fullName ? user.email : user.organization.name}
           </p>
         </div>
       </Link>

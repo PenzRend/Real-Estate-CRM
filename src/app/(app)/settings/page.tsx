@@ -70,7 +70,6 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
                 {m.userId === user.id && <span className="text-xs font-normal text-muted">(te)</span>}
               </p>
               <p className="truncate text-xs text-muted">
-                {m.username && `@${m.username} · `}
                 {m.email}
               </p>
             </div>
@@ -171,7 +170,6 @@ async function SettingsContent() {
               userId={user.id}
               fullName={user.fullName ?? ""}
               email={user.email}
-              username={user.username ?? ""}
               avatarUrl={user.avatarUrl}
               workspaceName={user.organization.name}
               canRename={user.organization.role !== "member"}

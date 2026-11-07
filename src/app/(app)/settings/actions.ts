@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
-import { AVATARS_BUCKET, USERNAME } from "@/lib/avatar";
+import { AVATARS_BUCKET } from "@/lib/avatar";
 import { authErrorMessage, newPassword } from "@/lib/password";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,11 +11,6 @@ export type SettingsState = { ok?: boolean; error?: string; message?: string };
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(1, "Add meg a neved.").max(200, "Legfeljebb 200 karakter."),
-  username: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .regex(USERNAME, "A felhasználónév 3–30 karakter: kisbetű, szám, pont vagy aláhúzás."),
   workspace_name: z.string().trim().min(1, "Add meg a munkaterület nevét.").max(200, "Legfeljebb 200 karakter.").optional(),
 });
 
@@ -25,18 +20,13 @@ export async function saveProfileAction(_: SettingsState, formData: FormData): P
   const canRename = user.organization.role !== "member";
   const parsed = profileSchema.safeParse({
     full_name: formData.get("full_name"),
-    username: String(formData.get("username") ?? "").replace(/^@/, ""),
     workspace_name: canRename ? formData.get("workspace_name") : undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  if (parsed.data.username !== user.username) {
-    const { data: free } = await supabase.rpc("username_available", { p_username: parsed.data.username });
-    if (!free) return { error: `A @${parsed.data.username} felhasználónév már foglalt. Válassz másikat.` };
-  }
-  const { error } = await supabase.from("profiles").update({ full_name: parsed.data.full_name, username: parsed.data.username }).eq("id", user.id);
-  if (error) return { error: error.code === "23505" ? "Ez a felhasználónév már foglalt." : "A mentés nem sikerült. Próbáld újra." };
+  const { error } = await supabase.from("profiles").update({ full_name: parsed.data.full_name }).eq("id", user.id);
+  if (error) return { error: "A mentés nem sikerült. Próbáld újra." };
   if (parsed.data.workspace_name && parsed.data.workspace_name !== user.organization.name) {
     const { error: orgError } = await supabase
       .from("organizations")
@@ -47,17 +37,6 @@ export async function saveProfileAction(_: SettingsState, formData: FormData): P
 
   refresh();
   return { ok: true, message: "Elmentve." };
-}
-
-/** Whether a username is free, while it is being typed. */
-export async function usernameAvailableAction(username: string) {
-  const user = await getCurrentUser();
-  const u = String(username).trim().toLowerCase().replace(/^@/, "");
-  if (u === user.username) return true;
-  if (!USERNAME.test(u)) return false;
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("username_available", { p_username: u });
-  return Boolean(data);
 }
 
 /** A picture the browser uploaded into the user's avatars folder; the previous one is removed. */

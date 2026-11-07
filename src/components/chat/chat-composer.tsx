@@ -6,7 +6,7 @@ import { searchShareableAction } from "@/app/(app)/messages/actions";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/cn";
 import type { ChatMember } from "@/lib/chat/data";
-import { mentionAtCursor } from "@/lib/chat/text";
+import { encodeMentions, mentionAtCursor } from "@/lib/chat/text";
 
 export type Attachment = { kind: "client" | "property" | "deal"; id: string; title: string; detail: string | null };
 const icons = { client: UserRound, property: Building2, deal: Handshake } as const;
@@ -35,18 +35,20 @@ export function ChatComposer({
   const [picking, setPicking] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
-  const suggestions = mention
-    ? members.filter((m) => m.userId !== me && m.username && (`${m.username} ${m.name}`.toLowerCase().includes(mention.query))).slice(0, 6)
-    : [];
+  // Mentions picked from the suggestions; on sending, their "@Name" becomes the member's token.
+  const [picked, setPicked] = useState<{ id: string; name: string }[]>([]);
+  const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const suggestions = mention ? members.filter((m) => m.userId !== me && fold(m.name).includes(fold(mention.query))).slice(0, 6) : [];
 
   function insertMention(m: ChatMember) {
-    if (!mention || !m.username) return;
+    if (!mention) return;
     const cursor = box.current?.selectionStart ?? draft.length;
-    const next = `${draft.slice(0, mention.start)}@${m.username} ${draft.slice(cursor)}`;
+    const next = `${draft.slice(0, mention.start)}@${m.name} ${draft.slice(cursor)}`;
     setDraft(next);
+    setPicked((p) => (p.some((x) => x.id === m.userId) ? p : [...p, { id: m.userId, name: m.name }]));
     setMention(null);
     requestAnimationFrame(() => {
-      const at = mention.start + m.username!.length + 2;
+      const at = mention.start + m.name.length + 2;
       box.current?.focus();
       box.current?.setSelectionRange(at, at);
     });
@@ -54,9 +56,10 @@ export function ChatComposer({
 
   function submit() {
     if (!draft.trim() && !attachment) return;
-    if (onSend(draft, attachment)) {
+    if (onSend(encodeMentions(draft, picked), attachment)) {
       setDraft("");
       setAttachment(null);
+      setPicked([]);
     }
     box.current?.focus();
   }
@@ -80,7 +83,6 @@ export function ChatComposer({
                 <UserAvatar name={m.name} url={m.avatarUrl} size="sm" />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-ink">{m.name}</span>
-                  <span className="block truncate text-xs text-muted">@{m.username}</span>
                 </span>
               </button>
             </li>

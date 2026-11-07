@@ -171,7 +171,7 @@ export function ChatView({
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{title(open)}</p>
             <p className="text-xs text-muted">
-              {open.peer === "office" ? `${members.length} tag látja · @névvel megemlíthetsz bárkit` : people.get(open.peer)?.username ? `@${people.get(open.peer)?.username} · csak ti ketten látjátok` : "Csak ti ketten látjátok"}
+              {open.peer === "office" ? `${members.length} tag látja · @ és egy név: megemlítheted a kollégát` : "Csak ti ketten látjátok"}
             </p>
           </div>
         </header>

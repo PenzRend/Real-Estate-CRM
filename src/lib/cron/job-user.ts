@@ -11,7 +11,7 @@ import type { CurrentUser } from "@/lib/auth";
 export async function jobUser(admin: SupabaseClient, userId: string, organizationId: string): Promise<CurrentUser | null> {
   const [{ data: member }, { data: profile }, { data: org }] = await Promise.all([
     admin.from("organization_members").select("role").eq("user_id", userId).eq("organization_id", organizationId).maybeSingle(),
-    admin.from("profiles").select("full_name, email, timezone, username, avatar_path").eq("id", userId).maybeSingle(),
+    admin.from("profiles").select("full_name, email, timezone, avatar_path").eq("id", userId).maybeSingle(),
     admin.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
   ]);
   if (!member || !profile || !org) return null;
@@ -20,7 +20,6 @@ export async function jobUser(admin: SupabaseClient, userId: string, organizatio
     id: userId,
     email: profile.email as string,
     fullName,
-    username: (profile.username as string | null) ?? null,
     avatarUrl: avatarUrl(profile.avatar_path as string | null),
     firstName: fullName ? fullName.trim().split(/\s+/).slice(-1)[0] : null,
     timezone: (profile.timezone as string | null) ?? "Europe/Budapest",

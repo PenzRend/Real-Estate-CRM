@@ -15,6 +15,3 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .join("")
     .toUpperCase() || "?";
-
-/** What a username may be: 3–30 of a–z, 0–9, "." and "_". */
-export const USERNAME = /^[a-z0-9._]{3,30}$/;

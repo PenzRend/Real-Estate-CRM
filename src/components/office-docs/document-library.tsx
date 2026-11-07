@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/i18n/format";
 import type { OfficeDocument, OfficeFolder } from "@/lib/office-docs/data";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { FillTemplate } from "./fill-template";
+import { FolderBar, type FolderPick } from "./folder-bar";
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv";
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -39,13 +40,13 @@ function kind(d: OfficeDocument) {
   return { Icon: File, cls: "bg-surface-strong text-muted", label: "Fájl" };
 }
 
-function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: Record<OfficeFolder, string> }) {
+function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: OfficeFolder[] }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, start] = useTransition();
   const k = kind(doc);
-  const update = (patch: { title?: string; folder?: string; pinned?: boolean }) => start(() => updateOfficeDocumentAction(doc.id, patch).catch(actionFailed).then(() => undefined));
+  const update = (patch: { title?: string; folderId?: string; pinned?: boolean }) => start(() => updateOfficeDocumentAction(doc.id, patch).catch(actionFailed).then(() => undefined));
 
   return (
     <li className="group relative flex items-center gap-3 px-4 py-3 sm:px-5">
@@ -80,7 +81,7 @@ function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: Record<Of
           </a>
         )}
         <p className="mt-0.5 truncate text-xs text-muted">
-          {k.label} · {size(doc.sizeBytes)} · {folders[doc.folder]} · {doc.uploader ? `${doc.uploader}, ` : ""}
+          {k.label} · {size(doc.sizeBytes)} · {folders.find((f) => f.id === doc.folderId)?.name ?? "Egyéb"} · {doc.uploader ? `${doc.uploader}, ` : ""}
           {formatDate(doc.createdAt)}
         </p>
       </div>
@@ -111,16 +112,17 @@ function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: Record<Of
                 <FolderOpen className="size-4" /> Mappa
               </span>
               <select
-                value={doc.folder}
-                onChange={(e) => (setMenu(false), update({ folder: e.target.value }))}
+                value={doc.folderId ?? ""}
+                onChange={(e) => (setMenu(false), update({ folderId: e.target.value }))}
                 className="max-w-28 rounded-lg border border-border bg-background px-1.5 py-1 text-xs"
                 aria-label="Mappa"
               >
-                {Object.entries(folders).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
                   </option>
                 ))}
+                <option value="">Egyéb</option>
               </select>
             </label>
             <button type="button" className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-danger hover:bg-danger-soft" onClick={() => (setMenu(false), setConfirming(true))}>
@@ -156,8 +158,10 @@ function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: Record<Of
 }
 
 /** The office's shared files: folders, search, drag-and-drop upload. */
-export function DocumentLibrary({ organizationId, documents, folders }: { organizationId: string; documents: OfficeDocument[]; folders: Record<OfficeFolder, string> }) {
-  const [folder, setFolder] = useState<OfficeFolder | "all">("all");
+export function DocumentLibrary({ organizationId, documents, folders }: { organizationId: string; documents: OfficeDocument[]; folders: OfficeFolder[] }) {
+  const [picked, setFolder] = useState<FolderPick>("all");
+  // A folder that was just removed (by anyone) falls back to "all".
+  const folder = picked === "all" || picked === "none" || folders.some((f) => f.id === picked) ? picked : "all";
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -165,12 +169,12 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: documents.length };
-    for (const d of documents) c[d.folder] = (c[d.folder] ?? 0) + 1;
+    for (const d of documents) c[d.folderId ?? "none"] = (c[d.folderId ?? "none"] ?? 0) + 1;
     return c;
   }, [documents]);
 
   const q = query.trim().toLowerCase();
-  const shown = documents.filter((d) => (folder === "all" || d.folder === folder) && (!q || `${d.title} ${d.fileName} ${d.uploader ?? ""}`.toLowerCase().includes(q)));
+  const shown = documents.filter((d) => (folder === "all" || (d.folderId ?? "none") === folder) && (!q || `${d.title} ${d.fileName} ${d.uploader ?? ""}`.toLowerCase().includes(q)));
 
   async function upload(files: FileList | File[] | null) {
     const list = Array.from(files ?? []);
@@ -189,7 +193,7 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
         toast({ message: `${file.name}: a feltöltés nem sikerült (PDF, Word, Excel, kép vagy szöveg lehet).` });
         continue;
       }
-      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folder: folder === "all" ? "general" : folder }).catch(actionFailed);
+      const r = await addOfficeDocumentAction({ path, fileName: file.name, size: file.size, mimeType: file.type, folderId: folder === "all" || folder === "none" ? null : folder }).catch(actionFailed);
       if (r.ok) done++;
       else toast({ message: r.error });
     }
@@ -231,23 +235,7 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
         <input ref={input} type="file" accept={ACCEPT} multiple hidden onChange={(e) => upload(e.target.files)} />
       </div>
 
-      <nav aria-label="Mappák" className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
-        {(["all", ...Object.keys(folders)] as (OfficeFolder | "all")[]).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFolder(f)}
-            aria-pressed={folder === f}
-            className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-sm",
-              folder === f ? "border-primary bg-primary font-medium text-white" : "border-border text-muted hover:border-border-strong hover:text-ink",
-            )}
-          >
-            {f === "all" ? "Mind" : folders[f]}
-            <span className={cn("ml-1.5 text-xs tabular-nums", folder === f ? "text-white/70" : "text-subtle")}>{counts[f] ?? 0}</span>
-          </button>
-        ))}
-      </nav>
+      <FolderBar folders={folders} counts={counts} value={folder} onChange={setFolder} />
 
       <div className={cn("relative rounded-3xl border bg-background transition-colors", dragging ? "border-accent bg-accent-soft/40" : "border-border")}>
         {uploading && (
@@ -276,7 +264,7 @@ export function DocumentLibrary({ organizationId, documents, folders }: { organi
         )}
         {dragging && (
           <div className="pop-in pointer-events-none absolute inset-0 grid place-items-center rounded-3xl bg-accent-soft/80 text-sm font-medium text-accent">
-            Engedd el a feltöltéshez{folder !== "all" && ` – ${folders[folder]}`}
+            Engedd el a feltöltéshez{folders.find((f) => f.id === folder) && ` – ${folders.find((f) => f.id === folder)!.name}`}
           </div>
         )}
       </div>

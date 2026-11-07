@@ -20,7 +20,7 @@ export async function inviteLink(token: string) {
 /** Can invite colleagues and remove members. */
 export const canManageTeam = (user: CurrentUser) => user.organization.role !== "member";
 
-export type TeamMember = { userId: string; name: string; email: string; username: string | null; avatarUrl: string | null; role: Role; joinedAt: string };
+export type TeamMember = { userId: string; name: string; email: string; avatarUrl: string | null; role: Role; joinedAt: string };
 export type PendingInvite = { id: string; email: string; role: Role; expiresAt: string; expired: boolean };
 
 export async function listTeam(user: CurrentUser, now = new Date()) {
@@ -29,7 +29,7 @@ export async function listTeam(user: CurrentUser, now = new Date()) {
   const [{ data: rows, error }, invites] = await Promise.all([
     supabase
       .from("organization_members")
-      .select("user_id, role, created_at, profiles (full_name, email, username, avatar_path)")
+      .select("user_id, role, created_at, profiles (full_name, email, avatar_path)")
       .eq("organization_id", user.organization.id)
       .order("created_at"),
     canManageTeam(user)
@@ -46,12 +46,11 @@ export async function listTeam(user: CurrentUser, now = new Date()) {
 
   const members: TeamMember[] = (rows ?? []).map((r) => {
     // Many-to-one embed: an object at runtime; typed as an array until DB types are generated.
-    const p = [r.profiles].flat()[0] as { full_name: string | null; email: string; username: string | null; avatar_path: string | null } | undefined;
+    const p = [r.profiles].flat()[0] as { full_name: string | null; email: string; avatar_path: string | null } | undefined;
     return {
       userId: r.user_id,
       name: p?.full_name || p?.email || "—",
       email: p?.email ?? "",
-      username: p?.username ?? null,
       avatarUrl: avatarUrl(p?.avatar_path ?? null),
       role: r.role as Role,
       joinedAt: r.created_at,

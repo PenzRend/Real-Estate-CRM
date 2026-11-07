@@ -7,23 +7,17 @@ import { listTeam } from "@/lib/team";
 // Dokumentumok: the office's shared files in the private "documents" bucket,
 // under "<workspace>/office/". The browser uploads straight into that folder;
 // here they are listed with short-lived download links, renamed, pinned,
-// moved between folders and removed (uploader or manager; RLS checks it too).
+// moved between the office's own folders and removed (uploader or manager;
+// RLS checks it too). A file without a folder shows under "Egyéb".
 
-export const OFFICE_FOLDERS = ["templates", "contracts", "marketing", "office", "general"] as const;
-export type OfficeFolder = (typeof OFFICE_FOLDERS)[number];
-export const folderLabels: Record<OfficeFolder, string> = {
-  templates: "Sablonok",
-  contracts: "Szerződésminták",
-  marketing: "Marketing",
-  office: "Irodai ügyek",
-  general: "Egyéb",
-};
+export type OfficeFolder = { id: string; name: string; canEdit: boolean };
 
 export type OfficeDocument = {
   id: string;
   title: string;
   fileName: string;
-  folder: OfficeFolder;
+  /** Null: no folder ("Egyéb"). */
+  folderId: string | null;
   sizeBytes: number;
   mimeType: string | null;
   pinned: boolean;
@@ -35,14 +29,57 @@ export type OfficeDocument = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LINK_SECONDS = 3600;
-const isFolder = (f: string): f is OfficeFolder => (OFFICE_FOLDERS as readonly string[]).includes(f);
+
+export async function listFolders(user: CurrentUser): Promise<OfficeFolder[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("office_document_folders")
+    .select("id, name, created_by")
+    .eq("organization_id", user.organization.id)
+    .order("position")
+    .order("created_at");
+  const manager = user.organization.role !== "member";
+  return (data ?? []).map((f) => ({ id: f.id, name: f.name, canEdit: manager || f.created_by === user.id }));
+}
+
+const folderName = (name: string) => name.replace(/\s+/g, " ").trim().slice(0, 60);
+
+export async function createFolder(user: CurrentUser, name: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const n = folderName(name);
+  if (!n) return { ok: false, error: "Adj nevet a mappának." };
+  if (["egyéb", "mind"].includes(n.toLowerCase())) return { ok: false, error: "Ez a név foglalt." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("office_document_folders").insert({ organization_id: user.organization.id, name: n }).select("id").single();
+  if (error || !data) return { ok: false, error: error?.code === "23505" ? "Már van ilyen nevű mappa." : "A mappát nem sikerült létrehozni." };
+  return { ok: true, id: data.id };
+}
+
+export async function renameFolder(user: CurrentUser, id: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const n = folderName(name);
+  if (!UUID.test(id) || !n) return { ok: false, error: "Adj nevet a mappának." };
+  if (["egyéb", "mind"].includes(n.toLowerCase())) return { ok: false, error: "Ez a név foglalt." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("office_document_folders").update({ name: n }).eq("id", id).eq("organization_id", user.organization.id).select("id");
+  if (error) return { ok: false, error: error.code === "23505" ? "Már van ilyen nevű mappa." : "Az átnevezés nem sikerült." };
+  if (!data?.length) return { ok: false, error: "Ezt a mappát a létrehozója vagy egy admin nevezheti át." };
+  return { ok: true };
+}
+
+/** The folder goes; its files stay, without a folder. */
+export async function deleteFolder(user: CurrentUser, id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID.test(id)) return { ok: false, error: "Ismeretlen mappa." };
+  const supabase = await createClient();
+  const { data } = await supabase.from("office_document_folders").delete().eq("id", id).eq("organization_id", user.organization.id).select("id");
+  if (!data?.length) return { ok: false, error: "Ezt a mappát a létrehozója vagy egy admin törölheti." };
+  return { ok: true };
+}
 
 export async function listOfficeDocuments(user: CurrentUser): Promise<OfficeDocument[]> {
   const supabase = await createClient();
   const [{ data }, { members }] = await Promise.all([
     supabase
       .from("office_documents")
-      .select("id, title, file_name, folder, size_bytes, mime_type, pinned, created_at, created_by, storage_path")
+      .select("id, title, file_name, folder_id, size_bytes, mime_type, pinned, created_at, created_by, storage_path")
       .eq("organization_id", user.organization.id)
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false })
@@ -64,7 +101,7 @@ export async function listOfficeDocuments(user: CurrentUser): Promise<OfficeDocu
     id: r.id,
     title: r.title,
     fileName: r.file_name,
-    folder: isFolder(r.folder) ? r.folder : "general",
+    folderId: r.folder_id,
     sizeBytes: Number(r.size_bytes),
     mimeType: r.mime_type,
     pinned: r.pinned,
@@ -76,13 +113,13 @@ export async function listOfficeDocuments(user: CurrentUser): Promise<OfficeDocu
 }
 
 /** Records a file the browser uploaded into the workspace's office folder. */
-export async function addOfficeDocument(user: CurrentUser, d: { path: string; fileName: string; size: number; mimeType: string; folder: string }) {
+export async function addOfficeDocument(user: CurrentUser, d: { path: string; fileName: string; size: number; mimeType: string; folderId: string | null }) {
   if (!d.path.startsWith(`${user.organization.id}/office/`) || d.path.includes("..") || d.path.length > 500) return { ok: false as const, error: "Érvénytelen fájl." };
   const supabase = await createClient();
   const title = d.fileName.replace(/\.[a-z0-9]{1,5}$/i, "").replace(/[_-]+/g, " ").trim().slice(0, 200) || "Dokumentum";
   const { error } = await supabase.from("office_documents").insert({
     organization_id: user.organization.id,
-    folder: isFolder(d.folder) ? d.folder : "general",
+    folder_id: d.folderId && UUID.test(d.folderId) ? d.folderId : null,
     title,
     storage_path: d.path,
     file_name: d.fileName.slice(0, 300),
@@ -97,11 +134,12 @@ export async function addOfficeDocument(user: CurrentUser, d: { path: string; fi
   return { ok: true as const };
 }
 
-export async function updateOfficeDocument(user: CurrentUser, id: string, patch: { title?: string; folder?: string; pinned?: boolean }) {
+/** `folderId`: a folder, or "" for none ("Egyéb"). */
+export async function updateOfficeDocument(user: CurrentUser, id: string, patch: { title?: string; folderId?: string; pinned?: boolean }) {
   if (!UUID.test(id)) return;
   const update: Record<string, unknown> = {};
   if (patch.title != null && patch.title.trim()) update.title = patch.title.trim().slice(0, 200);
-  if (patch.folder != null && isFolder(patch.folder)) update.folder = patch.folder;
+  if (patch.folderId != null) update.folder_id = UUID.test(patch.folderId) ? patch.folderId : null;
   if (patch.pinned != null) update.pinned = patch.pinned;
   if (!Object.keys(update).length) return;
   const supabase = await createClient();

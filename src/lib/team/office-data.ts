@@ -38,7 +38,7 @@ export async function officeStats(user: CurrentUser, month: string) {
     openDeals: (open.data ?? []).map(deal),
     targets: (targets.data ?? []).map((t) => ({ userId: t.user_id, commission: num(t.commission), deals: t.deals, listings: t.listings, viewings: t.viewings })),
   });
-  // Pictures and usernames for the agent cards.
+  // Pictures for the agent cards.
   return { ...stats, people: new Map(team.members.map((m) => [m.userId, m])) };
 }
 
