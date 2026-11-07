@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { addOfficeDocument, deleteOfficeDocument, updateOfficeDocument } from "@/lib/office-docs/data";
+import { fillTemplate } from "@/lib/office-docs/fill";
 
 export async function addOfficeDocumentAction(d: { path: string; fileName: string; size: number; mimeType: string; folder: string }) {
   const user = await getCurrentUser();
@@ -31,4 +32,14 @@ export async function deleteOfficeDocumentAction(id: string) {
   const user = await getCurrentUser();
   await deleteOfficeDocument(user, String(id));
   refresh();
+}
+
+/** A Word template filled from a deal, client or listing; the browser downloads the result. */
+export async function fillTemplateAction(documentId: string, choice: { clientId?: string | null; propertyId?: string | null; dealId?: string | null }) {
+  const user = await getCurrentUser();
+  return fillTemplate(user, String(documentId), {
+    clientId: choice.clientId ? String(choice.clientId) : null,
+    propertyId: choice.propertyId ? String(choice.propertyId) : null,
+    dealId: choice.dealId ? String(choice.dealId) : null,
+  });
 }

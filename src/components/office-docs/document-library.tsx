@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/i18n/format";
 import type { OfficeDocument, OfficeFolder } from "@/lib/office-docs/data";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { FillTemplate } from "./fill-template";
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv";
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -84,6 +85,7 @@ function DocumentRow({ doc, folders }: { doc: OfficeDocument; folders: Record<Of
         </p>
       </div>
       {busy && <Loader2 className="size-4 animate-spin text-subtle" />}
+      {/\.docx$/i.test(doc.fileName) && <FillTemplate documentId={doc.id} title={doc.title} />}
       {doc.url && (
         <a href={doc.url} className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink" aria-label={`${doc.title} letöltése`} title="Letöltés">
           <Download className="size-4" />

@@ -379,6 +379,18 @@ Branch `feat/mvp-foundation`.
   `documents` bucket under `<workspace>/office/`; folders, search, drag-and-drop
   upload, rename, pin, move, delete (uploader or manager). Tested end to end.
 
+- **Team features (2026-11-07):** unique @usernames and profile pictures
+  (public `avatars` bucket); chat cards for clients, listings and deals
+  (paperclip, or "Csapatnak" on the record's page), @mentions with
+  suggestions, phone notifications for direct messages and office @mentions
+  (mail cron); "Átadás kollégának"; a congratulation and confetti when a deal
+  is won; colleagues' viewings marked in Naptár with an "Iroda / Csak az
+  enyéim" switch; "Múlt hét az irodában" (dashboard card for managers Mon–Wed,
+  Monday notification via the daily cron); duplicate warnings in the client
+  and listing forms; filling Word templates from Dokumentumok (docxtemplater,
+  `{vevo_nev}`-style fields). Not yet tested with two people: live chat
+  delivery, notifications, hand-over to a colleague.
+
 ## Known gaps / next
 
 - Run `supabase/checks/workspace-isolation.sql` again: it now also covers

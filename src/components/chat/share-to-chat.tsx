@@ -43,8 +43,8 @@ export function ShareToChat({ kind, id, title }: { kind: "client" | "property" |
 
   return (
     <>
-      <Button variant="secondary" onClick={openDialog}>
-        <Send /> Küldés a csapatnak
+      <Button variant="secondary" onClick={openDialog} title="Küldés a csapatnak: az iroda csevegésébe vagy egy kollégának">
+        <Send /> Csapatnak
       </Button>
       <dialog
         ref={dialog}
