@@ -1,10 +1,12 @@
 "use client";
 
-import { CalendarCheck, CalendarPlus, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Loader2, Mail, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, EyeOff, Loader2, Mail, RotateCcw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { draftReplyAction, markVisitAction, sendReplyAction, syncIfStaleAction } from "@/app/(app)/dashboard/actions";
+import { ignoreEmailAction, restoreEmailAction } from "@/app/(app)/inbox/actions";
+import { UndoableButton } from "@/components/ui/undoable-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { AwayDraft, AwayItem, AwaySummary } from "@/lib/away/data";
@@ -291,6 +293,16 @@ function AwayRow({
               Rögzítés a Flavióban
             </Link>
           )}
+          <UndoableButton
+            action={() => ignoreEmailAction(item.id)}
+            undo={() => restoreEmailAction(item.id)}
+            done="Elrejtve – a Levelek oldal Elrejtett fülén megtalálod."
+            variant="ghost"
+            size="xs"
+            className="ml-auto rounded-full text-muted hover:text-ink"
+          >
+            <EyeOff /> Elrejtés
+          </UndoableButton>
           {state.status === "error" && <span className="text-xs text-danger">{state.error}</span>}
         </div>
       )}
