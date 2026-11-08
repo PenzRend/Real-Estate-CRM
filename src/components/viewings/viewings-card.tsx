@@ -226,7 +226,10 @@ export function ViewingsCard({
   showProperty = true,
   book,
   empty,
+  openFeedbackFor,
 }: {
+  /** Opens "Hogy sikerült?" for this viewing at once (from the phone notification). */
+  openFeedbackFor?: string | null;
   viewings: Viewing[];
   /** Server time (ISO), so "waiting for feedback" matches the server render. */
   now: string;
@@ -238,7 +241,10 @@ export function ViewingsCard({
 }) {
   const [booking, setBooking] = useState(false);
   // Held here, not in the row: a saved answer removes the row from open lists.
-  const [open, setOpen] = useState<{ dialog: "feedback" | "edit"; viewing: Viewing } | null>(null);
+  const [open, setOpen] = useState<{ dialog: "feedback" | "edit"; viewing: Viewing } | null>(() => {
+    const v = openFeedbackFor ? viewings.find((x) => x.id === openFeedbackFor && x.status === "scheduled") : undefined;
+    return v ? { dialog: "feedback", viewing: v } : null;
+  });
   const at = new Date(now);
   const waiting = viewings.filter((v) => awaitingFeedback(v, at)).length;
   return (

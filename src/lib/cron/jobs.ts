@@ -9,6 +9,7 @@ import { arrivalsMessage } from "@/lib/push/messages";
 import { weekSummary } from "@/lib/team/week-summary";
 import { weekLine } from "@/lib/team/week-text";
 import { pushToUser } from "@/lib/push/server";
+import { morningMessage, todaysViewings } from "@/lib/viewings/day";
 import { asBackgroundJob } from "@/lib/supabase/db";
 import { jobUser } from "./job-user";
 
@@ -61,6 +62,7 @@ async function mailJob(admin: SupabaseClient): Promise<JobResult> {
     notified,
     leadsAnnounced: await announceNewLeads(admin),
     chatNotified: await announceChatMessages(admin),
+    feedbackPrompts: await feedbackPrompts(admin, new Date()),
     emailsSent: await sendDueOutbox(admin),
   };
 }
@@ -224,7 +226,116 @@ async function viewingRemindersJob(admin: SupabaseClient, now: Date): Promise<Jo
 
 /** Once a morning (7:00): tomorrow's viewing reminders, and the weekly seller reports on Mondays. */
 async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
-  return { ...(await viewingRemindersJob(admin, now)), ...(await sellerReportsJob(admin, now)), ...(await officeWeekJob(admin, now)), ...(await noContactJob(admin, now)) };
+  return {
+    ...(await viewingRemindersJob(admin, now)),
+    ...(await sellerReportsJob(admin, now)),
+    ...(await officeWeekJob(admin, now)),
+    ...(await noContactJob(admin, now)),
+    ...(await morningBriefJob(admin, now)),
+  };
+}
+
+type ViewingRow = {
+  id: string;
+  organization_id: string;
+  starts_at: string;
+  duration_minutes: number;
+  status: string;
+  location: string | null;
+  agent: string | null;
+  client_id: string;
+  property_id: string;
+};
+
+/** Names and places for viewings, in a shape lib/viewings/day understands. */
+async function dayViewings(admin: SupabaseClient, rows: ViewingRow[]) {
+  const clientIds = [...new Set(rows.map((r) => r.client_id))];
+  const propertyIds = [...new Set(rows.map((r) => r.property_id))];
+  const [{ data: clients }, { data: properties }] = await Promise.all([
+    clientIds.length ? admin.from("clients").select("id, full_name, phone").in("id", clientIds) : Promise.resolve({ data: [] }),
+    propertyIds.length ? admin.from("properties").select("id, title, postal_code, city, district, address").in("id", propertyIds) : Promise.resolve({ data: [] }),
+  ]);
+  const c = new Map((clients ?? []).map((x: { id: string; full_name: string; phone: string | null }) => [x.id, x]));
+  const p = new Map(
+    (properties ?? []).map((x: { id: string; title: string; postal_code: string | null; city: string | null; district: string | null; address: string | null }) => [
+      x.id,
+      { name: x.title, address: [[x.postal_code, x.city].filter(Boolean).join(" "), x.district, x.address].filter(Boolean).join(", ") || null },
+    ]),
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    agent: r.agent,
+    startsAt: r.starts_at,
+    durationMinutes: r.duration_minutes,
+    status: r.status,
+    location: r.location,
+    client: { name: c.get(r.client_id)?.full_name ?? "Ügyfél", phone: c.get(r.client_id)?.phone ?? null },
+    property: p.get(r.property_id) ?? { name: "Ingatlan", address: null },
+  }));
+}
+
+const VIEWING_COLUMNS = "id, organization_id, starts_at, duration_minutes, status, location, calendar_user_id, created_by, client_id, property_id";
+const withAgent = (r: Record<string, unknown>): ViewingRow => ({ ...(r as unknown as ViewingRow), agent: (r.calendar_user_id ?? r.created_by ?? null) as string | null });
+
+/**
+ * 7:00, to every agent with notifications on: "Jó reggelt! Ma: 3 megtekintés,
+ * az első 10:00 – Bartók Béla út · 4 teendő". Nothing on an empty day.
+ */
+async function morningBriefJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
+  const { data: devices } = await admin.from("push_subscriptions").select("user_id").limit(10_000);
+  const users = [...new Set((devices ?? []).map((d) => d.user_id as string))];
+  if (!users.length) return { morningBriefs: 0 };
+  const { data: rows } = await admin
+    .from("viewings")
+    .select(VIEWING_COLUMNS)
+    .eq("status", "scheduled")
+    .gte("starts_at", new Date(now.getTime() - 86_400_000).toISOString())
+    .lte("starts_at", new Date(now.getTime() + 2 * 86_400_000).toISOString())
+    .limit(5000);
+  const viewings = todaysViewings(await dayViewings(admin, (rows ?? []).map(withAgent)), now);
+  const endOfDay = new Date(now.getTime() + 18 * 3600_000).toISOString();
+  let sent = 0;
+  for (const userId of users) {
+    const { count } = await admin
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["todo", "in_progress"])
+      .lte("due_at", endOfDay)
+      .or(`assigned_to.eq.${userId},and(assigned_to.is.null,created_by.eq.${userId})`);
+    const message = morningMessage(
+      viewings.filter((v) => v.agent === userId),
+      count ?? 0,
+    );
+    if (!message) continue;
+    sent += await asBackgroundJob(admin, () => pushToUser(userId, { ...message, url: "/dashboard", tag: "morning" })).catch(() => 0);
+  }
+  return { morningBriefs: sent };
+}
+
+/** Right after a viewing ends (within the hour): "Hogy sikerült?" to its agent, once; the notification opens the feedback. */
+async function feedbackPrompts(admin: SupabaseClient, now: Date): Promise<number> {
+  const { data: rows } = await admin
+    .from("viewings")
+    .select(VIEWING_COLUMNS)
+    .eq("status", "scheduled")
+    .is("feedback_prompted_at", null)
+    .gte("starts_at", new Date(now.getTime() - 8 * 3600_000).toISOString())
+    .lte("starts_at", now.toISOString())
+    .limit(200);
+  const ended = (await dayViewings(admin, (rows ?? []).map(withAgent))).filter((v) => {
+    const end = new Date(v.startsAt).getTime() + v.durationMinutes * 60_000;
+    return end <= now.getTime() && end > now.getTime() - 3600_000;
+  });
+  let sent = 0;
+  for (const v of ended) {
+    // Marked first, so a slow push never asks twice.
+    await admin.from("viewings").update({ feedback_prompted_at: now.toISOString() }).eq("id", v.id);
+    if (!v.agent) continue;
+    sent += await asBackgroundJob(admin, () =>
+      pushToUser(v.agent!, { title: "Hogy sikerült a megtekintés?", body: `${v.client.name} – ${v.property.name}`, url: `/dashboard?feedback=${v.id}`, tag: `feedback-${v.id}` }),
+    ).catch(() => 0);
+  }
+  return sent;
 }
 
 /** Monday mornings: last week's office numbers to every owner and admin of a team (two or more members). */

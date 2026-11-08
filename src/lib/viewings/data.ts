@@ -29,6 +29,8 @@ export type Viewing = {
   feedbackAt: string | null;
   client: { id: string; name: string; email: string | null; phone: string | null };
   property: { id: string; name: string; address: string | null };
+  /** The agent it belongs to (whose calendar it is in, else who booked it). */
+  agentId: string | null;
   /** In someone's calendar (Google or Outlook); `mine` when it is the current user's. */
   calendar: { link: string | null; mine: boolean } | null;
   /** The day-before reminder to the client, and their answer. */
@@ -90,6 +92,7 @@ async function hydrate(user: CurrentUser, rows: Row[]): Promise<Viewing[]> {
       feedbackAt: r.feedback_at,
       client: { id: r.client_id, name: client?.full_name ?? "Ügyfél", email: client?.email ?? null, phone: client?.phone ?? null },
       property: { id: r.property_id, name: property?.title ?? "Ingatlan", address: property ? propertyAddress(property) : null },
+      agentId: r.calendar_user_id ?? r.created_by ?? null,
       calendar: r.calendar_event_id ? { link: r.calendar_link, mine: r.calendar_user_id === user.id } : null,
       reminderSentAt: r.reminder_sent_at,
       response: r.client_response ? { answer: r.client_response, at: r.client_response_at, note: r.client_response_note } : null,

@@ -76,7 +76,10 @@ export function DashboardView({
   viewings,
   deals,
   welcome,
+  route,
 }: {
+  /** "Mai útvonal" on a viewing day. */
+  route?: ReactNode;
   data: DashboardData;
   now: Date;
   /** "Első lépések" for a new agent. */
@@ -96,6 +99,8 @@ export function DashboardView({
       {welcome}
 
       {strip}
+
+      {route}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="flex flex-col gap-6 xl:col-span-2">

@@ -24,6 +24,7 @@ import { WeekCard } from "@/components/team/week-card";
 import { weekSummary } from "@/lib/team/week-summary";
 import { awaitingFeedback } from "@/lib/viewings/logic";
 import { FirstSteps } from "@/components/dashboard/first-steps";
+import { TodayRoute } from "@/components/dashboard/today-route";
 import { firstSteps } from "@/lib/onboarding/first-steps";
 
 export const metadata: Metadata = { title: "Áttekintés" };
@@ -48,6 +49,8 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
     );
   }
   const user = await getCurrentUser();
+  // "Hogy sikerült?" from the phone notification opens that viewing's feedback.
+  const feedbackFor = await searchParams.then((p) => (typeof p.feedback === "string" ? p.feedback : null));
   const [data, away, shown, viewings, deals, steps] = await Promise.all([
     getDashboardData(user, now),
     getAwaySummary(user, now),
@@ -73,6 +76,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
       now={now}
       data={data}
       welcome={<FirstSteps steps={steps} />}
+      route={<TodayRoute viewings={viewings.filter((v) => v.agentId === user.id)} now={now} agent={user.fullName} />}
       strip={
         <TodayStrip
           c={{
@@ -97,7 +101,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
           {(deals.openCount > 0 || deals.upcoming.length > 0) && <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
         </>
       }
-      viewings={viewings.length > 0 && <ViewingsCard viewings={viewings} now={now.toISOString()} empty="" />}
+      viewings={viewings.length > 0 && <ViewingsCard viewings={viewings} now={now.toISOString()} empty="" openFeedbackFor={feedbackFor} />}
     />
   );
 }
