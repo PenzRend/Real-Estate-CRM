@@ -2,6 +2,8 @@
 
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
+import { myBookingLink, renewBookingToken, saveBookingLink } from "@/lib/booking/data";
+import type { BookingSettings } from "@/lib/booking/slots";
 import { addCalDavCalendars, addICloudCalendarsFromMailbox, addSubscription, removeSubscription, SUBSCRIPTION_COLORS, type SubscriptionColor } from "@/lib/calendar/data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -50,4 +52,29 @@ export async function addICloudFromMailboxAction(mailboxId: string): Promise<Sub
   if (!r.ok) return { error: r.error };
   refresh();
   return { ok: true };
+}
+
+/** "Foglalási link": the agent's booking page for clients, switched on or off with its hours. */
+export async function saveBookingLinkAction(input: BookingSettings & { active: boolean }) {
+  const user = await getCurrentUser();
+  const r = await saveBookingLink(user, {
+    active: Boolean(input?.active),
+    days: Array.isArray(input?.days) ? input.days.map(Number) : [],
+    startMinute: Number(input?.startMinute),
+    endMinute: Number(input?.endMinute),
+    slotMinutes: Number(input?.slotMinutes),
+    noticeHours: Number(input?.noticeHours),
+    horizonDays: Number(input?.horizonDays),
+  });
+  if (r.ok) refresh();
+  return r;
+}
+
+/** A new booking address; the old one stops working at once. */
+export async function renewBookingTokenAction() {
+  const user = await getCurrentUser();
+  await renewBookingToken(user);
+  const link = await myBookingLink(user);
+  refresh();
+  return { token: link?.token ?? null };
 }

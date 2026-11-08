@@ -33,6 +33,8 @@ import { AdWriter } from "@/components/listings/ad-writer";
 import { PriceCheckCard } from "@/components/listings/price-check-card";
 import { priceStudy } from "@/lib/listings/comparables";
 import { listDealsFor } from "@/lib/deals/data";
+import { CopyBookingLink } from "@/components/booking/copy-booking-link";
+import { myBookingLink } from "@/lib/booking/data";
 import { archivePropertyAction, restorePropertyAction } from "../actions";
 import { FormSubmit } from "@/components/ui/form-submit";
 
@@ -60,6 +62,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
     priceStudy(user, id),
     portalExportOf(user, id),
   ]);
+  const booking = await myBookingLink(user).catch(() => null);
   if (!property) notFound();
   const draftMatches = property.status === "draft" ? (await matchesForProperty(user, id, { preview: true })).length : 0;
 
@@ -74,6 +77,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
       {team && <ShareToChat kind="property" id={property.id} title={property.title} />}
       <MoreActions>
+        {booking?.active && property.status === "active" && <CopyBookingLink token={booking.token} propertyId={property.id} />}
         <Link href={`/deals/new?property=${property.id}`} className={buttonClasses("secondary", "md", "w-full justify-start border-transparent shadow-none")}>
           <Handshake /> Ügylet indítása
         </Link>

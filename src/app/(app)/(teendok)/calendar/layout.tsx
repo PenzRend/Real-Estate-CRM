@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/ui/page";
 import { getCurrentUser } from "@/lib/auth";
 import { listSubscriptions } from "@/lib/calendar/data";
 import { listMailboxes } from "@/lib/mail/sync";
+import { BookingLinkDialog } from "@/components/booking/booking-link-dialog";
+import { DEFAULT_BOOKING, myBookingLink } from "@/lib/booking/data";
 
 /** "Naptárak": the connections popup, with a dot when a calendar needs attention. */
 async function Connections() {
@@ -20,12 +22,26 @@ async function Connections() {
   );
 }
 
+/** "Foglalási link": the agent's own booking page for clients. */
+async function BookingLinkButton() {
+  const link = await myBookingLink(await getCurrentUser()).catch(() => null);
+  return <BookingLinkDialog link={link} defaults={DEFAULT_BOOKING} />;
+}
+
 /** What stays while the calendar pages through months and weeks: the header and the toolbar. Only the grid (page.tsx) loads. */
 export default function CalendarLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition>
       <div data-wide className="flex flex-col gap-6">
-        <PageHeader title="Naptár" description="Megtekintések, feladatok és a saját naptáraid egy helyen." />
+        <PageHeader
+          title="Naptár"
+          description="Megtekintések, feladatok és a saját naptáraid egy helyen."
+          actions={
+            <Suspense fallback={<div className="h-9 w-36 shimmer rounded-full bg-surface" />}>
+              <BookingLinkButton />
+            </Suspense>
+          }
+        />
         <Suspense fallback={<div className="h-[42px] shimmer rounded-xl bg-surface" />}>
           <CalendarToolbar
             connections={

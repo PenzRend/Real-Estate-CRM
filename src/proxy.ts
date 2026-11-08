@@ -3,12 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
 // Pages reachable without a session ("/" is the landing page; matched exactly;
-// "/l/…" are listing pages shared with clients). Everything else requires sign-in.
+// "/l/…" are listing pages shared with clients, "/b/…" an agent's viewing booking page). Everything else requires sign-in.
 // "/invite/…" is a team invitation; it works signed in or out. "/api/calendar/…"
 // is a calendar subscription, read by calendar apps that carry no session.
 // "/api/cron" is the server's scheduler (it checks its own secret); "/sw.js"
 // and the manifest make Flavio installable as an app with notifications.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/invite", "/api/calendar", "/api/feed", "/api/calls", "/adatvedelem", "/api/health", "/api/cron", "/sw.js", "/manifest.webmanifest", "/app-icon", "/apple-icon", "/v"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/auth", "/l", "/b", "/invite", "/api/calendar", "/api/feed", "/api/calls", "/adatvedelem", "/api/health", "/api/cron", "/sw.js", "/manifest.webmanifest", "/app-icon", "/apple-icon", "/v"];
 // Signed-in users have no reason to see these.
 const GUEST_ONLY_PATHS = ["/", "/login", "/signup", "/forgot-password"];
 
