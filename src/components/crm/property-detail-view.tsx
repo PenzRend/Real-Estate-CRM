@@ -5,6 +5,7 @@ import { Badge, PropertyStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
+import { RecordTabs } from "@/components/ui/record-tabs";
 import type { PropertyDetail } from "@/lib/db/properties";
 import { extrasForDisplay } from "@/lib/properties/extras";
 import { BookViewingButton } from "@/components/viewings/viewings-card";
@@ -51,6 +52,8 @@ export function PropertyDetailView({
   documents,
   priceCheck,
   descriptionAction,
+  mediaCount,
+  tab,
 }: {
   property: PropertyDetail;
   /** Price per m² against comparable properties. */
@@ -70,11 +73,14 @@ export function PropertyDetailView({
   media?: ReactNode;
   /** Booked and past viewings card. */
   viewings?: ReactNode;
+  /** The photo count, for the "Fotók" tab. */
+  mediaCount?: number;
+  /** The tab to open (?tab=…). */
+  tab?: string | null;
 }) {
   const location = [p.postal_code, p.city, p.district].filter(Boolean).join(" ");
   const videoLinks = Array.isArray(p.features?.video_links) ? p.features.video_links.filter((v) => typeof v === "string" && v.startsWith("https://")) : [];
-  const pricePerSqm =
-    p.price != null && p.area_sqm ? formatPrice(Math.round(p.price / p.area_sqm), p.currency) + " / m²" : null;
+  const pricePerSqm = p.price != null && p.area_sqm ? formatPrice(Math.round(p.price / p.area_sqm), p.currency) + " / m²" : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -88,7 +94,7 @@ export function PropertyDetailView({
         <Link href="/properties" className="inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-ink">
           <ChevronLeft className="size-4" /> Ingatlanok
         </Link>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               {p.archived_at ? <PropertyStatusBadge status={p.status} /> : <PropertyStatusPicker id={p.id} status={p.status} />}
@@ -123,165 +129,211 @@ export function PropertyDetailView({
               key={s.label}
               className={`min-w-0 p-4 sm:p-5 ${i % 2 === 1 ? "border-l border-border" : ""} ${i >= 2 ? "border-t border-border lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}
             >
-              <div className="text-[15px] leading-tight font-medium tracking-[-0.03em] text-ink tabular-nums min-[360px]:text-[17px] sm:text-[26px]">{s.value}</div>
+              <div className="text-[15px] leading-tight font-medium tracking-[-0.03em] text-ink tabular-nums min-[360px]:text-[17px] sm:text-[26px]">
+                {s.value}
+              </div>
               <div className="mt-2 text-sm text-muted">{s.label}</div>
             </div>
           ))}
         </Panel>
       </header>
 
-      {media}
+      <RecordTabs
+        initial={tab}
+        tabs={[
+          {
+            id: "attekintes",
+            label: "Áttekintés",
+            content: (
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                <div className="flex flex-col gap-6 xl:col-span-2">
+                  {deals}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="flex flex-col gap-6 xl:col-span-2">
-          {deals}
+                  {viewings}
 
-          {documents}
+                  {matches}
 
-          {viewings}
-
-          {matches}
-
-          <Card>
-            <CardHeader title="Leírás" action={descriptionAction} />
-            {p.description ? (
-              <p className="px-5 py-4 text-[15px] leading-relaxed whitespace-pre-line text-text">{p.description}</p>
-            ) : (
-              <p className="px-5 py-4 text-sm text-muted">Még nincs leírás.</p>
-            )}
-            {(p.source_url || videoLinks.length > 0) && (
-              <div className="flex flex-col gap-1.5 border-t border-border px-5 py-3 text-sm">
-                {videoLinks.map((v) => (
-                  <a key={v} href={v} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 font-medium text-ink hover:text-accent">
-                    <PlayCircle className="size-4 text-muted" /> {new URL(v).hostname.includes("matterport") || new URL(v).hostname.includes("kuula") ? "Virtuális séta" : "Videó"}: {new URL(v).hostname.replace(/^www\./, "")}
-                    <ExternalLink className="size-3.5 text-muted" />
-                  </a>
-                ))}
-                {p.source_url && (
-                  <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 text-muted hover:text-ink">
-                    Importálva innen: {p.source_url.replace(/^https:\/\//, "")} <ExternalLink className="size-3.5" />
-                  </a>
-                )}
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader title="Előzmények" count={p.interactions.length} />
-            {p.interactions.length ? (
-              <ul className="divide-y divide-border">
-                {p.interactions.map((i) => {
-                  const Icon = interactionIcons[i.type];
-                  return (
-                    <li key={i.id} className="flex gap-3 px-5 py-4">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-muted">
-                        <Icon className="size-4" strokeWidth={1.75} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                          <span className="font-medium text-ink">{interactionTypeLabels[i.type]}</span>
-                          {i.client && (
-                            <Link href={`/clients/${i.client.id}`} className="text-accent hover:underline">{i.client.name}</Link>
-                          )}
-                          <span className="text-xs text-muted">{formatDateTime(i.occurredAt)}</span>
-                        </p>
-                        {i.summary && <p className="mt-1 text-sm text-text">{i.summary}</p>}
-                        {i.outcome && <p className="mt-1 text-xs text-muted">Eredmény: {i.outcome}</p>}
+                  <Card>
+                    <CardHeader title="Leírás" action={descriptionAction} />
+                    {p.description ? (
+                      <p className="px-5 py-4 text-[15px] leading-relaxed whitespace-pre-line text-text">{p.description}</p>
+                    ) : (
+                      <p className="px-5 py-4 text-sm text-muted">Még nincs leírás.</p>
+                    )}
+                    {(p.source_url || videoLinks.length > 0) && (
+                      <div className="flex flex-col gap-1.5 border-t border-border px-5 py-3 text-sm">
+                        {videoLinks.map((v) => (
+                          <a
+                            key={v}
+                            href={v}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex w-fit items-center gap-1.5 font-medium text-ink hover:text-accent"
+                          >
+                            <PlayCircle className="size-4 text-muted" />{" "}
+                            {new URL(v).hostname.includes("matterport") || new URL(v).hostname.includes("kuula") ? "Virtuális séta" : "Videó"}:{" "}
+                            {new URL(v).hostname.replace(/^www\./, "")}
+                            <ExternalLink className="size-3.5 text-muted" />
+                          </a>
+                        ))}
+                        {p.source_url && (
+                          <a
+                            href={p.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex w-fit items-center gap-1.5 text-muted hover:text-ink"
+                          >
+                            Importálva innen: {p.source_url.replace(/^https:\/\//, "")} <ExternalLink className="size-3.5" />
+                          </a>
+                        )}
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EmptyState icon={Eye} title="Még nincs rögzített előzmény" />
-            )}
-          </Card>
-        </div>
+                    )}
+                  </Card>
+                </div>
 
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader title="Tulajdonos" />
-            {p.owner ? (
-              <Link href={`/clients/${p.owner.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-surface">
-                <span className="grid size-9 place-items-center rounded-full bg-surface-strong text-muted">
-                  <UserRound className="size-4" />
-                </span>
-                <span className="text-sm font-medium text-ink">{p.owner.name}</span>
-              </Link>
-            ) : (
-              <p className="px-5 py-4 text-sm text-muted">Nincs megadva. A szerkesztésnél választhatsz az ügyfeleid közül.</p>
-            )}
-          </Card>
+                <div className="flex flex-col gap-6">
+                  <Card>
+                    <CardHeader title="Tulajdonos" />
+                    {p.owner ? (
+                      <Link href={`/clients/${p.owner.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-surface">
+                        <span className="grid size-9 place-items-center rounded-full bg-surface-strong text-muted">
+                          <UserRound className="size-4" />
+                        </span>
+                        <span className="text-sm font-medium text-ink">{p.owner.name}</span>
+                      </Link>
+                    ) : (
+                      <p className="px-5 py-4 text-sm text-muted">Nincs megadva. A szerkesztésnél választhatsz az ügyfeleid közül.</p>
+                    )}
+                  </Card>
 
-          {priceCheck}
+                  <Card>
+                    <CardHeader title="Feladatok" count={p.tasks.length} />
+                    {p.tasks.length ? (
+                      <ul className="divide-y divide-border">
+                        {p.tasks.map((t) => (
+                          <TaskRow key={t.id} task={t} />
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="px-5 py-4 text-sm text-muted">Nincs nyitott feladat.</p>
+                    )}
+                  </Card>
 
-          {sellerReport}
+                  {p.internal_notes && (
+                    <Card>
+                      <CardHeader title="Belső megjegyzés" />
+                      <p className="px-5 py-4 text-sm whitespace-pre-line text-text">{p.internal_notes}</p>
+                    </Card>
+                  )}
 
-          <Card>
-            <CardHeader title="Részletek" />
-            <dl className="divide-y divide-border px-5 py-1">
-              <Detail label="Cím">{p.address}</Detail>
-              <Detail label="Emelet">{p.floor}</Detail>
-              <Detail label="Hálószobák">{p.bedroom_count != null ? formatNumber(p.bedroom_count) : null}</Detail>
-              <Detail label="Fürdőszobák">{p.bathroom_count != null ? formatNumber(p.bathroom_count) : null}</Detail>
-              <Detail label="Épület">{p.building_type}</Detail>
-              <Detail label="Állapot">{p.condition}</Detail>
-              <Detail label="Energetika">{p.energy_rating}</Detail>
-              <Detail label="Forrás">{p.listing_source}</Detail>
-              {extrasForDisplay(p.features).map((x) => (
-                <Detail key={x.label} label={x.label}>
-                  {x.value}
-                </Detail>
-              ))}
-            </dl>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-5 py-4">
-              <Feature label="Erkély / terasz" value={p.has_balcony} />
-              <Feature label="Kert" value={p.has_garden} />
-              <Feature label="Parkolás" value={p.has_parking} />
-            </div>
-          </Card>
+                  <p className="px-1 text-xs text-subtle">
+                    Felvéve: {formatDate(p.created_at)} · Módosítva: {formatDate(p.updated_at)}
+                  </p>
+                </div>
+              </div>
+            ),
+          },
+          { id: "fotok", label: "Fotók", count: mediaCount, content: media },
+          { id: "papirok", label: "Papírok", content: documents },
+          {
+            id: "reszletek",
+            label: "Részletek",
+            content: (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="flex flex-col gap-6">
+                  <Card>
+                    <CardHeader title="Részletek" />
+                    <dl className="divide-y divide-border px-5 py-1">
+                      <Detail label="Cím">{p.address}</Detail>
+                      <Detail label="Emelet">{p.floor}</Detail>
+                      <Detail label="Hálószobák">{p.bedroom_count != null ? formatNumber(p.bedroom_count) : null}</Detail>
+                      <Detail label="Fürdőszobák">{p.bathroom_count != null ? formatNumber(p.bathroom_count) : null}</Detail>
+                      <Detail label="Épület">{p.building_type}</Detail>
+                      <Detail label="Állapot">{p.condition}</Detail>
+                      <Detail label="Energetika">{p.energy_rating}</Detail>
+                      <Detail label="Forrás">{p.listing_source}</Detail>
+                      {extrasForDisplay(p.features).map((x) => (
+                        <Detail key={x.label} label={x.label}>
+                          {x.value}
+                        </Detail>
+                      ))}
+                    </dl>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-5 py-4">
+                      <Feature label="Erkély / terasz" value={p.has_balcony} />
+                      <Feature label="Kert" value={p.has_garden} />
+                      <Feature label="Parkolás" value={p.has_parking} />
+                    </div>
+                  </Card>
+                </div>
+                <div className="flex flex-col gap-6">
+                  {priceCheck}
 
-          <Card>
-            <CardHeader title="Érdeklődő ügyfelek" count={p.relatedClients.length} />
-            {p.relatedClients.length ? (
-              <ul className="divide-y divide-border">
-                {p.relatedClients.map((c) => (
-                  <li key={c.id}>
-                    <Link href={`/clients/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-surface">
-                      <span className="font-medium text-ink">{c.name}</span>
-                      <Badge>{relationLabels[c.relation] ?? c.relation}</Badge>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-5 py-4 text-sm text-muted">Még nincs érdeklődő ügyfél.</p>
-            )}
-          </Card>
+                  {sellerReport}
 
-          <Card>
-            <CardHeader title="Feladatok" count={p.tasks.length} />
-            {p.tasks.length ? (
-              <ul className="divide-y divide-border">
-                {p.tasks.map((t) => <TaskRow key={t.id} task={t} />)}
-              </ul>
-            ) : (
-              <p className="px-5 py-4 text-sm text-muted">Nincs nyitott feladat.</p>
-            )}
-          </Card>
-
-          {p.internal_notes && (
-            <Card>
-              <CardHeader title="Belső megjegyzés" />
-              <p className="px-5 py-4 text-sm whitespace-pre-line text-text">{p.internal_notes}</p>
-            </Card>
-          )}
-
-          <p className="px-1 text-xs text-subtle">
-            Felvéve: {formatDate(p.created_at)} · Módosítva: {formatDate(p.updated_at)}
-          </p>
-        </div>
-      </div>
+                  <Card>
+                    <CardHeader title="Érdeklődő ügyfelek" count={p.relatedClients.length} />
+                    {p.relatedClients.length ? (
+                      <ul className="divide-y divide-border">
+                        {p.relatedClients.map((c) => (
+                          <li key={c.id}>
+                            <Link href={`/clients/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-surface">
+                              <span className="font-medium text-ink">{c.name}</span>
+                              <Badge>{relationLabels[c.relation] ?? c.relation}</Badge>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="px-5 py-4 text-sm text-muted">Még nincs érdeklődő ügyfél.</p>
+                    )}
+                  </Card>
+                </div>
+              </div>
+            ),
+          },
+          {
+            id: "elozmenyek",
+            label: "Előzmények",
+            count: p.interactions.length,
+            content: (
+              <>
+                <Card>
+                  <CardHeader title="Előzmények" count={p.interactions.length} />
+                  {p.interactions.length ? (
+                    <ul className="divide-y divide-border">
+                      {p.interactions.map((i) => {
+                        const Icon = interactionIcons[i.type];
+                        return (
+                          <li key={i.id} className="flex gap-3 px-5 py-4">
+                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-muted">
+                              <Icon className="size-4" strokeWidth={1.75} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                                <span className="font-medium text-ink">{interactionTypeLabels[i.type]}</span>
+                                {i.client && (
+                                  <Link href={`/clients/${i.client.id}`} className="text-accent hover:underline">
+                                    {i.client.name}
+                                  </Link>
+                                )}
+                                <span className="text-xs text-muted">{formatDateTime(i.occurredAt)}</span>
+                              </p>
+                              {i.summary && <p className="mt-1 text-sm text-text">{i.summary}</p>}
+                              {i.outcome && <p className="mt-1 text-xs text-muted">Eredmény: {i.outcome}</p>}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <EmptyState icon={Eye} title="Még nincs rögzített előzmény" />
+                  )}
+                </Card>
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

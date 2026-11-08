@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowRight, Building2, CheckSquare, CornerDownLeft, Handshake, Loader2, Mail, Plus, Search, UserRound } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, CheckSquare, CornerDownLeft, FileSignature, Handshake, Loader2, Mail, Plus, Search, Settings, Sparkles, UserRound, Wand2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { globalSearchAction } from "@/app/(app)/search-actions";
 import type { SearchHit } from "@/lib/search/global";
 import { cn } from "@/lib/cn";
-import { navItems } from "./nav-items";
+import { navItems, teamNavItems } from "./nav-items";
 
 type Item = { key: string; group: string; title: string; detail: string | null; href: string; icon: typeof Search };
 
@@ -26,6 +26,17 @@ const actions: { title: string; href: string; words: string }[] = [
   { title: "Új feladat", href: "/tasks?new=1", words: "uj feladat teendo" },
   { title: "Rögzítés (hívás, találkozó)", href: "/interactions/new", words: "rogzites hivas jegyzet diktalas" },
   { title: "Naptárak kezelése", href: "/settings/calendars", words: "naptar icloud google outlook" },
+];
+
+// Screens behind a menu item's tabs or the profile, still found by name.
+const moreScreens = [
+  { href: "/calendar", label: "Naptár", icon: CalendarDays },
+  { href: "/contracts", label: "Szerződések", icon: FileSignature },
+  { href: "/documents/templates", label: "Dokumentumkészítő", icon: Wand2 },
+  { href: "/inbox/automation", label: "Automatikus levelek", icon: Zap },
+  { href: "/assistant", label: "AI-asszisztens", icon: Sparkles },
+  { href: "/settings", label: "Beállítások", icon: Settings },
+  ...teamNavItems,
 ];
 
 const plain = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -93,8 +104,8 @@ export function CommandPalette() {
 
   const items: Item[] = useMemo(() => {
     const q = plain(query.trim());
-    const screens = navItems
-      .filter((n) => !q || plain(n.label).includes(q))
+    const screens = [...navItems, ...moreScreens]
+      .filter((n) => (q ? plain(n.label).includes(q) : navItems.includes(n as (typeof navItems)[number])))
       .map((n) => ({ key: `nav:${n.href}`, group: "Oldalak", title: n.label, detail: null, href: n.href, icon: n.icon }));
     const quick = actions
       .filter((a) => !q || plain(a.title).includes(q) || a.words.includes(q))

@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react";
+import { SectionSwitch, TODO_SECTIONS } from "@/components/ui/section-switch";
 import { NewTaskForm, TasksPageForm } from "@/components/crm/new-task-form";
 import { PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
@@ -16,6 +17,7 @@ async function TaskForm() {
 export default function TasksLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition className="flex flex-col gap-6">
+      <SectionSwitch items={TODO_SECTIONS} />
       <PageHeader title="Feladatok" description="Visszahívások és utánkövetések, ügyfelekhez és ingatlanokhoz kötve." />
       {/* The form itself, inert and without clients, while they load: same size, so nothing below moves. */}
       <Suspense

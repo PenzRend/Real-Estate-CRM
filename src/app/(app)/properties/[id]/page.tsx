@@ -1,7 +1,8 @@
 import { ShareToChat } from "@/components/chat/share-to-chat";
 import { ContractsCard } from "@/components/contracts/contracts-card";
 import { LinkedFilesCard } from "@/components/office-docs/linked-files-card";
-import { Archive, ArchiveRestore } from "lucide-react";
+import { Archive, ArchiveRestore, Handshake } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PropertyDetailView } from "@/components/crm/property-detail-view";
@@ -14,6 +15,7 @@ import { MoreActions } from "@/components/ui/more-actions";
 import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
+import { hasTeam } from "@/lib/team/has-team";
 import { recordTitle } from "@/lib/db/titles";
 import { matchesForProperty } from "@/lib/db/matches";
 import { listMedia } from "@/lib/db/media";
@@ -43,6 +45,7 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   // Just created or imported: the matching buyers are offered it straight away.
   const justAdded = query.new === "1";
   const user = await getCurrentUser();
+  const team = await hasTeam(user);
   const [property, matches, media, share, contact, viewings, deals, target, reports, documents, study, onPortals] = await Promise.all([
     getPropertyDetail(user, id),
     matchesForProperty(user, id),
@@ -69,8 +72,11 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
   ) : (
     <>
       <ShareButton propertyId={property.id} share={share} defaults={contact} />
-      <ShareToChat kind="property" id={property.id} title={property.title} />
+      {team && <ShareToChat kind="property" id={property.id} title={property.title} />}
       <MoreActions>
+        <Link href={`/deals/new?property=${property.id}`} className={buttonClasses("secondary", "md", "w-full justify-start border-transparent shadow-none")}>
+          <Handshake /> Ügylet indítása
+        </Link>
         <PortalToggle propertyId={property.id} on={onPortals} listed={["active", "reserved", "under_negotiation"].includes(property.status)} />
         <UndoableButton action={archivePropertyAction.bind(null, property.id)} undo={restorePropertyAction.bind(null, property.id)} done="Az ingatlan archiválva – kikerült a listákból, minden adata megmaradt.">
           <Archive /> Archiválás
@@ -84,9 +90,8 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
       property={property}
       actions={actions}
       matches={property.archived_at ? null : <ClientMatchesCard propertyId={property.id} matches={matches} active={property.status === "active"} justAdded={justAdded} draftMatches={draftMatches} />}
-      viewings={
-        <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="Még nem volt foglalt megtekintés ehhez az ingatlanhoz." />
-      }
+      // Empty cards only add noise: "Megtekintés foglalása" is in the header, "Ügylet indítása" in the "…" menu.
+      viewings={viewings.length ? <ViewingsCard viewings={viewings} now={new Date().toISOString()} showProperty={false} empty="" /> : null}
       priceCheck={study ? <PriceCheckCard propertyId={property.id} study={study} /> : null}
       descriptionAction={property.archived_at ? null : <AdWriter propertyId={property.id} currentTitle={property.title} />}
       documents={
@@ -106,8 +111,10 @@ async function PropertyContent({ params, searchParams }: Pick<PageProps<"/proper
           />
         )
       }
-      deals={property.archived_at && !deals.length ? null : <DealsCard deals={deals} newHref={`/deals/new?property=${property.id}`} empty="Még nincs ügylet. Ha egy vevő ajánlatot tesz, indíts egyet." />}
+      deals={deals.length ? <DealsCard deals={deals} newHref={`/deals/new?property=${property.id}`} empty="" /> : null}
       media={<PropertyMedia propertyId={property.id} organizationId={user.organization.id} items={media} sourceUrl={property.source_url} />}
+      mediaCount={media.length}
+      tab={typeof query.tab === "string" ? query.tab : null}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react";
+import { SectionSwitch, TODO_SECTIONS } from "@/components/ui/section-switch";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { CalendarConnections } from "@/components/calendar/connections";
 import { ConnectionsDialog } from "@/components/calendar/connections-dialog";
@@ -25,7 +26,8 @@ export default function CalendarLayout({ children }: { children: ReactNode }) {
   return (
     <PageTransition>
       <div data-wide className="flex flex-col gap-6">
-        <PageHeader title="Naptár" description="Megtekintések, feladatok, a Google-, Apple- és Outlook-naptárad egy helyen – és a Flavio a többi naptáradban is." />
+        <SectionSwitch items={TODO_SECTIONS} />
+        <PageHeader title="Naptár" description="Megtekintések, feladatok és a saját naptáraid egy helyen." />
         <Suspense fallback={<div className="h-[42px] shimmer rounded-xl bg-surface" />}>
           <CalendarToolbar
             connections={

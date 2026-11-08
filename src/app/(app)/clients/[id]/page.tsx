@@ -12,6 +12,7 @@ import { MoreActions } from "@/components/ui/more-actions";
 import { UndoableButton } from "@/components/ui/undoable-button";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
+import { hasTeam } from "@/lib/team/has-team";
 import { recordTitle } from "@/lib/db/titles";
 import { getClientDetail } from "@/lib/db/clients";
 import { matchesForClient } from "@/lib/db/matches";
@@ -33,6 +34,7 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
 async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const user = await getCurrentUser();
+  const team = await hasTeam(user);
   const [detail, owned, matches, viewings, deals, identifications] = await Promise.all([
     getClientDetail(user, id),
     listOwnedProperties(user, id),
@@ -66,7 +68,7 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
   const actions = (
     <>
       {!client.archivedAt && <BookViewingButton clientId={client.id} variant="secondary" />}
-      {!client.archivedAt && <ShareToChat kind="client" id={client.id} title={client.fullName} />}
+      {!client.archivedAt && team && <ShareToChat kind="client" id={client.id} title={client.fullName} />}
       {client.archivedAt ? (
         archiveAction
       ) : (
@@ -94,6 +96,7 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       actions={actions}
       archivedAt={client.archivedAt}
       notice={notice}
+      tab={typeof query.tab === "string" ? query.tab : null}
       viewings={
         viewings.length || wantsListings ? (
           <ViewingsCard viewings={viewings} now={new Date().toISOString()} showClient={false} empty="Még nincs foglalt megtekintés." />

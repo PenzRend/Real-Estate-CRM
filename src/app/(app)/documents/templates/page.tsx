@@ -1,4 +1,5 @@
 import { FilePlus2, FileText, Zap } from "lucide-react";
+import { DOCUMENT_SECTIONS, SectionSwitch } from "@/components/ui/section-switch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -20,18 +21,14 @@ async function Templates() {
   const folderName = new Map(folders.map((f) => [f.id, f.name]));
   return (
     <div className="flex flex-col gap-6">
+      <SectionSwitch items={DOCUMENT_SECTIONS} />
       <PageHeader
         title="Dokumentumkészítő"
-        description="Saját sablonok, amelyekből Flavio megírja a dokumentumot: a mezőket az ügyfél, ingatlan vagy ügylet adataiból tölti ki, a bekezdéseket az AI fogalmazza. Akár magától is, amikor új ügyfél jön vagy ügylet indul."
+        description="Saját sablonok (levél, ajánlat, tájékoztató), amelyeket Flavio kitölt az ügyfél, ingatlan vagy ügylet adataival."
         actions={
-          <>
-            <Link href="/documents" className="text-sm text-muted hover:text-ink">
-              ← Dokumentumok
-            </Link>
-            <ButtonLink href="/documents/templates/new">
-              <FilePlus2 /> Új sablon
-            </ButtonLink>
-          </>
+          <ButtonLink href="/documents/templates/new">
+            <FilePlus2 /> Új sablon
+          </ButtonLink>
         }
       />
       {templates.length ? (

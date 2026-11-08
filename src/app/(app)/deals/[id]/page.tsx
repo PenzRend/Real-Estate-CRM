@@ -89,7 +89,7 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ShareToChat kind="deal" id={deal.id} title={deal.property.name} />
+            {members.length > 1 && <ShareToChat kind="deal" id={deal.id} title={deal.property.name} />}
             <DealOutcome dealId={deal.id} status={deal.status} />
           </div>
         </div>

@@ -23,6 +23,8 @@ import { TodayStrip } from "@/components/dashboard/today-strip";
 import { WeekCard } from "@/components/team/week-card";
 import { weekSummary } from "@/lib/team/week-summary";
 import { awaitingFeedback } from "@/lib/viewings/logic";
+import { FirstSteps } from "@/components/dashboard/first-steps";
+import { firstSteps } from "@/lib/onboarding/first-steps";
 
 export const metadata: Metadata = { title: "Áttekintés" };
 
@@ -46,12 +48,13 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
     );
   }
   const user = await getCurrentUser();
-  const [data, away, shown, viewings, deals] = await Promise.all([
+  const [data, away, shown, viewings, deals, steps] = await Promise.all([
     getDashboardData(user, now),
     getAwaySummary(user, now),
     notice(searchParams),
     listOpenViewings(user, now),
     dealSummary(user, now),
+    firstSteps(user).catch(() => []),
   ]);
   // The agent's own month (numbers and targets).
   const month = await officeStats(user, utcToZonedLocal(now.toISOString()).slice(0, 7)).catch(() => null);
@@ -69,6 +72,7 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
     <DashboardView
       now={now}
       data={data}
+      welcome={<FirstSteps steps={steps} />}
       strip={
         <TodayStrip
           c={{

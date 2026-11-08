@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Wand2 } from "lucide-react";
-import { ButtonLink } from "@/components/ui/button";
+import { DOCUMENT_SECTIONS, SectionSwitch } from "@/components/ui/section-switch";
 import { connection } from "next/server";
 import { DocumentLibrary } from "@/components/office-docs/document-library";
 import { PageHeader } from "@/components/ui/page";
@@ -17,15 +16,8 @@ async function Documents({ searchParams }: Pick<PageProps<"/documents">, "search
   const [documents, folders] = await Promise.all([listOfficeDocuments(user), listFolders(user)]);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Dokumentumok"
-        description="Az iroda közös fájljai: szerződésminták, sablonok, árlisták, marketinganyagok – egy helyen, mindenkinek, ügyfelekhez, ingatlanokhoz és ügyletekhez kapcsolva."
-        actions={
-          <ButtonLink href="/documents/templates" variant="secondary">
-            <Wand2 /> Dokumentumkészítő
-          </ButtonLink>
-        }
-      />
+      <SectionSwitch items={DOCUMENT_SECTIONS} />
+      <PageHeader title="Dokumentumok" description="Az iroda közös fájljai, ügyfelekhez, ingatlanokhoz és ügyletekhez kapcsolva." />
       <DocumentLibrary
         organizationId={user.organization.id}
         documents={documents}

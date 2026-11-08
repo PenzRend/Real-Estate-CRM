@@ -5,6 +5,12 @@ export type GuideEntry = { id: string; screen: string; href: string; how: string
 
 export const appGuide: GuideEntry[] = [
   {
+    id: "menu",
+    screen: "Menü",
+    href: "/dashboard",
+    how: "The side menu (on a phone the ☰ button at the top left): 'Mondd Flaviónak' (say what to do), 'Rögzítés' (log a call or meeting), 'Keresés', then Áttekintés, Ügyfelek, Ingatlanok, Ügyletek, Teendők, Levelek, Dokumentumok; in an office with colleagues also a 'Csapat' group with Üzenetek and Iroda. Teendők holds 'Feladatok' and 'Naptár' (switch at the top of the page); Dokumentumok holds 'Fájlok', 'Szerződések' and 'Dokumentumkészítő' (switch at the top). Beállítások opens from your name at the bottom of the menu; 'Visszajelzés' is just above it. The AI assistant is the round button in the bottom-right corner. A listing's page has tabs: 'Áttekintés' (deals, viewings, matching clients, description, owner, tasks), 'Fotók', 'Papírok' (document checklist, contracts, linked files), 'Részletek' (all data, 'Ár és piac', weekly owner report, interested clients), 'Előzmények'; 'Ügylet indítása' is in its '…' menu. A client's page has 'Áttekintés' and 'Papírok' (anti-money-laundering identification, contracts, linked files). New users see 'Első lépések' on Áttekintés until the first listing, client, mailbox and assistant request are done.",
+  },
+  {
     id: "dashboard",
     screen: "Áttekintés",
     href: "/dashboard",
@@ -22,14 +28,14 @@ export const appGuide: GuideEntry[] = [
     href: "/clients",
     how: "Client list with search and filters (status, follow-up, budget, location). Open a client for contact details, one-tap 'Hívás', 'SMS', 'WhatsApp', 'Viber' and 'E-mail' buttons (after a call, 'Hogy ment?' logs it in one tap: 'Megbeszéltük', 'Nem vette fel', 'Visszahív / később', 'Foglalt volt', with an optional note and follow-up task), 'Pénzmosás elleni azonosítás' (customer due diligence under the Pmt.: 'Azonosítás felvétele' opens a form for a private person – name, birth name, mother's name, birth place and date, nationality, address, ID document and its validity – or a company – registration data, representative, beneficial owners – plus the PEP declaration, purpose and source of funds; saved encrypted; 'Adatlap aláírásra' prints it for signing; deals warn when the buyer or seller is not identified; data is kept for 8 years, so such a client can't be permanently erased before that), 'Keresési igények', 'Előzmények', tasks, deals, viewings and 'Illő ingatlanok'. 'Szerkesztés' edits; 'Archiválás' archives (restorable).",
   },
-  { id: "client_new", screen: "Új ügyfél", href: "/clients/new", how: "Add a client by hand: 'Gyors műveletek' → 'Új ügyfél' in the menu. Usually faster: 'Rögzítés' creates the client from the conversation." },
+  { id: "client_new", screen: "Új ügyfél", href: "/clients/new", how: "Add a client by hand: 'Új ügyfél' on Ügyfelek (or Ctrl+K → 'Új ügyfél'). Usually faster: 'Rögzítés' creates the client from the conversation." },
   {
     id: "properties",
     screen: "Ingatlanok",
     href: "/properties",
     how: "Listing list with filters. A listing's page has the description, details, owner, 'Fotók és videók' ('Fotók kezelése' to upload), 'Illő ügyfelek' ('Ajánlás mindenkinek' writes a personal offer to every matching buyer not yet offered it – strong and good matches ticked – to review and send all at once; it opens by itself right after a listing is added or imported, and a draft listing says how many clients it would suit once made active), viewings, tasks, 'Megosztás ügyféllel' (shareable link for a client), deals ('Ügylet indítása'), 'AI hirdetésszöveg' next to 'Leírás' (writes the ad from the listing's data in 'Kiegyensúlyozott', 'Rövid' or 'Részletes' style, lists missing facts such as the energy rating, 'Mentés a leírásba' or 'Másolás a portálhoz'), 'Ár és piac' (price per m² against comparable listings and agreed deal prices in the office's data, with a realistic range; 'Értékbecslő lap a tulajdonosnak' opens a printable valuation sheet, 'Nyomtatás / PDF'), 'Dokumentumok' (checklist: tulajdoni lap, energetikai tanúsítvány and megbízási szerződés required, plus floor plan, condominium deed, utility bills, other; 'Feltöltés' for a PDF, photo or Word file, 'Nem kell' when not needed, 'Hiányzók bekérése a tulajdonostól' emails the owner a list and sets a reminder), 'Heti riport a tulajdonosnak' (switch on 'Hetente automatikusan, hétfő reggel' to email the owner every Monday about the week's viewings, anonymous buyer feedback and offers from the agent's own mailbox; 'Riport most' drafts one to edit and send now; needs an owner with an email address) and 'Szerkesztés'. The status can be changed on the listing page.",
   },
-  { id: "property_new", screen: "Új ingatlan", href: "/properties/new", how: "Add a listing by hand: 'Gyors műveletek' → 'Új ingatlan', or 'Ingatlan hozzáadása' on Ingatlanok." },
+  { id: "property_new", screen: "Új ingatlan", href: "/properties/new", how: "Add a listing by hand: 'Ingatlan hozzáadása' on Ingatlanok (or Ctrl+K → 'Új ingatlan')." },
   {
     id: "import",
     screen: "Importálás hirdetésből",
@@ -64,7 +70,7 @@ export const appGuide: GuideEntry[] = [
     id: "tasks",
     screen: "Feladatok",
     href: "/tasks",
-    how: "Tabs 'Mai', 'Lejárt', 'Közelgő', 'Kész'. Create one with 'Gyors műveletek' → 'Új feladat'; tick the circle to complete. Tasks also come from 'Rögzítés' automatically.",
+    how: "Tabs 'Mai', 'Lejárt', 'Közelgő', 'Kész'. Create one with the form at the top of Feladatok (Teendők in the menu), or ask the assistant ('írj fel egy feladatot holnapra…'); tick the circle to complete. Tasks also come from 'Rögzítés' automatically.",
   },
   {
     id: "inbox",
@@ -88,7 +94,7 @@ export const appGuide: GuideEntry[] = [
     id: "assistant",
     screen: "AI-asszisztens",
     href: "/assistant",
-    how: "This chat, also available from the round button in the bottom-right corner on every screen. Answers questions about the agent's own clients, listings, deals, tasks and emails, and where things are in Flavio, and does things when asked: creates a task, logs a call or note, sets a follow-up date, adds a client, drafts a contract for review, writes an email into 'Kimenő levelek' for approval, opens a page; a viewing booking or moving a deal to another stage waits for 'Jóváhagyás' in the chat. It never sends anything itself and cannot delete. 'Mondd Flaviónak' (above 'Rögzítés' in the menu, the sound-wave button on a phone) or the microphone in the chat: say what to do, it listens until you stop talking.",
+    how: "The round button in the bottom-right corner on every screen opens it (full page: the arrows in its corner). Answers questions about the agent's own clients, listings, deals, tasks and emails, and where things are in Flavio, and does things when asked: creates a task, logs a call or note, sets a follow-up date, adds a client, drafts a contract for review, writes an email into 'Kimenő levelek' for approval, opens a page; a viewing booking or moving a deal to another stage waits for 'Jóváhagyás' in the chat. It never sends anything itself and cannot delete. 'Mondd Flaviónak' (above 'Rögzítés' in the menu, the sound-wave button on a phone) or the microphone in the chat: say what to do, it listens until you stop talking.",
   },
   {
     id: "portals",
@@ -148,7 +154,7 @@ export const appGuide: GuideEntry[] = [
     id: "settings",
     screen: "Beállítások",
     href: "/settings",
-    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; the connected mailbox and calendar (Gmail or Outlook), the browser extension, and a calendar subscription link that puts viewings into Apple Calendar on iPhone/Mac, Outlook or other calendar apps ('Apple Naptár, Outlook és más naptárak' → 'Feliratkozási link létrehozása') ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Also reachable from the account menu.",
+    how: "Name and agency name ('Profil'); team ('Csapat'): workspace members, inviting a colleague by email ('Meghívás' creates a link to send with 'Küldés e-mailben' or 'Link másolása'; owner and admins only), pending invites ('Új link', 'Visszavonás'), removing a member, leaving a workspace, switching between workspaces; the connected mailbox and calendar (Gmail or Outlook), the browser extension, and a calendar subscription link that puts viewings into Apple Calendar on iPhone/Mac, Outlook or other calendar apps ('Apple Naptár, Outlook és más naptárak' → 'Feliratkozási link létrehozása') ('Kapcsolatok'); exporting all data to one Excel file ('Adatok' → 'Exportálás Excelbe', owner and admins only); password change ('Jelszó'). Opened from your name at the bottom of the menu.",
   },
   { id: "feedback", screen: "Visszajelzés", href: "/dashboard", how: "Report a bug or idea to the Flavio team: 'Visszajelzés' at the bottom of the side menu." },
 ];
