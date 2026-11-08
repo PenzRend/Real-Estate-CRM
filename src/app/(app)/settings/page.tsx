@@ -180,7 +180,9 @@ async function SettingsContent() {
         <TeamSection user={user} />
 
         <FormSection number="03" title="Kapcsolatok" description="Értesítések, levelek, naptár, hirdetésimport és -export.">
-          <NotificationsSetting publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+          <div id="ertesitesek" className="scroll-mt-24">
+            <NotificationsSetting publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+          </div>
           <Connection
             icon={Mail}
             title={mailboxes.length > 1 ? `${mailboxes.length} postafiók` : "E-mail (Gmail, Outlook, céges, iCloud…)"}

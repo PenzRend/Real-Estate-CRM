@@ -5,6 +5,7 @@ import { CommandPalette } from "@/components/app-shell/command-palette";
 import { Toaster } from "@/components/ui/toaster";
 import { NavigationProgress } from "@/components/app-shell/navigation-progress";
 import { SetupNotice } from "@/components/app-shell/setup-notice";
+import { InstallBanner } from "@/components/app-shell/install-banner";
 import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
 import { TeamGate } from "@/components/app-shell/team-gate";
 import { llmConfig } from "@/lib/ai/config";
@@ -35,6 +36,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         {/* Bottom padding keeps the last buttons clear of the assistant bubble; a page that needs the room (the calendar) marks itself data-wide. */}
         <main className="mx-auto w-full max-w-6xl flex-1 has-[[data-wide]]:max-w-[1600px] px-4 pt-8 pb-24 sm:px-8 sm:pt-10 sm:pb-24">
           <SetupNotice />
+          <InstallBanner />
           {children}
         </main>
       </div>
