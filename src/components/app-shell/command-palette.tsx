@@ -22,6 +22,7 @@ const actions: { title: string; href: string; words: string }[] = [
   { title: "Új ügyfél", href: "/clients/new", words: "uj ugyfel vevo hozzaadas" },
   { title: "Új ingatlan", href: "/properties/new", words: "uj ingatlan hirdetes felvetel" },
   { title: "Hirdetés importálása", href: "/properties/import", words: "import hirdetes link ingatlan.com" },
+  { title: "Ügyfelek importálása (Excel, névjegyek)", href: "/clients/import", words: "import ugyfel excel csv nevjegy telefon lista" },
   { title: "Új ügylet", href: "/deals/new", words: "uj ugylet ajanlat foglalo" },
   { title: "Új feladat", href: "/tasks?new=1", words: "uj feladat teendo" },
   { title: "Rögzítés (hívás, találkozó)", href: "/interactions/new", words: "rogzites hivas jegyzet diktalas" },

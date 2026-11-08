@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
 import { ClientFiltersFromUrl, ClientFiltersPlaceholder } from "@/components/crm/filter-bars";
 import { ButtonLink } from "@/components/ui/button";
@@ -13,9 +13,14 @@ export default function ClientsLayout({ children }: { children: ReactNode }) {
         title="Ügyfelek"
         description="Vevők, eladók, tulajdonosok és befektetők egy helyen."
         actions={
-          <ButtonLink href="/clients/new">
-            <Plus /> Új ügyfél
-          </ButtonLink>
+          <>
+            <ButtonLink href="/clients/import" variant="secondary">
+              <FileSpreadsheet /> Importálás
+            </ButtonLink>
+            <ButtonLink href="/clients/new">
+              <Plus /> Új ügyfél
+            </ButtonLink>
+          </>
         }
       />
       <Suspense fallback={<ClientFiltersPlaceholder />}>

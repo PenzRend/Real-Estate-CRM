@@ -23,11 +23,11 @@ const content: Record<FirstStep["id"], { title: string; why: string; icon: typeo
     alt: { label: "Kézzel", href: "/properties/new" },
   },
   client: {
-    title: "Add hozzá az első ügyfeledet",
-    why: "Hívás után nyomd meg a Rögzítést, és mondd el, mit beszéltetek – Flavio kitölti az adatlapot.",
+    title: "Hozd át az ügyfeleidet",
+    why: "Az Excel-listádat vagy a telefonod névjegyeit egy lépésben. Új ügyfélnél pedig elég a Rögzítés: mondd el, mit beszéltetek.",
     icon: UserPlus,
-    action: { label: "Rögzítés", href: "/interactions/new" },
-    alt: { label: "Űrlappal", href: "/clients/new" },
+    action: { label: "Importálás Excelből", href: "/clients/import" },
+    alt: { label: "Egyenként", href: "/clients/new" },
   },
   mailbox: {
     title: "Kösd össze a postafiókodat",
