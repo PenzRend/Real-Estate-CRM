@@ -18,12 +18,14 @@ export type EmailItem = {
   client: Ref | null;
   status: EmailStatus;
   interactionId: string | null;
+  /** The mailbox it arrived in: a reply goes out from the same one. */
+  mailboxId: string | null;
 };
 
 export type EmailDetail = EmailItem & { bodyText: string | null };
 
 const COLUMNS =
-  "id, direction, from_email, from_name, to_emails, subject, snippet, received_at, portal, client_id, status, interaction_id";
+  "id, direction, from_email, from_name, to_emails, subject, snippet, received_at, portal, client_id, status, interaction_id, mailbox_id";
 
 type Row = {
   id: string;
@@ -38,6 +40,7 @@ type Row = {
   client_id: string | null;
   status: EmailStatus;
   interaction_id: string | null;
+  mailbox_id?: string | null;
   body_text?: string | null;
 };
 
@@ -62,6 +65,7 @@ function toItem(r: Row, clients: Map<string, Ref>): EmailItem {
     client: r.client_id ? (clients.get(r.client_id) ?? null) : null,
     status: r.status,
     interactionId: r.interaction_id,
+    mailboxId: r.mailbox_id ?? null,
   };
 }
 

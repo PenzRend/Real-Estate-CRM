@@ -24,11 +24,12 @@ const AUTO_DRAFTS = 3;
 const FOLLOW_UP_DAYS = 2;
 
 type DraftState = { status: "idle" | "loading" | "error"; draft: AwayDraft | null; error?: string };
-type Sent = { at: string; logged: "client" | "property" | null };
+export type Sent = { at: string; logged: "client" | "property" | null };
 
 type Mailbox = AwaySummary["mailbox"];
 
-function DraftEditor({
+/** The reply draft to check, edit and send (also used on Levelek: "Válasz és feldolgozás"). */
+export function DraftEditor({
   emailId,
   draft,
   mailbox,
@@ -36,7 +37,10 @@ function DraftEditor({
   onRewrite,
   onSent,
   busy,
+  returnTo = "/dashboard",
 }: {
+  /** Where the one-time send permission comes back to. */
+  returnTo?: string;
   emailId: string;
   draft: AwayDraft;
   mailbox: Mailbox;
@@ -153,7 +157,7 @@ function DraftEditor({
           ) : (
             mailbox && (
               <a
-                href={permissionHref("send", "/dashboard", mailbox.id)}
+                href={permissionHref("send", returnTo, mailbox.id)}
                 title="Egyszeri engedély. A Flavio csak akkor küld, ha megnyomod a Küldést."
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
               >

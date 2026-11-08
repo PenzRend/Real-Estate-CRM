@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Building2, CalendarDays, CheckSquare, CornerDownLeft, FileSignature, Handshake, Loader2, Mail, Plus, Search, Settings, Sparkles, UserRound, Wand2, Zap } from "lucide-react";
+import { ArrowRight, Building2, CheckSquare, CornerDownLeft, Handshake, Loader2, Mail, Plus, Search, Settings, Sparkles, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { globalSearchAction } from "@/app/(app)/search-actions";
@@ -30,10 +30,7 @@ const actions: { title: string; href: string; words: string }[] = [
 
 // Screens behind a menu item's tabs or the profile, still found by name.
 const moreScreens = [
-  { href: "/calendar", label: "Naptár", icon: CalendarDays },
-  { href: "/contracts", label: "Szerződések", icon: FileSignature },
-  { href: "/documents/templates", label: "Dokumentumkészítő", icon: Wand2 },
-  { href: "/inbox/automation", label: "Automatikus levelek", icon: Zap },
+  ...navItems.flatMap((n) => (n.children ?? []).filter((c) => c.href !== n.href).map((c) => ({ href: c.href, label: c.label, icon: n.icon }))),
   { href: "/assistant", label: "AI-asszisztens", icon: Sparkles },
   { href: "/settings", label: "Beállítások", icon: Settings },
   ...teamNavItems,

@@ -70,7 +70,8 @@ export default function InboxLayout({ children }: { children: ReactNode }) {
         title="Levelek"
         description="Ügyfelekkel váltott levelek és portálos érdeklődések, feldolgozásra várva."
         actions={
-          <Link href="/inbox/automation" className={buttonClasses("secondary", "sm")}>
+          // On a computer the menu shows "Automatikus levelek" under Levelek.
+          <Link href="/inbox/automation" className={buttonClasses("secondary", "sm", "lg:hidden")}>
             <Zap /> Automatikus levelek
           </Link>
         }

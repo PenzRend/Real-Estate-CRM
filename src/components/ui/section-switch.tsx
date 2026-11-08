@@ -1,23 +1,20 @@
 "use client";
 
-import { CalendarDays, CheckSquare, FileSignature, FolderOpen, Wand2, type LucideIcon } from "lucide-react";
+import { FileSignature, FolderOpen, Wand2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { cn } from "@/lib/cn";
 
-// Screens that share one menu item switch between each other here. The bar
-// is drawn by the group's layout ((teendok), (dokumentumok)), so it stays in
-// place while only the page below changes; centred, so a wide page (the
-// calendar) doesn't move it.
+// On a phone, where the menu is folded away, the screens of one menu item
+// (Dokumentumok: files, contracts, the document creator) switch here; on a
+// computer the menu shows them as a branch under the item. Drawn by the
+// group's layout ((dokumentumok)), so it stays in place while the page below
+// changes.
 
 type Section = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
-const groups: Record<"teendok" | "dokumentumok", Section[]> = {
-  teendok: [
-    { href: "/tasks", label: "Feladatok", icon: CheckSquare },
-    { href: "/calendar", label: "Naptár", icon: CalendarDays },
-  ],
+const groups: Record<"dokumentumok", Section[]> = {
   dokumentumok: [
     { href: "/documents", label: "Fájlok", icon: FolderOpen, exact: true },
     { href: "/contracts", label: "Szerződések", icon: FileSignature },
@@ -27,7 +24,7 @@ const groups: Record<"teendok" | "dokumentumok", Section[]> = {
 
 function Bar({ group, pathname }: { group: keyof typeof groups; pathname: string | null }) {
   return (
-    <nav aria-label="Részek" className="mb-8 flex justify-center">
+    <nav aria-label="Részek" className="mb-8 flex justify-center lg:hidden">
       <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-surface-strong p-1.5 [scrollbar-width:none]">
         {groups[group].map(({ href, label, icon: Icon, exact }) => {
           const active = pathname != null && (pathname === href || (!exact && pathname.startsWith(`${href}/`)));

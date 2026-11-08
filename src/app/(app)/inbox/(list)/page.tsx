@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleAlert, EyeOff, Inbox, Sparkles, UserRound } from "lucide-react";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AllMailList } from "@/components/mail/all-mail";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,8 @@ import { browseMailbox } from "@/lib/mail/browse";
 import { isMailCryptoConfigured } from "@/lib/mail/crypto";
 import { inboxViews } from "@/lib/mail/inbox-views";
 import { listMailboxes, type Mailbox } from "@/lib/mail/sync";
+import type { AwayMailbox } from "@/lib/away/data";
+import { ReplyAndProcess } from "@/components/mail/reply-and-process";
 import { ignoreEmailAction, restoreEmailAction } from "../actions";
 
 export const metadata: Metadata = { title: "Levelek" };
@@ -33,11 +36,16 @@ const errors: Record<string, string> = {
   save: "A kapcsolat mentése nem sikerült. Próbáld újra.",
 };
 
-function EmailRow({ e }: { e: EmailItem }) {
+/** An incoming email can be answered and processed in one go; an outgoing one only processed. */
+function ReplyOrNot({ incoming, children, ...p }: { incoming: boolean; emailId: string; mailbox: AwayMailbox | null; hasClient: boolean; children: ReactNode }) {
+  return incoming ? <ReplyAndProcess {...p}>{children}</ReplyAndProcess> : <span className="flex shrink-0 flex-wrap items-center gap-1.5">{children}</span>;
+}
+
+function EmailRow({ e, mailbox }: { e: EmailItem; mailbox: AwayMailbox | null }) {
   const sender = e.direction === "outgoing" ? `→ ${e.toEmails.join(", ")}` : (e.fromName ?? e.fromEmail ?? "Ismeretlen");
   return (
-    <li className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-start sm:gap-4">
-      <div className="min-w-0 flex-1">
+    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-5 py-4">
+      <div className="min-w-0 flex-1 basis-64">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-medium text-ink">{sender}</p>
           {e.portal && <Badge tone="accent">{e.portal}</Badge>}
@@ -55,10 +63,10 @@ function EmailRow({ e }: { e: EmailItem }) {
         {e.snippet && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{e.snippet}</p>}
         <p className="mt-1 text-xs text-subtle">{formatDateTime(e.receivedAt)}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="contents">
         {e.status === "new" && (
-          <>
-            <Link href={`/interactions/new?email=${e.id}`} className={buttonClasses("primary", "xs")}>
+          <ReplyOrNot incoming={e.direction === "incoming"} emailId={e.id} mailbox={mailbox} hasClient={Boolean(e.client)}>
+            <Link href={`/interactions/new?email=${e.id}`} className={buttonClasses(e.direction === "incoming" ? "secondary" : "primary", "xs")}>
               <Sparkles /> Feldolgozás
             </Link>
             <UndoableButton
@@ -71,7 +79,7 @@ function EmailRow({ e }: { e: EmailItem }) {
             >
               <EyeOff /> Elrejtés
             </UndoableButton>
-          </>
+          </ReplyOrNot>
         )}
         {e.status === "processed" && e.client && (
           <Link href={`/clients/${e.client.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-success">
@@ -180,6 +188,10 @@ async function InboxList({ searchParams }: Pick<PageProps<"/inbox">, "searchPara
     );
   }
   const emails = await listEmails(user, view.value);
+  // For "Válasz és feldolgozás": each email's own mailbox (a reply goes out from it).
+  const sendable = new Map<string, AwayMailbox>(
+    mailboxes.map((m) => [m.id, { id: m.id, email: m.email_address, provider: m.provider, lastSyncedAt: m.last_synced_at, status: m.status, canSend: m.can_send && m.status !== "revoked" }]),
+  );
   return (
     <div className="flex flex-col gap-4">
       {notices}
@@ -187,7 +199,7 @@ async function InboxList({ searchParams }: Pick<PageProps<"/inbox">, "searchPara
         {emails.length ? (
           <ul className="divide-y divide-border">
             {emails.map((e) => (
-              <EmailRow key={e.id} e={e} />
+              <EmailRow key={e.id} e={e} mailbox={(e.mailboxId && sendable.get(e.mailboxId)) || sendable.values().next().value || null} />
             ))}
           </ul>
         ) : (
