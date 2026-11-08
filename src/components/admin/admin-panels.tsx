@@ -2,13 +2,13 @@
 
 import { Check, Copy, Mail, X } from "lucide-react";
 import { useState, useTransition } from "react";
-import { createSignupCodeAction, revokeSignupCodeAction, setAiLimitAction, type CodeResult } from "@/app/(app)/admin/actions";
+import { createSignupCodeAction, revokeSignupCodeAction, type CodeResult } from "@/app/(app)/admin/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
 import { actionFailed } from "@/lib/action-failed";
-import type { SignupCode, WorkspaceUsage } from "@/lib/admin";
-import { formatDate, formatNumber } from "@/lib/i18n/format";
+import type { SignupCode } from "@/lib/admin";
+import { formatDate } from "@/lib/i18n/format";
 
 const statusLabel: Record<SignupCode["status"], { label: string; tone: "success" | "neutral" | "warning" }> = {
   open: { label: "Szabad", tone: "success" },
@@ -147,67 +147,3 @@ function CodeRow({ c }: { c: SignupCode }) {
   );
 }
 
-export function AiLimits({ workspaces }: { workspaces: WorkspaceUsage[] }) {
-  if (!workspaces.length) return <p className="text-sm text-muted sm:col-span-2">Még nincs munkaterület.</p>;
-  return (
-    <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border sm:col-span-2">
-      {workspaces.map((w) => (
-        <LimitRow key={w.id} w={w} />
-      ))}
-    </ul>
-  );
-}
-
-function LimitRow({ w }: { w: WorkspaceUsage }) {
-  const [value, setValue] = useState(w.limit === null ? "" : String(w.limit));
-  const [busy, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
-  const saved = w.limit === null ? "" : String(w.limit);
-  return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-ink">
-          {w.name}
-          {w.members > 1 && <span className="font-normal text-muted"> · {w.members} fő</span>}
-        </p>
-        <p className="truncate text-xs text-muted">{w.ownerEmail ?? "—"}</p>
-      </div>
-      <div className="text-right text-sm tabular-nums">
-        <p className="text-ink">
-          {formatNumber(w.calls)} hívás{w.limit !== null && <span className="text-muted"> / {formatNumber(w.limit)}</span>}
-        </p>
-        <p className="text-xs text-subtle">{formatNumber(w.inputTokens + w.outputTokens)} token</p>
-      </div>
-      <form
-        className="flex items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const limit = value.trim() === "" ? null : Number(value);
-          start(async () => {
-            const r = await setAiLimitAction(w.id, limit).catch(actionFailed);
-            setMsg(r.ok ? "Mentve" : r.error);
-          });
-        }}
-      >
-        <Input
-          type="number"
-          min={0}
-          step={1}
-          inputMode="numeric"
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setMsg(null);
-          }}
-          placeholder="Alap"
-          aria-label={`${w.name} havi AI-kerete`}
-          className="w-24"
-        />
-        <Button type="submit" variant="secondary" size="sm" disabled={busy || value === saved}>
-          Mentés
-        </Button>
-      </form>
-      {msg && <p className="w-full text-right text-xs text-muted">{msg}</p>}
-    </li>
-  );
-}
