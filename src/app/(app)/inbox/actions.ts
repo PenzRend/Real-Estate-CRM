@@ -3,7 +3,9 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { insertTasks } from "@/lib/db/activity";
 import { setEmailStatus } from "@/lib/db/mail";
+import { createClient } from "@/lib/supabase/server";
 import { importMail, readMail } from "@/lib/mail/browse";
 import { connectImapMailbox, type ImapConnectState } from "@/lib/mail/connect-imap";
 import { disconnectMailbox, setPrimaryMailbox, syncMailboxes, type SyncResult } from "@/lib/mail/sync";
@@ -62,4 +64,18 @@ export async function importMailAction(mailboxId: string, ref: string): Promise<
   const r = await importMail(user, mailboxId, String(ref).slice(0, 2000));
   if (r.ok) redirect(`/interactions/new?email=${r.emailId}`);
   return r;
+}
+
+/** "Később válaszolok": a task to answer this email at the chosen time, linked to its client. The email stays in the list. */
+export async function replyLaterAction(emailId: string, at: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getCurrentUser();
+  if (!/^[0-9a-f-]{36}$/i.test(String(emailId)) || Number.isNaN(Date.parse(at))) return { ok: false, error: "Ismeretlen levél." };
+  const supabase = await createClient();
+  // RLS limits this to the user's own imported emails.
+  const { data: e } = await supabase.from("emails").select("subject, from_name, from_email, client_id").eq("id", emailId).eq("user_id", user.id).maybeSingle();
+  if (!e) return { ok: false, error: "Ismeretlen levél." };
+  const about = e.subject?.trim() || e.from_name || e.from_email || "levél";
+  await insertTasks(user, [{ title: `Válaszolni: ${about}`.slice(0, 200), due_at: new Date(at).toISOString(), client_id: e.client_id, property_id: null, source: "manual" }]);
+  refresh();
+  return { ok: true };
 }

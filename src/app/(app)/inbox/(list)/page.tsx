@@ -19,6 +19,7 @@ import { inboxViews } from "@/lib/mail/inbox-views";
 import { listMailboxes, type Mailbox } from "@/lib/mail/sync";
 import type { AwayMailbox } from "@/lib/away/data";
 import { ReplyAndProcess } from "@/components/mail/reply-and-process";
+import { ReplyLater } from "@/components/mail/reply-later";
 import { ignoreEmailAction, restoreEmailAction } from "../actions";
 
 export const metadata: Metadata = { title: "Levelek" };
@@ -79,6 +80,7 @@ function EmailRow({ e, mailbox }: { e: EmailItem; mailbox: AwayMailbox | null })
             >
               <EyeOff /> Elrejtés
             </UndoableButton>
+            {e.direction === "incoming" && <ReplyLater emailId={e.id} />}
           </ReplyOrNot>
         )}
         {e.status === "processed" && e.client && (
