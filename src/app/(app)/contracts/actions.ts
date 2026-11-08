@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { aiReview, approveDraft, createDraft, deleteDraft, getDraft, saveDraft, type Refs } from "@/lib/contracts/data";
 import { contractChecks } from "@/lib/contracts/checks";
-import { CONTRACT_KINDS, isContractKind, missingFields } from "@/lib/contracts/kinds";
+import { CONTRACT_KINDS, isContractKind, missingFields, type CustomField } from "@/lib/contracts/kinds";
 import { contractHtml } from "@/lib/contracts/render";
+import { resetOfficeTemplate, saveOfficeTemplate } from "@/lib/contracts/templates";
 
 const ref = (v: unknown) => (typeof v === "string" ? v : null);
 
@@ -23,8 +24,8 @@ export async function previewContractAction(id: string, body: string, extra: Rec
   if (!draft || !isContractKind(draft.kind)) return null;
   const values = { ...draft.values, ...Object.fromEntries(Object.entries(extra ?? {}).filter(([, v]) => typeof v === "string" && v.trim())) };
   return {
-    html: contractHtml(draft.kind, String(body).slice(0, 200_000), values),
-    missing: missingFields(draft.kind, values).map((f) => f.key),
+    html: contractHtml(draft.kind, String(body).slice(0, 200_000), values, draft.customFields),
+    missing: missingFields(draft.kind, values, String(body), draft.customFields).map((f) => f.key),
     checks: contractChecks(draft.kind, values),
     label: CONTRACT_KINDS[draft.kind].label,
   };
@@ -53,4 +54,29 @@ export async function deleteContractAction(id: string) {
   const user = await getCurrentUser();
   await deleteDraft(user, String(id));
   redirect("/contracts");
+}
+
+/** The template editor's preview: the text with every field shown as a marked label. Nothing is saved. */
+export async function previewContractTemplateAction(kind: string, body: string, customFields: CustomField[]) {
+  await getCurrentUser();
+  if (!isContractKind(kind)) return null;
+  return contractHtml(kind, String(body).slice(0, 200_000), {}, Array.isArray(customFields) ? customFields : []);
+}
+
+export async function saveContractTemplateAction(kind: string, input: { body: string; customFields: CustomField[]; sourceName: string | null }) {
+  const user = await getCurrentUser();
+  const r = await saveOfficeTemplate(user, String(kind), {
+    body: String(input?.body ?? ""),
+    customFields: Array.isArray(input?.customFields) ? input.customFields.map((c) => ({ key: String(c.key), label: String(c.label) })) : [],
+    sourceName: input?.sourceName ? String(input.sourceName) : null,
+  });
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function resetContractTemplateAction(kind: string) {
+  const user = await getCurrentUser();
+  const r = await resetOfficeTemplate(user, String(kind));
+  if (r.ok) refresh();
+  return r;
 }

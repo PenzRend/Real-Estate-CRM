@@ -56,8 +56,8 @@ describe("postChat", () => {
 });
 
 describe("shouldFallBack", () => {
-  it("is for quota and outages only", () => {
-    expect([429, 498, 500, 503].map(shouldFallBack)).toEqual([true, true, true, true]);
-    expect([200, 400, 401, 413].map(shouldFallBack)).toEqual([false, false, false, false]);
+  it("is for quota, outages and requests over the main provider's per-minute budget", () => {
+    expect([413, 429, 498, 500, 503].map(shouldFallBack)).toEqual([true, true, true, true, true]);
+    expect([200, 400, 401, 404].map(shouldFallBack)).toEqual([false, false, false, false]);
   });
 });

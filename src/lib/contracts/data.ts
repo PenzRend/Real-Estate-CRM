@@ -13,8 +13,9 @@ import { linkDocument } from "@/lib/office-docs/links";
 import { aiInstructions } from "@/lib/office-docs/template-render";
 import { db } from "@/lib/supabase/db";
 import { contractChecks, type Check } from "./checks";
-import { CONTRACT_KINDS, isContractKind, missingFields, type ContractField, type ContractKind } from "./kinds";
+import { CONTRACT_KINDS, fieldsFor, isContractKind, type ContractField, type ContractKind, type CustomField } from "./kinds";
 import { contractDocx, contractHtml, contractText } from "./render";
+import { officeTemplate } from "./templates";
 
 // Contract drafts: values gathered from the deal, listing and clients (with
 // the parties' details from their anti-money-laundering identification), the
@@ -219,7 +220,9 @@ export async function createDraft(user: CurrentUser, kind: string, refs: Refs, o
   if (!r.dealId && !r.propertyId && !r.clientId) return { ok: false, error: "Válassz ügyletet, ingatlant vagy ügyfelet." };
   const { values, context } = await gatherValues(user, kind, r);
   const memory = await remembered(user);
-  const body = await writeParagraphs(user, CONTRACT_KINDS[kind].body, { ...memory, ...values }, context);
+  // The office's own wording when it has one, Flavio's otherwise.
+  const own = await officeTemplate(user, kind);
+  const body = await writeParagraphs(user, own?.body ?? CONTRACT_KINDS[kind].body, { ...memory, ...values }, context);
   const supabase = await db();
   // A deal's draft also belongs to its listing and buyer, so it shows on their pages.
   let propertyId = r.propertyId;
@@ -265,6 +268,8 @@ export type DraftView = {
   /** What the agent typed (so the form shows what came from them). */
   extra: Record<string, string>;
   fields: ContractField[];
+  /** Labels of the fields the office's own text adds. */
+  customFields: CustomField[];
   missing: string[];
   checks: Check[];
   html: string;
@@ -288,6 +293,8 @@ export async function getDraft(user: CurrentUser, id: string): Promise<DraftView
   const { values: base } = await gatherValues(user, kind, { dealId: d.deal_id, propertyId: d.deal_id ? null : d.property_id, clientId: d.deal_id ? null : d.client_id });
   const extra = decryptExtra(d.extra_enc);
   const values = { ...base, ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v?.trim())) };
+  const customFields = (await officeTemplate(user, kind))?.customFields ?? [];
+  const fields = fieldsFor(kind, d.body, customFields);
   return {
     id: d.id,
     kind,
@@ -298,10 +305,11 @@ export async function getDraft(user: CurrentUser, id: string): Promise<DraftView
     body: d.body,
     values,
     extra,
-    fields: CONTRACT_KINDS[kind].fields,
-    missing: missingFields(kind, values).map((f) => f.key),
+    fields,
+    customFields,
+    missing: fields.filter((f) => f.required && !values[f.key]?.trim()).map((f) => f.key),
     checks: contractChecks(kind, values),
-    html: contractHtml(kind, d.body, values),
+    html: contractHtml(kind, d.body, values, customFields),
     note: CONTRACT_KINDS[kind].note ?? null,
     refs: { dealId: d.deal_id, propertyId: d.property_id, clientId: d.client_id },
     documentId: d.document_id,
@@ -344,7 +352,7 @@ export async function approveDraft(user: CurrentUser, id: string): Promise<{ ok:
   if (!draft) return { ok: false, error: "Ismeretlen tervezet." };
   if (draft.missing.length) return { ok: false, error: `Még hiányzik: ${draft.fields.filter((f) => draft.missing.includes(f.key)).map((f) => f.label).join(", ")}.` };
   if (draft.checks.some((c) => c.level === "error")) return { ok: false, error: "Előbb javítsd a pirossal jelölt hibát." };
-  const docx = contractDocx(draft.kind, draft.body, draft.values);
+  const docx = contractDocx(draft.kind, draft.body, draft.values, draft.customFields);
   const supabase = await db();
   const safe = draft.title
     .normalize("NFD")

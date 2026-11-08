@@ -98,7 +98,8 @@ export async function postWithRetry(url: string, init: RequestInit, maxWaitSecon
 type OpenAiCompatibleConfig = Extract<LlmConfig, { provider: "openai-compatible" }>;
 
 /** Out of quota (429; 498 is Groq's "over capacity") or down: worth trying the fallback provider. */
-export const shouldFallBack = (status: number) => status === 429 || status === 498 || status >= 500;
+// 413: the request is over the main provider's per-minute token budget (Groq's free tier), which a long document can be.
+export const shouldFallBack = (status: number) => status === 413 || status === 429 || status === 498 || status >= 500;
 
 /**
  * POST to /chat/completions. `body` gets the model's name, as provider-specific

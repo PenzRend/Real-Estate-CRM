@@ -29,7 +29,7 @@ export function fillTemplateText(body: string, values: Record<string, string>, a
       const text = ai?.[n++];
       return text ?? `[AI-bekezdés: ${instruction.trim()}]`;
     })
-    .replace(/\{([a-z_]+)\}/g, (_, key: string) => values[key] ?? "");
+    .replace(/\{([a-z0-9_]+)\}/g, (_, key: string) => values[key] ?? "");
 }
 
 function runs(line: string): Run[] {

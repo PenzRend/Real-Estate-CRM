@@ -348,6 +348,41 @@ export function kindsFor(from: "deal" | "property" | "client", opts: { rent?: bo
 }
 
 /** The fields still empty among the required ones. */
-export function missingFields(kind: ContractKind, values: Record<string, string>): ContractField[] {
-  return CONTRACT_KINDS[kind].fields.filter((f) => f.required && !values[f.key]?.trim());
+/** A field an office's own text adds (from the AI's reading of its contract, or typed by hand). */
+export type CustomField = { key: string; label: string };
+
+/** Every field any contract knows, for labelling the fields of an office's own text. */
+export const FIELD_CATALOG: ContractField[] = (() => {
+  const seen = new Map<string, ContractField>();
+  for (const k of CONTRACT_ORDER) for (const f of CONTRACT_KINDS[k].fields) if (!seen.has(f.key)) seen.set(f.key, { ...f, required: false });
+  return [...seen.values()];
+})();
+
+/** The {fields} a text uses ("vetelar_szoveg" counts as "vetelar"). */
+export function bodyKeys(body: string): string[] {
+  return [...new Set([...body.matchAll(/\{([a-z0-9_]+)\}/g)].map((m) => m[1].replace(/_szoveg$/, "")))];
+}
+
+const humanize = (key: string) => {
+  const s = key.replace(/_/g, " ").trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+/**
+ * The fields a draft asks for: the ones its text uses. The contract's own
+ * fields keep their label, group and "required"; a field from another
+ * contract is optional; a new one is labelled from the office's list.
+ */
+export function fieldsFor(kind: ContractKind, body: string, custom: CustomField[] = []): ContractField[] {
+  const used = bodyKeys(body);
+  const own = new Map(CONTRACT_KINDS[kind].fields.map((f) => [f.key, f]));
+  const known = new Map(FIELD_CATALOG.map((f) => [f.key, f]));
+  const labels = new Map(custom.map((c) => [c.key, c.label]));
+  const inOrder = CONTRACT_KINDS[kind].fields.filter((f) => used.includes(f.key));
+  const rest = used.filter((k) => !own.has(k)).map((key): ContractField => known.get(key) ?? { key, label: labels.get(key) || humanize(key), group: "Egyéb" });
+  return [...inOrder, ...rest];
+}
+
+export function missingFields(kind: ContractKind, values: Record<string, string>, body: string = CONTRACT_KINDS[kind].body, custom: CustomField[] = []): ContractField[] {
+  return fieldsFor(kind, body, custom).filter((f) => f.required && !values[f.key]?.trim());
 }

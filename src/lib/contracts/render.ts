@@ -1,5 +1,5 @@
 import { fillTemplateText, toBlocks, toDocx, toHtml } from "@/lib/office-docs/template-render";
-import { CONTRACT_KINDS, type ContractKind } from "./kinds";
+import { fieldsFor, type ContractKind, type CustomField } from "./kinds";
 import { amountWithWords } from "./words";
 
 // A contract's values and text: amounts get their words ("…, azaz … forint"),
@@ -31,11 +31,11 @@ export function withWords(values: Record<string, string>): Record<string, string
 }
 
 /** The text with values filled; empty fields as gaps to mark (preview) or dotted lines (final). */
-export function contractText(kind: ContractKind, body: string, values: Record<string, string>, mode: "preview" | "final") {
-  const labels = new Map(CONTRACT_KINDS[kind].fields.map((f) => [f.key, f.label]));
+export function contractText(kind: ContractKind, body: string, values: Record<string, string>, mode: "preview" | "final", custom: CustomField[] = []) {
+  const labels = new Map(fieldsFor(kind, body, custom).map((f) => [f.key, f.label]));
   const all = withWords(values);
   const filled: Record<string, string> = {};
-  for (const key of new Set([...body.matchAll(/\{([a-z_]+)\}/g)].map((m) => m[1]))) {
+  for (const key of new Set([...body.matchAll(/\{([a-z0-9_]+)\}/g)].map((m) => m[1]))) {
     const v = all[key]?.trim();
     const label = labels.get(key) ?? labels.get(key.replace(/_szoveg$/, "")) ?? key;
     filled[key] = v ? v : mode === "preview" ? `${MISSING}${label}⟧` : DOTS;
@@ -45,10 +45,10 @@ export function contractText(kind: ContractKind, body: string, values: Record<st
 }
 
 /** For the review screen: gaps become highlighted marks. */
-export function contractHtml(kind: ContractKind, body: string, values: Record<string, string>) {
-  return toHtml(toBlocks(contractText(kind, body, values, "preview"))).replace(/⟦hiányzik: ([^⟧]*)⟧/g, '<mark data-missing="true">$1</mark>');
+export function contractHtml(kind: ContractKind, body: string, values: Record<string, string>, custom: CustomField[] = []) {
+  return toHtml(toBlocks(contractText(kind, body, values, "preview", custom))).replace(/⟦hiányzik: ([^⟧]*)⟧/g, '<mark data-missing="true">$1</mark>');
 }
 
-export function contractDocx(kind: ContractKind, body: string, values: Record<string, string>) {
-  return toDocx(toBlocks(contractText(kind, body, values, "final")));
+export function contractDocx(kind: ContractKind, body: string, values: Record<string, string>, custom: CustomField[] = []) {
+  return toDocx(toBlocks(contractText(kind, body, values, "final", custom)));
 }
