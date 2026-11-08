@@ -3,8 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { runCronJob, CRON_JOBS, type CronJob } from "@/lib/cron/jobs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// Room for a slow mailbox check; within the limit of Vercel's free plan.
+export const maxDuration = 60;
+
 /**
- * Background jobs, called by the server's scheduler (see docs/DEPLOY.md):
+ * Background jobs, called by the server's scheduler (see docs/DEPLOY.md, or docs/DEPLOY-VERCEL.md):
  * `GET /api/cron?job=mail` every 2 minutes, `?job=daily` every morning,
  * with `Authorization: Bearer <CRON_SECRET>`.
  */
