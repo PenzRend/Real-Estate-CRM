@@ -176,7 +176,7 @@ function SearchButton({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function Sidebar({ account, team }: { account: ReactNode; team?: ReactNode }) {
+export function Sidebar({ account, team, plan }: { account: ReactNode; team?: ReactNode; plan?: ReactNode }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-border px-4 py-6 lg:flex">
       <div className="px-2">
@@ -190,6 +190,7 @@ export function Sidebar({ account, team }: { account: ReactNode; team?: ReactNod
         {team}
       </div>
       <div className="mt-auto flex flex-col gap-3">
+        {plan}
         <FeedbackButton />
         {account}
       </div>
@@ -197,7 +198,7 @@ export function Sidebar({ account, team }: { account: ReactNode; team?: ReactNod
   );
 }
 
-export function MobileNav({ account, team }: { account: ReactNode; team?: ReactNode }) {
+export function MobileNav({ account, team, plan }: { account: ReactNode; team?: ReactNode; plan?: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -256,6 +257,7 @@ export function MobileNav({ account, team }: { account: ReactNode; team?: ReactN
               <div onClick={(e) => (e.target as Element).closest("a") && setOpen(false)}>{team}</div>
             </div>
             <div className="mt-auto flex flex-col gap-3">
+              <div onClick={(e) => (e.target as Element).closest("a") && setOpen(false)}>{plan}</div>
               <FeedbackButton />
               {account}
             </div>

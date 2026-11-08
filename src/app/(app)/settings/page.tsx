@@ -245,7 +245,7 @@ async function SettingsContent() {
           ) : (
             <p className="text-sm text-muted sm:col-span-2">Az exportálást a munkaterület tulajdonosa vagy egy admin végezheti.</p>
           )}
-          <p className="text-sm text-muted sm:col-span-2">
+          <p id="ai-keret" className="scroll-mt-24 text-sm text-muted sm:col-span-2">
             AI-használat ebben a hónapban: <span className="font-medium text-ink tabular-nums">{ai.used}{ai.limit !== null && ` / ${ai.limit}`}</span> hívás
             {ai.limit !== null && " (a hónap elején újraindul)"}.
           </p>
