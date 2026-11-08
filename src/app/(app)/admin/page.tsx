@@ -18,10 +18,10 @@ import {
   listSignupCodes,
   listUsers,
   listWorkspaceUsage,
+  serviceKeyStatus,
 } from "@/lib/admin";
 import { defaultMonthlyLimit } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Pilot admin" };
 
@@ -74,12 +74,17 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
   if (!isPlatformAdmin(user)) notFound();
   const params = await searchParams;
   const tab = typeof params.tab === "string" && TABS.some((t) => t.value === params.tab) ? params.tab : TABS[0].value;
+  const key = await serviceKeyStatus();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Pilot admin" description="A pilot egésze: felhasználók, munkaterületek, AI-használat, rendszerállapot és meghívókódok." />
-      {!createAdminClient() && (
-        <p className="rounded-2xl border border-border bg-surface p-4 text-sm text-ink">A szerveren nincs beállítva a SUPABASE_SECRET_KEY, ezért az adatok nem látszanak.</p>
+      {key !== "ok" && (
+        <p role="alert" className="rounded-2xl bg-danger-soft p-4 text-sm text-danger">
+          {key === "missing"
+            ? "A szerveren nincs beállítva a SUPABASE_SECRET_KEY, ezért az adatok nem látszanak."
+            : "A Supabase nem fogadja el a SUPABASE_SECRET_KEY-t (hibás vagy törölt kulcs). Az adatok nem látszanak, és a háttérfolyamatok (automatikus levelek, emlékeztetők, értesítések) sem futnak. Hozz létre új secret kulcsot a Supabase-ben, és írd be a Vercelben, majd telepítsd újra."}
+        </p>
       )}
       <Suspense fallback={<ViewTabsPlaceholder label="Admin nézetek" items={TABS} />}>
         <ViewTabs param="tab" label="Admin nézetek" items={TABS} />

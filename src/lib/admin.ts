@@ -117,6 +117,19 @@ const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const part = () => Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
 export const newSignupCode = () => `${part()}-${part()}`;
 
+/**
+ * Whether the service key works: "missing" when unset, "invalid" when Supabase
+ * refuses it (a wrong or deleted key; background jobs fail the same way).
+ */
+export async function serviceKeyStatus(): Promise<"ok" | "missing" | "invalid"> {
+  const admin = createAdminClient();
+  if (!admin) return "missing";
+  const { error, status } = await admin.from("organizations").select("id", { head: true, count: "exact" });
+  if (!error) return "ok";
+  console.error("service key check failed", status, error.message);
+  return status === 401 || status === 403 ? "invalid" : "ok";
+}
+
 /** Profile emails by user id, for lists that name who did something. */
 async function emailsById(admin: NonNullable<ReturnType<typeof createAdminClient>>, ids: (string | null)[]) {
   const unique = [...new Set(ids.filter(Boolean))] as string[];
@@ -153,7 +166,7 @@ export async function listWorkspaceUsage(): Promise<WorkspaceUsage[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   const { data, error } = await admin.rpc("admin_workspaces", { p_since: monthStart() });
-  if (error) console.error("admin_workspaces failed", error.code);
+  if (error) console.error("admin_workspaces failed", error.code ?? error.message);
   type Row = {
     organization_id: string; name: string; is_personal: boolean; owner_email: string | null; members: number; created_at: string;
     last_activity_at: string | null; ai_monthly_limit: number | null; ai_calls: number; ai_tokens: number; clients: number;
@@ -187,7 +200,7 @@ export async function getOverview(): Promise<Overview | null> {
   const admin = createAdminClient();
   if (!admin) return null;
   const { data, error } = await admin.rpc("admin_overview", { p_since: monthStart() });
-  if (error) console.error("admin_overview failed", error.code);
+  if (error) console.error("admin_overview failed", error.code ?? error.message);
   return (data as Overview | null) ?? null;
 }
 
@@ -195,7 +208,7 @@ export async function getDaily(days = 30): Promise<DailyRow[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   const { data, error } = await admin.rpc("admin_daily", { p_days: days });
-  if (error) console.error("admin_daily failed", error.code);
+  if (error) console.error("admin_daily failed", error.code ?? error.message);
   return (data ?? []) as DailyRow[];
 }
 
@@ -204,7 +217,7 @@ export async function listUsers(): Promise<AdminUser[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   const { data, error } = await admin.rpc("admin_users", { p_since: monthStart() });
-  if (error) console.error("admin_users failed", error.code);
+  if (error) console.error("admin_users failed", error.code ?? error.message);
   type Row = {
     user_id: string; email: string; full_name: string | null; created_at: string; confirmed: boolean; last_sign_in_at: string | null;
     last_seen_at: string | null; workspaces: string | null; role: string | null; ai_calls: number; clients: number; properties: number;
@@ -237,7 +250,7 @@ export async function getAiBreakdown(): Promise<AiBreakdownRow[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   const { data, error } = await admin.rpc("admin_ai_breakdown", { p_since: monthStart() });
-  if (error) console.error("admin_ai_breakdown failed", error.code);
+  if (error) console.error("admin_ai_breakdown failed", error.code ?? error.message);
   type Row = { operation_type: string; model: string; status: string; calls: number; input_tokens: number; output_tokens: number };
   return ((data ?? []) as Row[]).map((r) => ({
     operation: r.operation_type,
@@ -253,7 +266,7 @@ export async function getSystemStatus(): Promise<SystemStatus | null> {
   const admin = createAdminClient();
   if (!admin) return null;
   const { data, error } = await admin.rpc("admin_system");
-  if (error) console.error("admin_system failed", error.code);
+  if (error) console.error("admin_system failed", error.code ?? error.message);
   if (!data) return null;
   type Raw = {
     db_bytes: number; storage_bytes: number; storage_files: number; last_mail_sync: string | null; reports_failed: number;
