@@ -57,8 +57,13 @@ export function LoginForm({ next, notice }: { next?: string; notice?: string }) 
   );
 }
 
-/** `next` and `email` come from an invite link: back to the invite after sign-up, with the invited address filled in. */
-export function SignupForm({ next, email }: { next?: string; email?: string }) {
+/**
+ * `next` and `email` come from a team invite link: back to the invite after
+ * sign-up, with the invited address filled in, and no code needed. `code` comes
+ * from a pilot invite link.
+ */
+export function SignupForm({ next, email, code }: { next?: string; email?: string; code?: string }) {
+  const invited = next?.startsWith("/invite/");
   const [state, action, pending] = useActionState<AuthFormState, FormData>(signUp, {});
   if (state.message) return <SentNotice message={state.message} />;
   return (
@@ -74,6 +79,22 @@ export function SignupForm({ next, email }: { next?: string; email?: string }) {
       <Field label="Jelszó" htmlFor="password" hint="Legalább 8 karakter.">
         <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} required />
       </Field>
+      {!invited && (
+        <Field label="Meghívókód" htmlFor="signup_code" hint="A Flavio most meghívásos. A kódot tőlünk kapod.">
+          <Input
+            id="signup_code"
+            name="signup_code"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            required
+            maxLength={20}
+            placeholder="ABCD-1234"
+            className="font-mono uppercase"
+            defaultValue={state.values?.signup_code ?? code}
+          />
+        </Field>
+      )}
       <Button type="submit" size="lg" className="mt-1 w-full" disabled={pending}>
         {pending ? "Fiók létrehozása…" : "Regisztráció"}
       </Button>

@@ -10,7 +10,8 @@ async function SignupFormFromUrl({ searchParams }: { searchParams: PageProps<"/s
   const params = await searchParams;
   const next = typeof params.next === "string" ? params.next : undefined;
   const email = typeof params.email === "string" ? params.email.slice(0, 320) : undefined;
-  return <SignupForm next={next} email={email} />;
+  const code = typeof params.code === "string" ? params.code.slice(0, 20) : undefined;
+  return <SignupForm next={next} email={email} code={code} />;
 }
 
 export default function SignupPage({ searchParams }: PageProps<"/signup">) {

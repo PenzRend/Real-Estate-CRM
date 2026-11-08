@@ -11,13 +11,20 @@ export type AuthFormState = {
   error?: string;
   message?: string;
   /** Echo non-secret fields so the form keeps them after an error. */
-  values?: { email?: string; full_name?: string };
+  values?: { email?: string; full_name?: string; signup_code?: string };
 };
 
 const email = z.string().trim().toLowerCase().email("Adj meg egy érvényes e-mail-címet.").max(320);
 
 // Emailed links point at the CRM's own address (APP_URL in production).
 const siteOrigin = appOrigin;
+
+const codeErrors: Record<string, string> = {
+  unknown: "Ez a meghívókód nem érvényes. Ellenőrizd, vagy kérj újat tőlünk.",
+  used: "Ezt a meghívókódot már felhasználták. Kérj újat tőlünk.",
+  expired: "Ez a meghívókód lejárt. Kérj újat tőlünk.",
+  other_email: "Ez a meghívókód egy másik e-mail-címhez szól. Azzal a címmel regisztrálj, amelyikre kaptad.",
+};
 
 export async function signIn(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const parsed = z
@@ -39,25 +46,42 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
       full_name: z.string().trim().min(1, "Add meg a neved.").max(200),
       email,
       password: newPassword,
+      signup_code: z.string().trim().toUpperCase().max(20),
     })
     .safeParse({
       full_name: formData.get("full_name"),
       email: formData.get("email"),
       password: formData.get("password"),
+      signup_code: formData.get("signup_code") ?? "",
     });
-  const values = { email: String(formData.get("email") ?? ""), full_name: String(formData.get("full_name") ?? "") };
+  const values = {
+    email: String(formData.get("email") ?? ""),
+    full_name: String(formData.get("full_name") ?? ""),
+    signup_code: String(formData.get("signup_code") ?? ""),
+  };
   if (!parsed.success) return { error: parsed.error.issues[0].message, values };
 
   const next = safePath(formData.get("next"), "/dashboard");
   const supabase = await createClient();
+  // A team invitation needs no code; the sign-up trigger checks the same and is the real gate.
+  const invited = next.startsWith("/invite/");
+  const code = parsed.data.signup_code;
+  if (!invited) {
+    if (!code) return { error: "Add meg a meghívókódot, amit tőlünk kaptál.", values };
+    const { data: status } = await supabase.rpc("signup_code_status", { p_code: code, p_email: parsed.data.email });
+    if (status !== "open") return { error: codeErrors[status as string] ?? codeErrors.unknown, values };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.full_name },
+      data: { full_name: parsed.data.full_name, ...(code && { signup_code: code }) },
       emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`,
     },
   });
+  // The trigger refused the account: a 500 "Database error saving new user", with no error code, is the only sign of it.
+  if (error && /database error saving new user/i.test(error.message)) return { error: invited ? "Ehhez a címhez nincs érvényes meghívó. Kérj új linket attól, aki meghívott." : codeErrors.unknown, values };
   if (error) return { error: translate(error), values };
 
   // Email confirmation disabled in Supabase → already signed in.

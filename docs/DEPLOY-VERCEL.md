@@ -64,6 +64,8 @@ Vercel deploys from GitHub. Push the branch you deploy, currently
 | `CRON_SECRET` | a **new** random key, made the same way. cron-job.org sends it (step 6) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | phone notifications (see `.env.example`) |
 | `PRIVACY_CONTROLLER`, `PRIVACY_EMAIL` | for the privacy page |
+| `ADMIN_EMAILS` | your own address: opens **/admin**, where you make sign-up codes and set AI caps |
+| `AI_MONTHLY_LIMIT` | AI calls each workspace may make in a month, e.g. `500`. Empty: no monthly cap |
 
 5. **Deploy**. The region is set to Frankfurt by `vercel.json`. Keep
    **Fluid compute** on (Settings → Functions); it is on by default and gives
@@ -123,6 +125,27 @@ inactivity.
    `RESULT: 0 failures`. Nothing is saved; it always rolls back.
 4. Connect Gmail on the Levelek page.
 5. In cron-job.org, both jobs show a successful run.
+
+## Inviting pilot agents
+
+New accounts need a sign-up code; only people invited into an existing team
+skip it. On **/admin** (Settings → Pilot admin):
+
+1. **Új kód**: write who it is for, optionally lock it to their email address.
+2. Send the link (`<APP_URL>/signup?code=…`) with **Küldés e-mailben**, or
+   copy it. Each code works once and for 60 days.
+3. The list shows who used which code. Revoke a code that was not used yet.
+
+The same page shows each workspace's AI calls this month. A number typed next
+to a workspace replaces `AI_MONTHLY_LIMIT` for it; empty goes back to the
+default. Over the cap, the AI features say so until the month ends.
+
+Your own first account also needs a code. Before you have one, make it in the
+production project's SQL editor:
+
+```sql
+insert into public.signup_codes (code, note) values ('ADMN-0001', 'Saját fiók');
+```
 
 ## Day to day
 
