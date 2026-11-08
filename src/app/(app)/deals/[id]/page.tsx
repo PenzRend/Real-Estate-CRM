@@ -8,6 +8,10 @@ import { notFound } from "next/navigation";
 import { TaskToggle } from "@/components/crm/task-toggle";
 import { DealField } from "@/components/deals/deal-field";
 import { DealOutcome, OffersList, PartiesList, StageBar } from "@/components/deals/deal-parts";
+import { NextStepCard } from "@/components/deals/next-step-card";
+import { listDrafts } from "@/lib/contracts/data";
+import { nextStep } from "@/lib/deals/next-step";
+import { utcToZonedLocal } from "@/lib/i18n/timezone";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageSuspense } from "@/components/ui/page-suspense";
@@ -62,6 +66,20 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
   const open = deal.status === "open";
   const clientOptions = [{ value: "", label: "Nincs megadva" }, ...clients.map((c) => ({ value: c.id, label: c.name }))];
   const members = team?.members ?? [];
+  const drafts = await listDrafts(user, { dealId: deal.id }).catch(() => []);
+  const localToday = utcToZonedLocal(new Date().toISOString()).slice(0, 10);
+  const step = nextStep(
+    {
+      ...deal,
+      rent: deal.property.listingType === "rent",
+      deposit_amount: deal.deposit_amount == null ? null : Number(deal.deposit_amount),
+      agreed_price: deal.agreed_price == null ? null : Number(deal.agreed_price),
+      offers: deal.offers,
+      contracts: drafts.map((d) => d.kind),
+      unidentified: unidentified.map((p) => ({ name: p.name, href: `/clients/${p.id}/azonositas` })),
+    },
+    localToday,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,6 +112,7 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
           </div>
         </div>
         <StageBar dealId={deal.id} stage={deal.stage} status={deal.status} />
+        {step && <NextStepCard dealId={deal.id} step={step} today={localToday} />}
         {open && unidentified.length > 0 && (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-warning-soft px-4 py-3 text-sm text-warning">
             <ShieldAlert className="size-4 shrink-0" /> Pénzmosás elleni azonosítás hiányzik:
@@ -121,10 +140,12 @@ async function DealContent({ params }: Pick<PageProps<"/deals/[id]">, "params">)
             <p className="border-t border-border px-5 py-3 text-xs text-muted">Minden megadott dátumból feladat lesz (aznap 9:00-ra), és a dátummal együtt mozog.</p>
           </Card>
 
-          <Card>
-            <CardHeader title="Ajánlatok" count={deal.offers.length} />
-            <OffersList dealId={deal.id} offers={deal.offers} currency={deal.currency} open={open} />
-          </Card>
+          <div id="offers">
+            <Card>
+              <CardHeader title="Ajánlatok" count={deal.offers.length} />
+              <OffersList dealId={deal.id} offers={deal.offers} currency={deal.currency} open={open} />
+            </Card>
+          </div>
 
           <Card>
             <CardHeader title="Feladatok" count={deal.tasks.length} />

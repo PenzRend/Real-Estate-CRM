@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Mail, MapPin, MessageSquareText, Phone, Users, Eye, FileText } from "lucide-react";
+import { Building2, CalendarClock, Mail, MapPin, MessageSquare, MessageSquareText, Mic, Phone, Users, Eye, FileText } from "lucide-react";
 import Link from "next/link";
 import { PriorityBadge, PropertyStatusBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
@@ -18,12 +18,13 @@ export const interactionIcons: Record<InteractionType, typeof Phone> = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FOLLOW_UP_PREFIX = "follow-up-";
+const quick = "grid size-8 place-items-center rounded-full text-muted hover:bg-surface-strong hover:text-ink";
 
 export function TaskRow({ task, overdue = false, done = false }: { task: TaskItem; overdue?: boolean; done?: boolean }) {
   // Client follow-up dates appear among tasks; they are closed by recording the contact.
   const followUpClientId = task.id.startsWith(FOLLOW_UP_PREFIX) ? task.id.slice(FOLLOW_UP_PREFIX.length) : null;
   return (
-    <li className="flex items-start gap-3 px-5 py-3.5">
+    <li className="group/task flex items-start gap-3 px-5 py-3.5">
       {UUID.test(task.id) ? (
         <TaskToggle id={task.id} done={done} title={task.title} />
       ) : followUpClientId ? (
@@ -58,9 +59,43 @@ export function TaskRow({ task, overdue = false, done = false }: { task: TaskIte
             </Link>
           )}
         </p>
+        {task.client && !done && (
+          // On a phone: under the task, so the title keeps its width.
+          <span className="mt-2 flex items-center gap-1 sm:hidden">
+            <TaskQuickActions client={task.client} labelled />
+          </span>
+        )}
       </div>
       {task.priority !== "normal" && !done && <PriorityBadge priority={task.priority} />}
+      {task.client && !done && (
+        // Do it from here: call or text, then log what was said. On a desktop they show on hover, at the right.
+        <span className="hidden shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within/task:opacity-100 group-hover/task:opacity-100 sm:flex">
+          <TaskQuickActions client={task.client} />
+        </span>
+      )}
     </li>
+  );
+}
+
+function TaskQuickActions({ client, labelled = false }: { client: NonNullable<TaskItem["client"]>; labelled?: boolean }) {
+  const tel = client.phone?.replace(/[^\d+]/g, "");
+  const cls = labelled ? "inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs text-ink active:bg-surface" : quick;
+  return (
+    <>
+      {tel && (
+        <>
+          <a href={`tel:${tel}`} className={cls} title={`Hívás: ${client.phone}`} aria-label={`${client.name} hívása`}>
+            <Phone className="size-3.5" /> {labelled && "Hívás"}
+          </a>
+          <a href={`sms:${tel}`} className={cls} title="SMS" aria-label={`SMS ${client.name} részére`}>
+            <MessageSquare className="size-3.5" /> {labelled && "SMS"}
+          </a>
+        </>
+      )}
+      <Link href={`/interactions/new?client=${client.id}`} className={cls} title="Mi történt? – rögzítés" aria-label={`${client.name} – rögzítés`}>
+        <Mic className="size-3.5" /> {labelled && "Rögzítés"}
+      </Link>
+    </>
   );
 }
 

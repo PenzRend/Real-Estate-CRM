@@ -31,7 +31,7 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
       .limit(100),
     supabase
       .from("clients")
-      .select("id, full_name, next_follow_up_at")
+      .select("id, full_name, phone, next_follow_up_at")
       .eq("organization_id", org)
       .is("archived_at", null)
       .lt("next_follow_up_at", tomorrow)
@@ -69,13 +69,13 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
   const propertyIds = [...new Set((tasks.data ?? []).map((t) => t.property_id).filter(Boolean))] as string[];
   const [clientNames, propertyNames] = await Promise.all([
     clientIds.length
-      ? supabase.from("clients").select("id, full_name").in("id", clientIds)
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[], error: null }),
+      ? supabase.from("clients").select("id, full_name, phone").in("id", clientIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; phone: string | null }[], error: null }),
     propertyIds.length
       ? supabase.from("properties").select("id, title").in("id", propertyIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[], error: null }),
   ]);
-  const clientRef = new Map((clientNames.data ?? []).map((c): [string, Ref] => [c.id, { id: c.id, name: c.full_name }]));
+  const clientRef = new Map((clientNames.data ?? []).map((c): [string, Ref & { phone: string | null }] => [c.id, { id: c.id, name: c.full_name, phone: c.phone }]));
   const propertyRef = new Map((propertyNames.data ?? []).map((p): [string, Ref] => [p.id, { id: p.id, name: p.title }]));
 
   const taskItems: TaskItem[] = (tasks.data ?? []).map((t) => ({
@@ -91,7 +91,7 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
     title: "Utánkövetés esedékes",
     dueAt: c.next_follow_up_at,
     priority: "normal",
-    client: { id: c.id, name: c.full_name },
+    client: { id: c.id, name: c.full_name, phone: c.phone },
     property: null,
   }));
   // Postgres and JS write timestamps differently ("+00:00" vs "Z"): compare instants, not strings.

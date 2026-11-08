@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, Loader2, X } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Handshake, Loader2, Sparkles, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { saveFeedbackAction } from "@/app/(app)/viewings/actions";
 import { VoiceRecorder } from "@/components/capture/voice-recorder";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/form";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/i18n/format";
@@ -29,7 +30,7 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
   const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ task: string | null } | null>(null);
+  const [done, setDone] = useState<{ task: string | null; outcome: Outcome } | null>(null);
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -42,7 +43,7 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
     const r = await saveFeedbackAction(viewing.id, { outcome, feedback }).catch(() => ({ ok: false as const, error: "A mentés nem sikerült. Próbáld újra." }));
     setBusy(false);
     if (!r.ok) return setError(r.error);
-    setDone({ task: r.task });
+    setDone({ task: r.task, outcome });
   }
 
   return (
@@ -71,8 +72,24 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
               <CheckCircle2 className="size-4 shrink-0" /> Rögzítve az ügyfél idővonalán.
             </p>
             {done.task && <p className="text-sm text-text">Új feladat: {done.task}</p>}
-            <div>
-              <Button onClick={() => dialog.current?.close()}>Kész</Button>
+            {/* The obvious next move, one tap away. */}
+            <div className="flex flex-wrap gap-2">
+              {done.outcome === "high" ? (
+                <Link href={`/deals/new?property=${viewing.property.id}&buyer=${viewing.client.id}`} className={buttonClasses("primary")}>
+                  <Handshake /> Ajánlatot tesz? Ügylet indítása
+                </Link>
+              ) : done.outcome === "no_show" ? (
+                <Link href={`/clients/${viewing.client.id}`} className={buttonClasses("primary")}>
+                  <CalendarPlus /> Új időpont
+                </Link>
+              ) : (
+                <Link href={`/clients/${viewing.client.id}`} className={buttonClasses("primary")}>
+                  <Sparkles /> Más illő ingatlanok
+                </Link>
+              )}
+              <Button variant="secondary" onClick={() => dialog.current?.close()}>
+                Kész
+              </Button>
             </div>
           </div>
         ) : (

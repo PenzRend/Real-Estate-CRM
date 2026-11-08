@@ -65,7 +65,8 @@ export function DealField({
   const common = { id, "aria-invalid": state === "error", className: cn(kind !== "notes" && "h-10") };
 
   return (
-    <div className="flex flex-col gap-1.5">
+    // data-deal-field: "Következő lépés" brings the field into view.
+    <div className="flex flex-col gap-1.5 transition-shadow" data-deal-field={field}>
       <label htmlFor={id} className="flex items-center justify-between gap-2 text-xs font-medium text-muted">
         {label} {status}
       </label>

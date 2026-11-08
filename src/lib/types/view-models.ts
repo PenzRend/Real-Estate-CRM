@@ -15,7 +15,8 @@ export type TaskItem = {
   title: string;
   dueAt: string | null;
   priority: TaskPriority;
-  client: Ref | null;
+  /** With the phone number, so the task can be done from the list (call, SMS). */
+  client: (Ref & { phone?: string | null }) | null;
   property: Ref | null;
 };
 

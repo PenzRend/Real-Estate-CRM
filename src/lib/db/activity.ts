@@ -364,10 +364,10 @@ export async function listTasks(user: CurrentUser, view: TaskView, now: Date): P
   const clientIds = [...new Set((data ?? []).map((t) => t.client_id).filter(Boolean))] as string[];
   const propertyIds = [...new Set((data ?? []).map((t) => t.property_id).filter(Boolean))] as string[];
   const [clients, properties] = await Promise.all([
-    clientIds.length ? supabase.from("clients").select("id, full_name").in("id", clientIds) : { data: [] as { id: string; full_name: string }[] },
+    clientIds.length ? supabase.from("clients").select("id, full_name, phone").in("id", clientIds) : { data: [] as { id: string; full_name: string; phone: string | null }[] },
     propertyIds.length ? supabase.from("properties").select("id, title").in("id", propertyIds) : { data: [] as { id: string; title: string }[] },
   ]);
-  const clientRef = new Map((clients.data ?? []).map((c): [string, Ref] => [c.id, { id: c.id, name: c.full_name }]));
+  const clientRef = new Map((clients.data ?? []).map((c): [string, Ref & { phone: string | null }] => [c.id, { id: c.id, name: c.full_name, phone: c.phone }]));
   const propertyRef = new Map((properties.data ?? []).map((p): [string, Ref] => [p.id, { id: p.id, name: p.title }]));
 
   return (data ?? []).map((t) => ({
