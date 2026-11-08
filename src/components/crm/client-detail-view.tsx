@@ -31,7 +31,10 @@ export function ClientDetailView({
   deals,
   identification,
   tab,
+  agentName,
 }: {
+  /** For the signature of "Gyors üzenet" texts. */
+  agentName?: string | null;
   client: ClientDetail;
   /** The AML identification status. */
   identification?: ReactNode;
@@ -105,7 +108,7 @@ export function ClientDetailView({
           </div>
         </div>
 
-        {!archivedAt && <ContactBar clientId={client.id} phone={client.phone} email={client.email} />}
+        {!archivedAt && <ContactBar clientId={client.id} phone={client.phone} email={client.email} clientName={client.fullName} agentName={agentName} />}
 
         <Panel className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
           {[

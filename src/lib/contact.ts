@@ -38,3 +38,25 @@ export const CALL_OUTCOMES = {
   busy: { label: "Foglalt volt", summary: "Hívás – foglalt", followUpDays: 1 },
 } as const;
 export type CallOutcome = keyof typeof CALL_OUTCOMES;
+
+/** Ready texts for the contact bar's "Gyors üzenet": polite, with the client's first name and the agent's name. */
+export function quickTexts(clientName: string, agent: string | null): { label: string; text: string }[] {
+  // Hungarian order: the first name is the last word.
+  const first = clientName.trim().split(/\s+/).at(-1) ?? "";
+  const hi = first ? `Kedves ${first}!` : "Jó napot!";
+  const sign = agent ? `\n${agent}` : "";
+  return [
+    { label: "Köszönöm a beszélgetést", text: `${hi} Köszönöm a beszélgetést! Ahogy megbeszéltük, hamarosan küldöm a részleteket.${sign}` },
+    { label: "Kérem, hívjon vissza", text: `${hi} Próbáltam elérni telefonon. Kérem, hívjon vissza, amikor alkalmas.${sign}` },
+    { label: "Megtekintés megerősítése", text: `${hi} Megerősítem a megbeszélt megtekintést. Ha közbejön valami, kérem, jelezze.${sign}` },
+    { label: "Késem", text: `${hi} Kb. 10 perc késéssel érkezem, elnézést kérek!${sign}` },
+    { label: "Elküldtem e-mailben", text: `${hi} Elküldtem e-mailben az ingatlan adatait, kérem, nézze meg.${sign}` },
+  ];
+}
+
+/** SMS and WhatsApp links with the text already written. */
+export function messageLinks(phone: string | null | undefined, text: string): { sms: string; whatsapp: string } | null {
+  const e164 = toE164(phone);
+  if (!e164) return null;
+  return { sms: `sms:${e164}?&body=${encodeURIComponent(text)}`, whatsapp: `https://wa.me/${e164.slice(1)}?text=${encodeURIComponent(text)}` };
+}

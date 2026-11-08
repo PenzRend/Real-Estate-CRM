@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Loader2, Mail, MessageCircle, MessageSquare, Phone, X } from "lucide-react";
+import { Check, Loader2, Mail, MessageCircle, MessageSquare, MessageSquareText, Phone, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { logCallAction } from "@/app/(app)/clients/contact-actions";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form";
 import { actionFailed } from "@/lib/action-failed";
-import { CALL_OUTCOMES, contactLinks, type CallOutcome } from "@/lib/contact";
+import { CALL_OUTCOMES, contactLinks, messageLinks, quickTexts, type CallOutcome } from "@/lib/contact";
 import { cn } from "@/lib/cn";
 
 type Channel = "call" | "whatsapp" | "viber";
@@ -39,8 +39,9 @@ function Action({ href, icon: Icon, label, onClick, external }: { href: string; 
  * (or a WhatsApp / Viber call) Flavio asks how it went: one tap logs it on the
  * timeline, with a follow-up task if needed.
  */
-export function ContactBar({ clientId, phone, email }: { clientId: string; phone: string | null; email: string | null }) {
+export function ContactBar({ clientId, phone, email, clientName = "", agentName = null }: { clientId: string; phone: string | null; email: string | null; clientName?: string; agentName?: string | null }) {
   const links = contactLinks(phone);
+  const [texts, setTexts] = useState(false);
   const [asking, setAsking] = useState<Channel | null>(null);
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [followUp, setFollowUp] = useState("");
@@ -83,10 +84,49 @@ export function ContactBar({ clientId, phone, email }: { clientId: string; phone
             <Action href={links.sms} icon={MessageSquare} label="SMS" />
             <Action href={links.whatsapp} icon={MessageCircle} label="WhatsApp" onClick={() => ask("whatsapp")} external />
             <Action href={links.viber} icon={MessageCircle} label="Viber" onClick={() => ask("viber")} />
+            <button
+              type="button"
+              onClick={() => setTexts((t) => !t)}
+              aria-expanded={texts}
+              className={cn(
+                "flex min-w-16 flex-col items-center gap-1 rounded-2xl border px-3 py-2.5 text-xs font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface",
+                texts ? "border-ink bg-surface" : "border-border bg-background",
+              )}
+            >
+              <MessageSquareText className="size-[18px]" />
+              Gyors üzenet
+            </button>
           </>
         )}
         {email && <Action href={`mailto:${email}`} icon={Mail} label="E-mail" />}
       </div>
+
+      {texts && (
+        // Ready texts: the phone opens with the message written, the agent only presses send.
+        <ul className="reveal flex flex-col divide-y divide-border rounded-2xl border border-border bg-background">
+          {quickTexts(clientName, agentName).map((t) => {
+            const m = messageLinks(phone, t.text);
+            return (
+              <li key={t.label} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-ink">{t.label}</span>
+                  <span className="line-clamp-1 text-xs text-muted">{t.text.replace(/\n/g, " – ")}</span>
+                </span>
+                {m && (
+                  <span className="flex shrink-0 gap-1.5">
+                    <a href={m.sms} className="rounded-full border border-border px-3 py-1 text-xs font-medium text-ink hover:bg-surface">
+                      SMS
+                    </a>
+                    <a href={m.whatsapp} target="_blank" rel="noopener noreferrer" className="rounded-full border border-border px-3 py-1 text-xs font-medium text-ink hover:bg-surface">
+                      WhatsApp
+                    </a>
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {asking && (
         <div className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-background p-4 shadow-float" role="dialog" aria-label="Hogy ment a hívás?">

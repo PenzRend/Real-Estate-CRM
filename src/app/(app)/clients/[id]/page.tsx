@@ -97,6 +97,7 @@ async function ClientContent({ params, searchParams }: PageProps<"/clients/[id]"
       archivedAt={client.archivedAt}
       notice={notice}
       tab={typeof query.tab === "string" ? query.tab : null}
+      agentName={user.fullName}
       viewings={
         viewings.length || wantsListings ? (
           <ViewingsCard viewings={viewings} now={new Date().toISOString()} showClient={false} empty="Még nincs foglalt megtekintés." />
