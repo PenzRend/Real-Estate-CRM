@@ -2,7 +2,7 @@
 
 import { Check, Files, Folder, FolderOpen, Inbox, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState, useTransition, type DragEvent } from "react";
-import { createFolderAction, deleteFolderAction, renameFolderAction } from "@/app/(app)/documents/actions";
+import { createFolderAction, deleteFolderAction, renameFolderAction } from "@/app/(app)/(dokumentumok)/documents/actions";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";
 import { cn } from "@/lib/cn";

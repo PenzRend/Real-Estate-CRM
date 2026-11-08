@@ -2,7 +2,7 @@
 
 import { Apple, CalendarDays, Check, CircleAlert, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
-import { addCalDavAction, addICloudFromMailboxAction, removeSubscriptionAction, type SubscriptionState } from "@/app/(app)/calendar/actions";
+import { addCalDavAction, addICloudFromMailboxAction, removeSubscriptionAction, type SubscriptionState } from "@/app/(app)/(teendok)/calendar/actions";
 import { AppPasswordSteps } from "@/components/mail/app-password-steps";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";

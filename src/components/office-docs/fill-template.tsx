@@ -2,7 +2,7 @@
 
 import { Building2, ChevronDown, Download, Handshake, Loader2, Search, UserRound, Wand2, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { fillTemplateAction } from "@/app/(app)/documents/actions";
+import { fillTemplateAction } from "@/app/(app)/(dokumentumok)/documents/actions";
 import { searchShareableAction } from "@/app/(app)/messages/actions";
 import { Button } from "@/components/ui/button";
 import { FIELD_HELP } from "@/lib/office-docs/fields";

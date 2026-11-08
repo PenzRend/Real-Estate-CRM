@@ -3,7 +3,7 @@
 import { FilePlus2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { createContractAction } from "@/app/(app)/contracts/actions";
+import { createContractAction } from "@/app/(app)/(dokumentumok)/contracts/actions";
 import { RecordSearch } from "@/components/office-docs/record-search";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";

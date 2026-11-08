@@ -3,7 +3,7 @@
 import { FilePlus2, Loader2, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
-import { generateDocumentAction, templateChoicesAction } from "@/app/(app)/documents/template-actions";
+import { generateDocumentAction, templateChoicesAction } from "@/app/(app)/(dokumentumok)/documents/template-actions";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";
 

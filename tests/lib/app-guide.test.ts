@@ -3,11 +3,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { appGuide } from "@/lib/assistant/app-guide";
 
-/** A page for the path, directly or inside a route group like "(list)". */
+/** The folders a URL path can live in: route groups like "(list)" or "(teendok)" may sit at any level. */
+function dirsFor(dir: string, segments: string[]): string[] {
+  if (!existsSync(dir)) return [];
+  const groups = readdirSync(dir).filter((d) => /^\(.+\)$/.test(d)).flatMap((g) => dirsFor(join(dir, g), segments));
+  if (!segments.length) return [dir, ...groups];
+  return [...dirsFor(join(dir, segments[0]), segments.slice(1)), ...groups];
+}
+
 function pageExists(href: string) {
-  const dir = join("src/app/(app)", href);
-  if (existsSync(join(dir, "page.tsx"))) return true;
-  return existsSync(dir) && readdirSync(dir).some((d) => /^\(.+\)$/.test(d) && existsSync(join(dir, d, "page.tsx")));
+  return dirsFor("src/app/(app)", href.split("?")[0].split("/").filter(Boolean)).some((d) => existsSync(join(d, "page.tsx")));
 }
 
 describe("appGuide", () => {

@@ -1,5 +1,4 @@
 import { FileSignature, PenLine, Zap } from "lucide-react";
-import { DOCUMENT_SECTIONS, SectionSwitch } from "@/components/ui/section-switch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -46,7 +45,6 @@ async function Contracts() {
   );
   return (
     <div className="flex flex-col gap-6">
-      <SectionSwitch items={DOCUMENT_SECTIONS} />
       <PageHeader title="Szerződések" description="Flavio megírja őket az ügylet, az ingatlan és az ügyfelek adataiból – te átnézed és jóváhagyod." />
       <section className="flex flex-col gap-3">
         <h2 className="text-base tracking-tight">Felülvizsgálatra vár · {waiting.length}</h2>

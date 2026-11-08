@@ -109,6 +109,11 @@ h3 {
 ::view-transition-new(.content-enter) {
   animation: 320ms var(--ease-out-soft) var(--vt-out) both vt-rise-in;
 }
+/* The scrollbar's room is kept even on short pages, so centred things (the section switch) don't shift between pages. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* The list that is about to change, while its new content loads. */
 [data-list-content] {
   transition: opacity 200ms ease;

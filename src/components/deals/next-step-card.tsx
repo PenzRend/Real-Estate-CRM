@@ -4,7 +4,7 @@ import { ArrowRight, CalendarClock, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createContractAction } from "@/app/(app)/contracts/actions";
+import { createContractAction } from "@/app/(app)/(dokumentumok)/contracts/actions";
 import { moveDealAction, updateDealFieldAction } from "@/app/(app)/deals/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";

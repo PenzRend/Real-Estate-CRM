@@ -4,7 +4,7 @@ import { Loader2, Save, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { deleteTemplateAction, generateDocumentAction, previewTemplateAction, saveTemplateAction } from "@/app/(app)/documents/template-actions";
+import { deleteTemplateAction, generateDocumentAction, previewTemplateAction, saveTemplateAction } from "@/app/(app)/(dokumentumok)/documents/template-actions";
 import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";

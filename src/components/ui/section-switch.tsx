@@ -1,41 +1,65 @@
 "use client";
 
+import { CalendarDays, CheckSquare, FileSignature, FolderOpen, Wand2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { cn } from "@/lib/cn";
 
-// Screens that share one menu item (Teendők: tasks and calendar;
-// Dokumentumok: files, contracts and templates) switch between each other
-// here, at the top of the page.
+// Screens that share one menu item switch between each other here. The bar
+// is drawn by the group's layout ((teendok), (dokumentumok)), so it stays in
+// place while only the page below changes; centred, so a wide page (the
+// calendar) doesn't move it.
 
-export const TODO_SECTIONS = [
-  { href: "/tasks", label: "Feladatok" },
-  { href: "/calendar", label: "Naptár" },
-];
+type Section = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
-export const DOCUMENT_SECTIONS = [
-  { href: "/documents", label: "Fájlok", exact: true },
-  { href: "/contracts", label: "Szerződések" },
-  { href: "/documents/templates", label: "Dokumentumkészítő" },
-];
+const groups: Record<"teendok" | "dokumentumok", Section[]> = {
+  teendok: [
+    { href: "/tasks", label: "Feladatok", icon: CheckSquare },
+    { href: "/calendar", label: "Naptár", icon: CalendarDays },
+  ],
+  dokumentumok: [
+    { href: "/documents", label: "Fájlok", icon: FolderOpen, exact: true },
+    { href: "/contracts", label: "Szerződések", icon: FileSignature },
+    { href: "/documents/templates", label: "Dokumentumkészítő", icon: Wand2 },
+  ],
+};
 
-export function SectionSwitch({ items }: { items: { href: string; label: string; exact?: boolean }[] }) {
-  const pathname = usePathname();
+function Bar({ group, pathname }: { group: keyof typeof groups; pathname: string | null }) {
   return (
-    <nav aria-label="Részek" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border p-1 [scrollbar-width:none]">
-      {items.map((i) => {
-        const active = pathname === i.href || (!i.exact && pathname.startsWith(`${i.href}/`));
-        return (
-          <Link
-            key={i.href}
-            href={i.href}
-            aria-current={active ? "page" : undefined}
-            className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm whitespace-nowrap transition-colors", active ? "bg-primary font-medium text-white" : "text-muted hover:text-ink")}
-          >
-            {i.label}
-          </Link>
-        );
-      })}
+    <nav aria-label="Részek" className="mb-8 flex justify-center">
+      <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-surface-strong p-1.5 [scrollbar-width:none]">
+        {groups[group].map(({ href, label, icon: Icon, exact }) => {
+          const active = pathname != null && (pathname === href || (!exact && pathname.startsWith(`${href}/`)));
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm whitespace-nowrap transition-[background-color,color,box-shadow] duration-200",
+                active ? "bg-background font-medium text-ink shadow-sm" : "text-muted hover:text-ink",
+              )}
+            >
+              <Icon className="hidden size-4 sm:block" strokeWidth={active ? 2 : 1.75} />
+              {label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
+  );
+}
+
+function ActiveBar({ group }: { group: keyof typeof groups }) {
+  return <Bar group={group} pathname={usePathname()} />;
+}
+
+/** The address is request data, so the highlight streams in; the bar itself is there at once, the same size. */
+export function SectionBar({ group }: { group: keyof typeof groups }) {
+  return (
+    <Suspense fallback={<Bar group={group} pathname={null} />}>
+      <ActiveBar group={group} />
+    </Suspense>
   );
 }

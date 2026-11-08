@@ -2,7 +2,7 @@
 
 import { Loader2, Sparkles } from "lucide-react";
 import { useTransition } from "react";
-import { addStarterTemplatesAction } from "@/app/(app)/documents/template-actions";
+import { addStarterTemplatesAction } from "@/app/(app)/(dokumentumok)/documents/template-actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 

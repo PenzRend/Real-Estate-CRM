@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, CircleAlert, Download, FileCheck2, Loader2, PencilLine, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { aiReviewContractAction, approveContractAction, deleteContractAction, previewContractAction, saveContractAction } from "@/app/(app)/contracts/actions";
+import { aiReviewContractAction, approveContractAction, deleteContractAction, previewContractAction, saveContractAction } from "@/app/(app)/(dokumentumok)/contracts/actions";
 import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

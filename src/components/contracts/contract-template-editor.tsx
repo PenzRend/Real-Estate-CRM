@@ -4,7 +4,7 @@ import { FileUp, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { resetContractTemplateAction, saveContractTemplateAction } from "@/app/(app)/contracts/actions";
+import { resetContractTemplateAction, saveContractTemplateAction } from "@/app/(app)/(dokumentumok)/contracts/actions";
 import { RichTemplateEditor, type EditorField } from "@/components/rich-template/rich-template-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";

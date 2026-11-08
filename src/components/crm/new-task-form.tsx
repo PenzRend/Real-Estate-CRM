@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
-import { createTaskAction, type TaskFormState } from "@/app/(app)/tasks/actions";
+import { createTaskAction, type TaskFormState } from "@/app/(app)/(teendok)/tasks/actions";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form";
 import { taskPriorityLabels } from "@/lib/i18n/labels";

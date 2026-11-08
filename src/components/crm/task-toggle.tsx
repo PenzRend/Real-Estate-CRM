@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
-import { setTaskDoneAction } from "@/app/(app)/tasks/actions";
+import { setTaskDoneAction } from "@/app/(app)/(teendok)/tasks/actions";
 import { cn } from "@/lib/cn";
 
 /** Round checkbox that completes or reopens a task, with an instant optimistic tick. */

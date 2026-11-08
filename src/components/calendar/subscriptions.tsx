@@ -2,7 +2,7 @@
 
 import { CircleAlert, Link2, Loader2, Plus, Trash2 } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
-import { addSubscriptionAction, removeSubscriptionAction, type SubscriptionState } from "@/app/(app)/calendar/actions";
+import { addSubscriptionAction, removeSubscriptionAction, type SubscriptionState } from "@/app/(app)/(teendok)/calendar/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form";
 import { cn } from "@/lib/cn";

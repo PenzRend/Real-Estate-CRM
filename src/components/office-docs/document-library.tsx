@@ -2,7 +2,7 @@
 
 import { ChevronRight, Download, File, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, GripVertical, Loader2, MoreHorizontal, Pin, PinOff, Search, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
-import { addOfficeDocumentAction, deleteOfficeDocumentAction, updateOfficeDocumentAction } from "@/app/(app)/documents/actions";
+import { addOfficeDocumentAction, deleteOfficeDocumentAction, updateOfficeDocumentAction } from "@/app/(app)/(dokumentumok)/documents/actions";
 import { buttonClasses } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";

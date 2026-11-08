@@ -2,7 +2,7 @@
 
 import { Link2, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { suggestFoldersAction, suggestLinksAction } from "@/app/(app)/documents/actions";
+import { suggestFoldersAction, suggestLinksAction } from "@/app/(app)/(dokumentumok)/documents/actions";
 import { Button } from "@/components/ui/button";
 import type { OfficeFolder } from "@/lib/office-docs/data";
 import { RecordSearch, recordIcons } from "./record-search";

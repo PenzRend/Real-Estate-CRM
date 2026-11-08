@@ -1,5 +1,4 @@
 import { FilePlus2, FileText, Zap } from "lucide-react";
-import { DOCUMENT_SECTIONS, SectionSwitch } from "@/components/ui/section-switch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -21,7 +20,6 @@ async function Templates() {
   const folderName = new Map(folders.map((f) => [f.id, f.name]));
   return (
     <div className="flex flex-col gap-6">
-      <SectionSwitch items={DOCUMENT_SECTIONS} />
       <PageHeader
         title="Dokumentumkészítő"
         description="Saját sablonok (levél, ajánlat, tájékoztató), amelyeket Flavio kitölt az ügyfél, ingatlan vagy ügylet adataival."

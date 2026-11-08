@@ -3,7 +3,7 @@
 import { Link2, Loader2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { linkDocumentAction, unlinkDocumentAction } from "@/app/(app)/documents/actions";
+import { linkDocumentAction, unlinkDocumentAction } from "@/app/(app)/(dokumentumok)/documents/actions";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";
 import type { DocLink } from "@/lib/office-docs/links";
