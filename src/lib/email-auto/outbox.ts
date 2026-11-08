@@ -6,6 +6,8 @@ import { loadRecords } from "@/lib/office-docs/fill";
 import { writeAiParagraphs } from "@/lib/office-docs/templates";
 import { aiInstructions, fillTemplateText } from "@/lib/office-docs/template-render";
 import { db } from "@/lib/supabase/db";
+import { appOrigin } from "@/lib/origin";
+import { ensureShare } from "@/lib/shares/data";
 import { listEmailTemplates, type EmailTemplate, type EmailTrigger } from "./templates";
 
 // The outbox: an event puts one message per matching rule in it, written for
@@ -42,7 +44,25 @@ function plain(s: string) {
     .trim();
 }
 
-export type EventRefs = { clientId: string; propertyId?: string | null; dealId?: string | null; viewingAt?: string | null; feedback?: string | null };
+export type EventRefs = {
+  clientId: string;
+  propertyId?: string | null;
+  dealId?: string | null;
+  viewingAt?: string | null;
+  feedback?: string | null;
+  /** More fields for this event, e.g. the old price of a price drop. */
+  extra?: Record<string, string>;
+};
+
+/** {ingatlan_link}: the listing's client page (its share link, made the first time a rule needs it). */
+async function listingLink(user: CurrentUser, propertyId: string) {
+  try {
+    const share = await ensureShare(user, propertyId);
+    return `${await appOrigin()}/l/${share.token}`;
+  } catch {
+    return "";
+  }
+}
 
 /** Writes one rule's message for a client. */
 async function render(user: CurrentUser, t: EmailTemplate, refs: EventRefs) {
@@ -54,7 +74,9 @@ async function render(user: CurrentUser, t: EmailTemplate, refs: EventRefs) {
       ? new Intl.DateTimeFormat("hu-HU", { month: "long", day: "numeric", weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Budapest" }).format(new Date(refs.viewingAt))
       : "",
     visszajelzes: refs.feedback ?? "",
+    ...refs.extra,
   };
+  if (refs.propertyId && `${t.subject}\n${t.body}`.includes("{ingatlan_link}")) values.ingatlan_link = await listingLink(user, refs.propertyId);
   const instructions = aiInstructions(t.body);
   const ai = instructions.length ? await writeAiParagraphs(user, instructions, values).catch(() => null) : null;
   return {

@@ -18,6 +18,8 @@ const TRIGGERS: { value: EmailTrigger; label: string }[] = [
   { value: "deal_created", label: "Ügylet indulásakor" },
   { value: "deal_won", label: "Sikeres lezáráskor" },
   { value: "no_contact", label: "Ha egy ügyféllel régóta nem beszéltünk" },
+  { value: "listing_match", label: "Új ingatlan, ami illik hozzá" },
+  { value: "price_drop", label: "Árcsökkenés egy megnézett ingatlanon" },
   { value: "manual", label: "Csak kézzel (kikapcsolt szabály)" },
 ];
 const triggerLabel = (t: EmailTrigger) => TRIGGERS.find((x) => x.value === t)?.label ?? t;
@@ -38,6 +40,8 @@ const FIELDS = [
   ["ingatlan_megnevezes", "Ingatlan"],
   ["ingatlan_cim", "Ingatlan címe"],
   ["ingatlan_ar", "Irányár"],
+  ["ingatlan_link", "Link az ingatlanhoz"],
+  ["korabbi_ar", "Korábbi ár (árcsökkenésnél)"],
   ["megtekintes_ideje", "Megtekintés ideje"],
   ["ugynok_nev", "Saját név"],
   ["ugynok_email", "Saját e-mail"],

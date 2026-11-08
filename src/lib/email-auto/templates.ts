@@ -6,7 +6,7 @@ import { db } from "@/lib/supabase/db";
 // for the agent's OK. The text uses the document creator's fields ({vevo_nev},
 // {keresztnev}, {ingatlan_cim}…) and may hold [[AI: …]] paragraphs.
 
-export const EMAIL_TRIGGERS = ["manual", "client_created", "viewing_booked", "viewing_completed", "deal_created", "deal_won", "no_contact"] as const;
+export const EMAIL_TRIGGERS = ["manual", "client_created", "viewing_booked", "viewing_completed", "deal_created", "deal_won", "no_contact", "listing_match", "price_drop"] as const;
 export type EmailTrigger = (typeof EMAIL_TRIGGERS)[number];
 export const emailTriggerLabels: Record<EmailTrigger, string> = {
   manual: "Csak kézzel",
@@ -16,6 +16,8 @@ export const emailTriggerLabels: Record<EmailTrigger, string> = {
   deal_created: "Ügylet indulásakor",
   deal_won: "Sikeres lezáráskor",
   no_contact: "Ha egy ügyféllel régóta nem beszéltünk",
+  listing_match: "Új ingatlan, ami illik hozzá",
+  price_drop: "Árcsökkenés egy megnézett ingatlanon",
 };
 
 export type EmailTemplate = {
@@ -158,6 +160,44 @@ Ha elégedett volt a munkámmal, sokat segítene egy rövid ajánlás ismerősei
 Üdvözlettel,
 {ugynok_nev}
 {iroda}`,
+  },
+  {
+    name: "Új ingatlan, ami illik hozzá",
+    trigger: "listing_match",
+    delayMinutes: 30,
+    noContactDays: null,
+    mode: "approve",
+    subject: "Új ingatlan, ami illhet Önhöz: {ingatlan_megnevezes}",
+    body: `Kedves {keresztnev}!
+
+Új ingatlan érkezett hozzánk, ami illik ahhoz, amit keres: **{ingatlan_megnevezes}**, {ingatlan_cim}, irányár: {ingatlan_ar}.
+
+[[AI: írj két rövid mondatot arról, miért illik hozzá: a keresett terület, a keret, a méret vagy a szobák alapján. Csak a megadott adatokra támaszkodj.]]
+
+Fotók és részletek: {ingatlan_link}
+
+Ha megnézné, írjon vagy hívjon, és egyeztetünk egy időpontot.
+
+Üdvözlettel,
+{ugynok_nev}`,
+  },
+  {
+    name: "Árcsökkenés – szóljunk az érdeklődőknek",
+    trigger: "price_drop",
+    delayMinutes: 0,
+    noContactDays: null,
+    mode: "approve",
+    subject: "Csökkent az ára: {ingatlan_megnevezes}",
+    body: `Kedves {keresztnev}!
+
+Jó hírem van: a(z) {ingatlan_megnevezes} ({ingatlan_cim}) irányára {korabbi_ar} helyett most **{ingatlan_ar}**.
+
+Ha még érdekli, szívesen megmutatom újra, vagy átbeszéljük a lehetőségeket.
+
+Részletek: {ingatlan_link}
+
+Üdvözlettel,
+{ugynok_nev}`,
   },
   {
     name: "Utánkövetés, ha régen beszéltünk",

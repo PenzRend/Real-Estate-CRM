@@ -58,8 +58,11 @@ export async function createPropertyAction(_: PropertyFormState, formData: FormD
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
   }
 
-  // An agency agreement draft waits for review on the listing's page.
-  after(() => onEvent(user, { type: "listing_created", propertyId: data.id }));
+  // An agency agreement draft waits for review on the listing's page; an active listing may go to the buyers it suits.
+  after(async () => {
+    await onEvent(user, { type: "listing_created", propertyId: data.id });
+    if (fields.status === "active") await onEvent(user, { type: "listing_active", propertyId: data.id });
+  });
   // "new": the listing's page offers it to the matching buyers at once.
   redirect(`/properties/${data.id}?new=1`);
 }
@@ -79,7 +82,7 @@ export async function updatePropertyAction(
   delete changes.video_links;
   const supabase = await createClient();
   // Extras are replaced as a set; other feature data (e.g. imported video links) is kept.
-  const { data: current } = await supabase.from("properties").select("features").eq("id", id).eq("organization_id", user.organization.id).maybeSingle();
+  const { data: current } = await supabase.from("properties").select("features, status, price").eq("id", id).eq("organization_id", user.organization.id).maybeSingle();
   const kept = Object.fromEntries(Object.entries((current?.features as Record<string, unknown>) ?? {}).filter(([k]) => !EXTRAS.some((e) => e.key === k)));
   const { data, error } = await supabase
     .from("properties")
@@ -95,6 +98,14 @@ export async function updatePropertyAction(
     return { formError: SAVE_FAILED, values: submittedValues(formData) };
   }
   if (!data) return { formError: "Ez az ingatlan nem található, vagy nincs jogosultságod módosítani." };
+
+  // Became active: buyers it suits may hear about it. Got cheaper while active: those who looked at it may.
+  const wasActive = current?.status === "active";
+  const nowActive = (changes.status ?? current?.status) === "active";
+  const oldPrice = current?.price == null ? null : Number(current.price);
+  const newPrice = changes.price == null ? oldPrice : Number(changes.price);
+  if (nowActive && !wasActive) after(() => onEvent(user, { type: "listing_active", propertyId: id }));
+  else if (nowActive && oldPrice != null && newPrice != null && newPrice < oldPrice) after(() => onEvent(user, { type: "price_drop", propertyId: id, oldPrice, newPrice }));
 
   redirect(`/properties/${id}`);
 }
@@ -126,7 +137,9 @@ export async function setPropertyStatusAction(id: string, status: string) {
   const user = await getCurrentUser();
   if (!(status in propertyStatusLabels)) throw new Error("Unknown property status");
   const supabase = await createClient();
+  const { data: before } = await supabase.from("properties").select("status").eq("id", id).eq("organization_id", user.organization.id).maybeSingle();
   const { error } = await supabase.from("properties").update({ status }).eq("id", id).eq("organization_id", user.organization.id);
   if (error) throw new Error(`Failed to change property status: ${error.code}`);
+  if (status === "active" && before && before.status !== "active") after(() => onEvent(user, { type: "listing_active", propertyId: id }));
   refresh();
 }

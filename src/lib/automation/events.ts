@@ -1,7 +1,9 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { createDraft } from "@/lib/contracts/data";
+import { matchesForProperty } from "@/lib/db/matches";
 import { enqueueForEvent } from "@/lib/email-auto/outbox";
+import { listEmailTemplates } from "@/lib/email-auto/templates";
 import { runAutomaticTemplates } from "@/lib/office-docs/templates";
 import { db } from "@/lib/supabase/db";
 
@@ -17,7 +19,11 @@ export type FlavioEvent =
   | { type: "viewing_completed"; viewingId: string; clientId: string; propertyId: string; feedback: string | null }
   | { type: "deal_created"; dealId: string }
   | { type: "deal_won"; dealId: string }
-  | { type: "deal_handover"; dealId: string };
+  | { type: "deal_handover"; dealId: string }
+  /** A listing became active (new, or its status changed): buyers it suits may hear about it. */
+  | { type: "listing_active"; propertyId: string }
+  /** An active listing's price went down: the clients who looked at it may hear about it. */
+  | { type: "price_drop"; propertyId: string; oldPrice: number; newPrice: number };
 
 const safely = async (what: string, fn: () => Promise<unknown>) => {
   try {
@@ -66,5 +72,38 @@ export async function onEvent(user: CurrentUser, e: FlavioEvent) {
     case "deal_handover":
       await safely("contract", () => createDraft(user, "atadas", { dealId: e.dealId }, "auto"));
       break;
+    case "listing_active":
+      await safely("email", () => emailMatchingBuyers(user, e.propertyId));
+      break;
+    case "price_drop":
+      await safely("email", () => emailPriceDrop(user, e.propertyId, e.oldPrice, e.newPrice));
+      break;
+  }
+}
+
+const hasRule = async (user: CurrentUser, trigger: "listing_match" | "price_drop") => (await listEmailTemplates(user)).some((t) => t.active && t.trigger === trigger);
+const MAX_RECIPIENTS = 50;
+
+/** "Új ingatlan, ami illik hozzá": the buyers it suits well (strong or good match), once per listing each. */
+async function emailMatchingBuyers(user: CurrentUser, propertyId: string) {
+  if (!(await hasRule(user, "listing_match"))) return;
+  const matches = (await matchesForProperty(user, propertyId)).filter((m) => m.match.category === "strong" || m.match.category === "good").slice(0, MAX_RECIPIENTS);
+  for (const m of matches) await enqueueForEvent(user, "listing_match", { clientId: m.client.id, propertyId }, `listing-match:${propertyId}:${m.client.id}`);
+}
+
+/** "Árcsökkenés": clients who viewed, asked about or made an offer on it (not those who said no), once per new price each. */
+async function emailPriceDrop(user: CurrentUser, propertyId: string, oldPrice: number, newPrice: number) {
+  if (!(await hasRule(user, "price_drop"))) return;
+  const supabase = await db();
+  const { data } = await supabase
+    .from("property_clients")
+    .select("client_id, relation")
+    .eq("property_id", propertyId)
+    .eq("organization_id", user.organization.id)
+    .in("relation", ["interested", "viewed", "offered"])
+    .limit(MAX_RECIPIENTS);
+  const money = (n: number) => `${new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 0 }).format(Math.round(n)).replace(/ /g, " ")} Ft`;
+  for (const r of data ?? []) {
+    await enqueueForEvent(user, "price_drop", { clientId: r.client_id as string, propertyId, extra: { korabbi_ar: money(oldPrice) } }, `price-drop:${propertyId}:${Math.round(newPrice)}:${r.client_id}`);
   }
 }
