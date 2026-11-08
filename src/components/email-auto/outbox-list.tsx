@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { approveOutboxAction, cancelOutboxAction, sendOutboxNowAction } from "@/app/(app)/inbox/automation-actions";
 import { Badge } from "@/components/ui/badge";
+import { useOneOpen } from "@/components/ui/one-open";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";
 import { cn } from "@/lib/cn";
@@ -20,7 +21,7 @@ const statusBadge: Record<OutboxItem["status"], { tone: "warning" | "accent" | "
 };
 
 function Row({ item }: { item: OutboxItem }) {
-  const [open, setOpen] = useState(item.status === "awaiting_approval");
+  const { open, setOpen, ref } = useOneOpen<HTMLLIElement>(`outbox-${item.id}`, item.status === "awaiting_approval");
   const [subject, setSubject] = useState(item.subject);
   const [body, setBody] = useState(item.body);
   const [busy, start] = useTransition();
@@ -29,8 +30,8 @@ function Row({ item }: { item: OutboxItem }) {
   const b = statusBadge[item.status];
 
   return (
-    <li className="px-5 py-4">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-3 text-left">
+    <li ref={ref} className="px-5 py-4">
+      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-start gap-3 text-left">
         <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-surface text-muted">
           <Mail className="size-4" />
         </span>

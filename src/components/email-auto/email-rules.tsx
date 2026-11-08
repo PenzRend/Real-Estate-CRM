@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { addEmailStartersAction, deleteEmailTemplateAction, saveEmailTemplateAction, toggleEmailTemplateAction } from "@/app/(app)/inbox/automation-actions";
 import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Badge } from "@/components/ui/badge";
+import { useOneOpen } from "@/components/ui/one-open";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 import { actionFailed } from "@/lib/action-failed";
@@ -134,7 +135,14 @@ function Editor({ id, initial, onDone }: { id: string | null; initial: Draft; on
         >
           {busy && <Loader2 className="animate-spin" />} Mentés
         </Button>
-        <Button size="sm" variant="ghost" onClick={onDone}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setD(initial);
+            onDone();
+          }}
+        >
           Mégse
         </Button>
         <label className="ml-auto flex items-center gap-2 text-xs text-ink">
@@ -146,15 +154,30 @@ function Editor({ id, initial, onDone }: { id: string | null; initial: Draft; on
 }
 
 function Rule({ t }: { t: EmailTemplate }) {
-  const [editing, setEditing] = useState(false);
-  const [busy, start] = useTransition();
-  if (editing) return <li className="px-5 py-4"><Editor id={t.id} initial={t} onDone={() => setEditing(false)} /></li>;
+  const { open: editing, setOpen: setEditing, ref } = useOneOpen<HTMLLIElement>(`rule-${t.id}`);
+  // Kept once opened, so closing it by clicking away keeps what was typed.
+  const [opened, setOpened] = useState(false);
+  if (editing && !opened) setOpened(true);
   return (
-    <li className="flex flex-wrap items-center gap-3 px-5 py-4">
+    <li ref={ref}>
+      {opened && (
+        <div className={cn("px-5 py-4", !editing && "hidden")}>
+          <Editor id={t.id} initial={t} onDone={() => setEditing(false)} />
+        </div>
+      )}
+      {!editing && <RuleRow t={t} onEdit={() => setEditing(true)} />}
+    </li>
+  );
+}
+
+function RuleRow({ t, onEdit }: { t: EmailTemplate; onEdit: () => void }) {
+  const [busy, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-5 py-4">
       <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl", t.active ? "bg-accent-soft text-accent" : "bg-surface text-muted")}>
         <Zap className="size-4" />
       </span>
-      <button type="button" onClick={() => t.canEdit && setEditing(true)} className="min-w-0 flex-1 text-left">
+      <button type="button" onClick={() => t.canEdit && onEdit()} className="min-w-0 flex-1 text-left">
         <span className="block truncate text-sm font-medium text-ink">{t.name}</span>
         <span className="block text-xs text-muted">
           {triggerLabel(t.trigger)} · {t.trigger === "no_contact" ? `${t.noContactDays ?? 21} nap csend után` : delayLabel(t.delayMinutes)}
@@ -192,13 +215,15 @@ function Rule({ t }: { t: EmailTemplate }) {
           </button>
         </>
       )}
-    </li>
+    </div>
   );
 }
 
 /** The automatic email rules: when a message goes, after how long, and whether it waits for an OK. */
 export function EmailRules({ templates }: { templates: EmailTemplate[] }) {
-  const [adding, setAdding] = useState(false);
+  const { open: adding, setOpen: setAdding, ref } = useOneOpen<HTMLDivElement>("rule-new");
+  const [opened, setOpened] = useState(false);
+  if (adding && !opened) setOpened(true);
   const [busy, start] = useTransition();
   return (
     <div className="flex flex-col gap-3">
@@ -209,7 +234,11 @@ export function EmailRules({ templates }: { templates: EmailTemplate[] }) {
           ))}
         </ul>
       )}
-      {adding && <Editor id={null} initial={blank} onDone={() => setAdding(false)} />}
+      {opened && (
+        <div ref={ref} className={cn(!adding && "hidden")}>
+          <Editor id={null} initial={blank} onDone={() => setAdding(false)} />
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {!adding && (
           <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
