@@ -1,7 +1,7 @@
 import "server-only";
 import { randomInt } from "node:crypto";
 import type { CurrentUser } from "@/lib/auth";
-import { monthStart } from "@/lib/ai/usage";
+import { dayStart, monthStart } from "@/lib/ai/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // The platform admin: whoever runs the pilot, named by address in ADMIN_EMAILS
@@ -35,6 +35,8 @@ export type WorkspaceUsage = {
   lastActivityAt: string | null;
   limit: number | null;
   calls: number;
+  dailyLimit: number | null;
+  today: number;
   tokens: number;
   clients: number;
   properties: number;
@@ -165,8 +167,13 @@ export async function listSignupCodes(): Promise<SignupCode[]> {
 export async function listWorkspaceUsage(): Promise<WorkspaceUsage[]> {
   const admin = createAdminClient();
   if (!admin) return [];
-  const { data, error } = await admin.rpc("admin_workspaces", { p_since: monthStart() });
+  const [{ data, error }, todays] = await Promise.all([
+    admin.rpc("admin_workspaces", { p_since: monthStart() }),
+    admin.rpc("admin_workspace_calls_since", { p_since: dayStart() }),
+  ]);
   if (error) console.error("admin_workspaces failed", error.code ?? error.message);
+  if (todays.error) console.error("admin_workspace_calls_since failed", todays.error.code ?? todays.error.message);
+  const today = new Map(((todays.data ?? []) as { organization_id: string; calls: number; ai_daily_limit: number | null }[]).map((t) => [t.organization_id, t]));
   type Row = {
     organization_id: string; name: string; is_personal: boolean; owner_email: string | null; members: number; created_at: string;
     last_activity_at: string | null; ai_monthly_limit: number | null; ai_calls: number; ai_tokens: number; clients: number;
@@ -184,6 +191,8 @@ export async function listWorkspaceUsage(): Promise<WorkspaceUsage[]> {
       lastActivityAt: r.last_activity_at,
       limit: r.ai_monthly_limit,
       calls: r.ai_calls,
+      dailyLimit: today.get(r.organization_id)?.ai_daily_limit ?? null,
+      today: today.get(r.organization_id)?.calls ?? 0,
       tokens: Number(r.ai_tokens),
       clients: r.clients,
       properties: r.properties,
@@ -334,6 +343,7 @@ export function configStatus() {
       { name: "VAPID_*", ok: has("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"), what: "Telefonos értesítések" },
       { name: "PRIVACY_*", ok: has("PRIVACY_CONTROLLER", "PRIVACY_EMAIL"), what: "Adatkezelési tájékoztató adatai" },
       { name: "AI_MONTHLY_LIMIT", ok: has("AI_MONTHLY_LIMIT"), what: "Havi AI-keret", optional: true },
+      { name: "AI_DAILY_LIMIT", ok: has("AI_DAILY_LIMIT"), what: "Napi AI-keret (ha nincs: 100)", optional: true },
     ] as { name: string; ok: boolean; what: string; optional?: boolean }[],
   };
 }

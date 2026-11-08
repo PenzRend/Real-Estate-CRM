@@ -66,6 +66,7 @@ Vercel deploys from GitHub. Push the branch you deploy, currently
 | `PRIVACY_CONTROLLER`, `PRIVACY_EMAIL` | for the privacy page |
 | `ADMIN_EMAILS` | your own address: opens **/admin**, where you make sign-up codes and set AI caps |
 | `AI_MONTHLY_LIMIT` | AI calls each workspace may make in a month, e.g. `500`. Empty: no monthly cap |
+| `AI_DAILY_LIMIT` | AI calls each workspace may make in a day. Empty: `100`. Groq's free tier allows about 1,000 requests a day for everyone together |
 
 5. **Deploy**. The region is set to Frankfurt by `vercel.json`. Keep
    **Fluid compute** on (Settings → Functions); it is on by default and gives

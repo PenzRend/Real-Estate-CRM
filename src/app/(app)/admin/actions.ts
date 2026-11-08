@@ -52,12 +52,13 @@ export async function revokeSignupCodeAction(id: string): Promise<Result> {
   return { ok: true };
 }
 
-/** The workspace's own monthly AI cap; null goes back to the server default. */
-export async function setAiLimitAction(organizationId: string, limit: number | null): Promise<Result> {
+/** The workspace's own daily or monthly AI cap; null goes back to the server default. */
+export async function setAiLimitAction(organizationId: string, period: "daily" | "monthly", limit: number | null): Promise<Result> {
   const admin = await adminClient();
   if (!admin) return { ok: false, error: "Ehhez nincs jogosultságod." };
   if (limit !== null && (!Number.isInteger(limit) || limit < 0 || limit > 1_000_000)) return { ok: false, error: "Adj meg egy nem negatív egész számot." };
-  const { error } = await admin.from("organizations").update({ ai_monthly_limit: limit }).eq("id", organizationId);
+  const column = period === "daily" ? "ai_daily_limit" : "ai_monthly_limit";
+  const { error } = await admin.from("organizations").update({ [column]: limit }).eq("id", organizationId);
   if (error) return { ok: false, error: "A mentés nem sikerült." };
   refresh();
   return { ok: true };

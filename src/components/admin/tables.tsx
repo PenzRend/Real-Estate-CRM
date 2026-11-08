@@ -36,7 +36,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 }
 
 /** Every workspace: what is in it, when it was last used, and its AI cap. */
-export function WorkspacesTable({ workspaces, defaultLimit }: { workspaces: WorkspaceUsage[]; defaultLimit: number | null }) {
+export function WorkspacesTable({ workspaces, defaultLimit, defaultDaily }: { workspaces: WorkspaceUsage[]; defaultLimit: number | null; defaultDaily: number }) {
   const [q, setQ] = useState("");
   const [teamsOnly, setTeamsOnly] = useState(false);
   const shown = useMemo(() => workspaces.filter((w) => matches(q, w.name, w.ownerEmail) && (!teamsOnly || w.members > 1)), [workspaces, q, teamsOnly]);
@@ -52,24 +52,80 @@ export function WorkspacesTable({ workspaces, defaultLimit }: { workspaces: Work
         </label>
       </div>
       <p className="text-xs text-muted">
-        {shown.length} / {workspaces.length} munkaterület · havi alapkeret: {defaultLimit === null ? "nincs korlát" : `${defaultLimit} hívás`}
+        {shown.length} / {workspaces.length} munkaterület · alapkeret: napi {defaultDaily}, havi {defaultLimit === null ? "nincs korlát" : defaultLimit} hívás. Üresen hagyva az alap érvényes.
       </p>
       <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border">
         {shown.map((w) => (
-          <WorkspaceRow key={w.id} w={w} defaultLimit={defaultLimit} />
+          <WorkspaceRow key={w.id} w={w} defaultLimit={defaultLimit} defaultDaily={defaultDaily} />
         ))}
       </ul>
     </div>
   );
 }
 
-function WorkspaceRow({ w, defaultLimit }: { w: WorkspaceUsage; defaultLimit: number | null }) {
-  const [value, setValue] = useState(w.limit === null ? "" : String(w.limit));
+/** One cap of a workspace: its own number, or empty for the server default. */
+function LimitInput({ w, period, own, fallback }: { w: WorkspaceUsage; period: "daily" | "monthly"; own: number | null; fallback: number | null }) {
+  const [value, setValue] = useState(own === null ? "" : String(own));
   const [busy, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-  const saved = w.limit === null ? "" : String(w.limit);
-  const cap = w.limit ?? defaultLimit;
-  const share = cap ? Math.min(w.calls / cap, 1) : 0;
+  const saved = own === null ? "" : String(own);
+  const label = period === "daily" ? "Napi" : "Havi";
+  return (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const limit = value.trim() === "" ? null : Number(value);
+        start(async () => {
+          const r = await setAiLimitAction(w.id, period, limit).catch(actionFailed);
+          setMsg(r.ok ? "Mentve" : r.error);
+        });
+      }}
+    >
+      <span className="w-10 text-xs text-muted">{label}</span>
+      <Input
+        type="number"
+        min={0}
+        step={1}
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setMsg(null);
+        }}
+        placeholder={fallback === null ? "Nincs" : `Alap: ${fallback}`}
+        aria-label={`${w.name} ${label.toLowerCase()} AI-kerete`}
+        className="h-9 w-28"
+      />
+      <Button type="submit" variant="secondary" size="sm" disabled={busy || value === saved}>
+        Mentés
+      </Button>
+      {msg && <span className="text-xs text-muted">{msg}</span>}
+    </form>
+  );
+}
+
+function UsageBar({ label, used, cap, extra }: { label: string; used: number; cap: number | null; extra?: string }) {
+  const share = cap ? Math.min(used / cap, 1) : 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between gap-3 text-xs">
+        <span className="text-muted">{label}</span>
+        <span className={cn("tabular-nums", cap !== null && used >= cap ? "font-medium text-danger" : "text-ink")}>
+          {formatNumber(used)}
+          {cap !== null && ` / ${formatNumber(cap)}`} hívás{extra && ` · ${extra}`}
+        </span>
+      </div>
+      {cap !== null && (
+        <span className="h-1.5 overflow-hidden rounded-full bg-surface" aria-hidden>
+          <span className={cn("block h-full rounded-full", share >= 1 ? "bg-danger" : share >= 0.8 ? "bg-warning" : "bg-ink")} style={{ width: `${share * 100}%` }} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+function WorkspaceRow({ w, defaultLimit, defaultDaily }: { w: WorkspaceUsage; defaultLimit: number | null; defaultDaily: number }) {
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -82,51 +138,14 @@ function WorkspaceRow({ w, defaultLimit }: { w: WorkspaceUsage; defaultLimit: nu
             {w.ownerEmail ?? "—"} · létrehozva {formatDate(w.createdAt)} · utoljára aktív: {ago(w.lastActivityAt)}
           </p>
         </div>
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const limit = value.trim() === "" ? null : Number(value);
-            start(async () => {
-              const r = await setAiLimitAction(w.id, limit).catch(actionFailed);
-              setMsg(r.ok ? "Mentve" : r.error);
-            });
-          }}
-        >
-          <span className="text-xs text-muted">Havi AI-keret</span>
-          <Input
-            type="number"
-            min={0}
-            step={1}
-            inputMode="numeric"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setMsg(null);
-            }}
-            placeholder={defaultLimit === null ? "Nincs" : `Alap: ${defaultLimit}`}
-            aria-label={`${w.name} havi AI-kerete`}
-            className="h-9 w-28"
-          />
-          <Button type="submit" variant="secondary" size="sm" disabled={busy || value === saved}>
-            Mentés
-          </Button>
-        </form>
-      </div>
-      {msg && <p className="text-right text-xs text-muted">{msg}</p>}
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between gap-3 text-xs">
-          <span className="text-muted">AI ebben a hónapban</span>
-          <span className={cn("tabular-nums", cap !== null && w.calls >= cap ? "font-medium text-danger" : "text-ink")}>
-            {formatNumber(w.calls)}
-            {cap !== null && ` / ${formatNumber(cap)}`} hívás · {formatNumber(w.tokens)} token
-          </span>
+        <div className="flex flex-col gap-2">
+          <LimitInput w={w} period="daily" own={w.dailyLimit} fallback={defaultDaily} />
+          <LimitInput w={w} period="monthly" own={w.limit} fallback={defaultLimit} />
         </div>
-        {cap !== null && (
-          <span className="h-1.5 overflow-hidden rounded-full bg-surface" aria-hidden>
-            <span className={cn("block h-full rounded-full", share >= 1 ? "bg-danger" : share >= 0.8 ? "bg-warning" : "bg-ink")} style={{ width: `${share * 100}%` }} />
-          </span>
-        )}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <UsageBar label="AI ma" used={w.today} cap={w.dailyLimit ?? defaultDaily} />
+        <UsageBar label="AI ebben a hónapban" used={w.calls} cap={w.limit ?? defaultLimit} extra={`${formatNumber(w.tokens)} token`} />
       </div>
       <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
         <Stat label="Ügyfél" value={w.clients} />

@@ -20,7 +20,7 @@ import {
   listWorkspaceUsage,
   serviceKeyStatus,
 } from "@/lib/admin";
-import { defaultMonthlyLimit } from "@/lib/ai/usage";
+import { defaultDailyLimit, defaultMonthlyLimit } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Pilot admin" };
@@ -38,14 +38,15 @@ const TABS = [
 /** One tab's content; each loads only what it shows. */
 async function Tab({ tab }: { tab: string }) {
   const defaultLimit = defaultMonthlyLimit();
+  const defaultDaily = defaultDailyLimit();
   switch (tab) {
     case "felhasznalok":
       return <UsersTable users={await listUsers()} />;
     case "munkateruletek":
-      return <WorkspacesTable workspaces={await listWorkspaceUsage()} defaultLimit={defaultLimit} />;
+      return <WorkspacesTable workspaces={await listWorkspaceUsage()} defaultLimit={defaultLimit} defaultDaily={defaultDaily} />;
     case "ai": {
       const [rows, workspaces] = await Promise.all([getAiBreakdown(), listWorkspaceUsage()]);
-      return <AiTab rows={rows} config={configStatus()} workspaces={workspaces} defaultLimit={defaultLimit} />;
+      return <AiTab rows={rows} config={configStatus()} workspaces={workspaces} defaultLimit={defaultLimit} defaultDaily={defaultDaily} />;
     }
     case "rendszer":
       return <SystemTab system={await getSystemStatus()} config={configStatus()} />;
@@ -63,7 +64,7 @@ async function Tab({ tab }: { tab: string }) {
     default: {
       const [overview, daily, system, workspaces] = await Promise.all([getOverview(), getDaily(30), getSystemStatus(), listWorkspaceUsage()]);
       if (!overview) return <p className="text-sm text-muted">Az adatok nem érhetők el.</p>;
-      return <OverviewTab overview={overview} daily={daily} system={system} config={configStatus()} workspaces={workspaces} defaultLimit={defaultLimit} />;
+      return <OverviewTab overview={overview} daily={daily} system={system} config={configStatus()} workspaces={workspaces} defaultLimit={defaultLimit} defaultDaily={defaultDaily} />;
     }
   }
 }

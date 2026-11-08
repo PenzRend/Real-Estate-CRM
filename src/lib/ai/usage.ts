@@ -1,10 +1,15 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
-import { utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
+import { startOfZonedDay, utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { createClient } from "@/lib/supabase/server";
 
-// Per-user limits on expensive AI calls, enforced on the server.
-const LIMITS = { perHour: 60, perDay: 300 };
+// Per-user limit on bursts of expensive AI calls, enforced on the server.
+const PER_HOUR = 60;
+
+const parseLimit = (v: string | undefined) => {
+  const n = Number.parseInt(v ?? "", 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
 
 /**
  * AI calls a workspace may make in a calendar month, unless the platform admin
@@ -12,8 +17,16 @@ const LIMITS = { perHour: 60, perDay: 300 };
  * server; empty means no monthly cap.
  */
 export function defaultMonthlyLimit(): number | null {
-  const n = Number.parseInt(process.env.AI_MONTHLY_LIMIT ?? "", 10);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  return parseLimit(process.env.AI_MONTHLY_LIMIT);
+}
+
+/**
+ * AI calls a workspace may make in a day (Budapest time), unless the admin set
+ * its own (organizations.ai_daily_limit). The provider's free tier is counted
+ * per day and shared by all workspaces, so there is always a default: 100.
+ */
+export function defaultDailyLimit(): number {
+  return parseLimit(process.env.AI_DAILY_LIMIT) ?? 100;
 }
 
 /** First moment of the current month, Budapest time, as an ISO string. */
@@ -21,37 +34,50 @@ export function monthStart(now = new Date()) {
   return zonedLocalToUtc(`${utcToZonedLocal(now.toISOString()).slice(0, 7)}-01T00:00`)!;
 }
 
-/** This month's AI calls of the user's workspace, and its cap (null: none). */
-export async function monthlyAiUsage(user: CurrentUser): Promise<{ used: number; limit: number | null }> {
+/** First moment of today, Budapest time, as an ISO string. */
+export function dayStart(now = new Date()) {
+  return startOfZonedDay(now).toISOString();
+}
+
+export type AiUsage = { today: number; dailyLimit: number; month: number; monthlyLimit: number | null };
+
+/** Today's and this month's AI calls of the user's workspace, with its caps. */
+export async function aiUsage(user: CurrentUser): Promise<AiUsage> {
   const supabase = await createClient();
-  const [used, org] = await Promise.all([
+  const count = (since: string) =>
     supabase
       .from("ai_processing_logs")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", user.organization.id)
       .neq("status", "rejected")
-      .gte("created_at", monthStart()),
-    supabase.from("organizations").select("ai_monthly_limit").eq("id", user.organization.id).maybeSingle(),
+      .gte("created_at", since);
+  const [today, month, org] = await Promise.all([
+    count(dayStart()),
+    count(monthStart()),
+    supabase.from("organizations").select("ai_daily_limit, ai_monthly_limit").eq("id", user.organization.id).maybeSingle(),
   ]);
-  const own = (org.data as { ai_monthly_limit: number | null } | null)?.ai_monthly_limit;
-  return { used: used.count ?? 0, limit: own ?? defaultMonthlyLimit() };
+  const own = org.data as { ai_daily_limit: number | null; ai_monthly_limit: number | null } | null;
+  return {
+    today: today.count ?? 0,
+    dailyLimit: own?.ai_daily_limit ?? defaultDailyLimit(),
+    month: month.count ?? 0,
+    monthlyLimit: own?.ai_monthly_limit ?? defaultMonthlyLimit(),
+  };
 }
 
 /** Returns a Hungarian message when the user is over the limit, otherwise null. */
 export async function aiLimitMessage(user: CurrentUser): Promise<string | null> {
   const supabase = await createClient();
-  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-  const [day, hour, month] = await Promise.all([
-    supabase.from("ai_processing_logs").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", dayAgo),
+  const [hour, usage] = await Promise.all([
     supabase.from("ai_processing_logs").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", hourAgo),
-    monthlyAiUsage(user),
+    aiUsage(user),
   ]);
-  if (month.limit !== null && month.used >= month.limit) {
+  if (usage.monthlyLimit !== null && usage.month >= usage.monthlyLimit) {
     return "Elfogyott a munkaterület havi AI-kerete. A hónap elején újraindul; ha előbb kell, írj nekünk a Visszajelzés gombbal.";
   }
-  if ((hour.count ?? 0) >= LIMITS.perHour) return "Elérted az óránkénti AI-keretet. Próbáld újra egy kicsit később.";
-  if ((day.count ?? 0) >= LIMITS.perDay) return "Elérted a napi AI-keretet. Holnap újra használhatod.";
+  if (usage.today >= usage.dailyLimit) return "Elfogyott a munkaterület mai AI-kerete. Éjfélkor újraindul.";
+  if ((hour.count ?? 0) >= PER_HOUR) return "Elérted az óránkénti AI-keretet. Próbáld újra egy kicsit később.";
   return null;
 }
 

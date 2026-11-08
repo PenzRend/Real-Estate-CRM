@@ -20,7 +20,7 @@ import { listPhoneKeys } from "@/lib/phone/calls";
 import { PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { isPlatformAdmin } from "@/lib/admin";
-import { monthlyAiUsage } from "@/lib/ai/usage";
+import { aiUsage } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
 import { listSubscriptions } from "@/lib/calendar/data";
 import { hasCalendarFeed } from "@/lib/calendar/feed";
@@ -152,7 +152,7 @@ async function TeamSection({ user }: { user: Awaited<ReturnType<typeof getCurren
 
 async function SettingsContent() {
   const user = await getCurrentUser();
-  const [mailboxes, feedActive, calendars, feed, phoneKeys, ai] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user), listSubscriptions(user), feedStatus(user), listPhoneKeys(user), monthlyAiUsage(user)]);
+  const [mailboxes, feedActive, calendars, feed, phoneKeys, ai] = await Promise.all([isMailCryptoConfigured() ? listMailboxes(user) : [], hasCalendarFeed(user), listSubscriptions(user), feedStatus(user), listPhoneKeys(user), aiUsage(user)]);
   // One line on the calendars: which are shown in Flavio, and whether the subscription link is on.
   const calendarParts = [
     ...mailboxes.filter((m) => m.can_calendar && m.status !== "revoked").map((m) => (m.provider === "outlook" ? "Outlook-naptár" : "Google Naptár")),
@@ -246,8 +246,13 @@ async function SettingsContent() {
             <p className="text-sm text-muted sm:col-span-2">Az exportálást a munkaterület tulajdonosa vagy egy admin végezheti.</p>
           )}
           <p id="ai-keret" className="scroll-mt-24 text-sm text-muted sm:col-span-2">
-            AI-használat ebben a hónapban: <span className="font-medium text-ink tabular-nums">{ai.used}{ai.limit !== null && ` / ${ai.limit}`}</span> hívás
-            {ai.limit !== null && " (a hónap elején újraindul)"}.
+            AI-használat ma: <span className="font-medium text-ink tabular-nums">{ai.today} / {ai.dailyLimit}</span> hívás (éjfélkor újraindul)
+            {ai.monthlyLimit !== null && (
+              <>
+                , ebben a hónapban: <span className="font-medium text-ink tabular-nums">{ai.month} / {ai.monthlyLimit}</span> hívás (a hónap elején újraindul)
+              </>
+            )}
+            .
           </p>
           {isPlatformAdmin(user) && (
             <Connection icon={ShieldCheck} title="Pilot admin" status="Meghívókódok és a munkaterületek AI-keretei." href="/admin" cta="Megnyitás" />

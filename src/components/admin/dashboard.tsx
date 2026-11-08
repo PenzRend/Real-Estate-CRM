@@ -9,6 +9,9 @@ import { formatDate, formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 // Supabase free plan: what the pilot runs inside.
 const FREE = { dbBytes: 500 * 1024 ** 2, storageBytes: 1024 ** 3 };
+// Groq's free tier: requests per day for the main model, shared by every workspace.
+// One Flavio call can take several requests (the assistant looks things up in steps).
+const PROVIDER_DAILY_REQUESTS = 1000;
 
 export function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -111,8 +114,10 @@ function DailyBars({ rows, value, accent, label }: { rows: DailyRow[]; value: (r
 type Alert = { tone: "danger" | "warning"; text: string };
 
 /** What needs a look, in plain words: the first card of the overview. */
-function alerts(o: Overview, s: SystemStatus | null, config: ReturnType<typeof configStatus>): Alert[] {
+function alerts(o: Overview, s: SystemStatus | null, config: ReturnType<typeof configStatus>, today: number): Alert[] {
   const out: Alert[] = [];
+  if (today >= PROVIDER_DAILY_REQUESTS * 0.7)
+    out.push({ tone: "warning", text: `Ma már ${today} AI-hívás volt: közel a Groq ingyenes napi ${PROVIDER_DAILY_REQUESTS} kéréséhez. Fölötte a tartalék (Gemini) dolgozik, ha elérhető.` });
   for (const c of config.checks) if (!c.ok && !c.optional) out.push({ tone: "danger", text: `Hiányzik a szerveren: ${c.name} (${c.what}).` });
   if (s) {
     const staleMin = s.lastMailSync ? (Date.now() - Date.parse(s.lastMailSync)) / 60_000 : null;
@@ -137,6 +142,7 @@ export function OverviewTab({
   config,
   workspaces,
   defaultLimit,
+  defaultDaily,
 }: {
   overview: Overview;
   daily: DailyRow[];
@@ -144,13 +150,20 @@ export function OverviewTab({
   config: ReturnType<typeof configStatus>;
   workspaces: WorkspaceUsage[];
   defaultLimit: number | null;
+  defaultDaily: number;
 }) {
-  const list = alerts(o, system, config);
+  const today = daily.at(-1)?.ai_calls ?? 0;
+  const list = alerts(o, system, config, today);
   // What the AI caps add up to this month, against what was used.
   const capTotal = defaultLimit === null && workspaces.every((w) => w.limit === null) ? null : workspaces.reduce((s, w) => s + (w.limit ?? defaultLimit ?? 0), 0);
-  const nearCap = workspaces.filter((w) => {
-    const cap = w.limit ?? defaultLimit;
-    return cap !== null && cap > 0 && w.calls / cap >= 0.8;
+  // Near either cap: today's or this month's.
+  const nearCap = workspaces.flatMap((w) => {
+    const month = w.limit ?? defaultLimit;
+    const day = w.dailyLimit ?? defaultDaily;
+    const out: { w: WorkspaceUsage; label: string; used: number; cap: number }[] = [];
+    if (day > 0 && w.today / day >= 0.8) out.push({ w, label: "ma", used: w.today, cap: day });
+    if (month !== null && month > 0 && w.calls / month >= 0.8) out.push({ w, label: "ebben a hónapban", used: w.calls, cap: month });
+    return out;
   });
 
   return (
@@ -209,14 +222,15 @@ export function OverviewTab({
             ) : (
               <p className="text-sm text-muted">Nem érhető el.</p>
             )}
+            <Meter label="AI ma, összes munkaterület (Groq ingyenes napi kerete)" used={today} total={PROVIDER_DAILY_REQUESTS} />
             {capTotal !== null && <Meter label="AI-keretek összesen, ebben a hónapban" used={o.ai_calls} total={capTotal} />}
           </Card>
-          <Card title="Közel a havi AI-kerethez" description="A munkaterületek, amelyek a keretük 80%-át már elérték.">
+          <Card title="Közel az AI-kerethez" description="A munkaterületek, amelyek a napi vagy a havi keretük 80%-át már elérték.">
             {nearCap.length ? (
               <ul className="flex flex-col gap-3">
-                {nearCap.map((w) => (
-                  <li key={w.id}>
-                    <Meter label={`${w.name}${w.ownerEmail ? ` · ${w.ownerEmail}` : ""}`} used={w.calls} total={w.limit ?? defaultLimit ?? 0} />
+                {nearCap.map(({ w, label, used, cap }) => (
+                  <li key={`${w.id}-${label}`}>
+                    <Meter label={`${w.name}${w.ownerEmail ? ` · ${w.ownerEmail}` : ""} · ${label}`} used={used} total={cap} />
                   </li>
                 ))}
               </ul>
@@ -253,7 +267,19 @@ const operationLabels: Record<string, string> = {
   client_summary: "Ügyfélösszefoglaló",
 };
 
-export function AiTab({ rows, config, workspaces, defaultLimit }: { rows: AiBreakdownRow[]; config: ReturnType<typeof configStatus>; workspaces: WorkspaceUsage[]; defaultLimit: number | null }) {
+export function AiTab({
+  rows,
+  config,
+  workspaces,
+  defaultLimit,
+  defaultDaily,
+}: {
+  rows: AiBreakdownRow[];
+  config: ReturnType<typeof configStatus>;
+  workspaces: WorkspaceUsage[];
+  defaultLimit: number | null;
+  defaultDaily: number;
+}) {
   const byOperation = new Map<string, { calls: number; errors: number; tokens: number }>();
   const byModel = new Map<string, { calls: number; input: number; output: number }>();
   for (const r of rows) {
@@ -281,7 +307,7 @@ export function AiTab({ rows, config, workspaces, defaultLimit }: { rows: AiBrea
             ["Fő modell", config.aiModel],
             ["Tartalék", config.aiFallbackModel],
             ["Diktálás", config.transcribeModel],
-            ["Havi alapkeret", defaultLimit === null ? "nincs korlát" : `${formatNumber(defaultLimit)} hívás / munkaterület`],
+            ["Alapkeret / munkaterület", `napi ${formatNumber(defaultDaily)}, havi ${defaultLimit === null ? "korlátlan" : formatNumber(defaultLimit)} hívás`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>
