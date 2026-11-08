@@ -5,5 +5,5 @@ import { llmConfig } from "@/lib/ai/config";
 export const metadata: Metadata = { title: "AI-asszisztens" };
 
 export default function AssistantPage() {
-  return <AssistantChat aiEnabled={llmConfig() != null} />;
+  return <AssistantChat aiEnabled={llmConfig() != null} listenForVoice />;
 }

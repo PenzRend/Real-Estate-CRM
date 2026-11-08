@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Menu, Mic, Plus, Search, X } from "lucide-react";
+import { AudioLines, Loader2, Menu, Mic, Plus, Search, X } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { VOICE_EVENT } from "@/components/assistant/voice-event";
 import { openSearch } from "./command-palette";
 import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
@@ -65,6 +66,28 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     <Suspense fallback={<NavList pathname={null} onNavigate={onNavigate} />}>
       <ActiveNavList onNavigate={onNavigate} />
     </Suspense>
+  );
+}
+
+/** Say what to do ("készíts foglalási szerződést a Kiss-ügyletre"): the assistant opens, listens and does it. */
+function VoiceButton({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate?.();
+        window.dispatchEvent(new Event(VOICE_EVENT));
+      }}
+      title="Mondd Flaviónak – például: „írj fel egy feladatot holnapra”"
+      aria-label="Mondd Flaviónak"
+      className={cn(
+        "flex items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent-soft/50 text-sm font-medium text-accent transition-colors hover:border-accent/60 hover:bg-accent-soft",
+        compact ? "size-9" : "h-11",
+      )}
+    >
+      <AudioLines className="size-4" />
+      {!compact && "Mondd Flaviónak"}
+    </button>
   );
 }
 
@@ -131,6 +154,7 @@ export function Sidebar({ account }: { account: ReactNode }) {
         <Logo />
       </div>
       <div className="flex flex-col gap-4">
+        <VoiceButton />
         <CaptureButton />
         <SearchButton />
         <NavLinks />
@@ -174,6 +198,7 @@ export function MobileNav({ account }: { account: ReactNode }) {
           <button type="button" onClick={openSearch} className="grid size-9 place-items-center rounded-full border border-border text-ink" aria-label="Keresés">
             <Search className="size-4" />
           </button>
+          <VoiceButton compact />
           <Link
             href="/interactions/new"
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-medium text-white"
@@ -203,6 +228,7 @@ export function MobileNav({ account }: { account: ReactNode }) {
               </button>
             </div>
             <div className="flex flex-col gap-4">
+              <VoiceButton onNavigate={() => setOpen(false)} />
               <CaptureButton onNavigate={() => setOpen(false)} />
               <NavLinks onNavigate={() => setOpen(false)} />
             </div>

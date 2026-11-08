@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, CircleAlert, Download, FileCheck2, Loader2
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { aiReviewContractAction, approveContractAction, deleteContractAction, previewContractAction, saveContractAction } from "@/app/(app)/contracts/actions";
+import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -174,21 +175,24 @@ export function ContractReview({ draft, documentUrl }: { draft: DraftView; docum
       <section className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-background">
         <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
           <span className="text-sm font-medium text-ink">{editing ? "A szerződés szövege" : "Előnézet"}</span>
-          <span className="text-xs text-muted">{editing ? "# címsor · **félkövér** · - felsorolás · {mező}" : "A sárgával jelölt részek még hiányoznak."}</span>
+          <span className="text-xs text-muted">{editing ? "Írj bele, mint egy Word-dokumentumba. A kék címkék az adatok." : "A sárgával jelölt részek még hiányoznak."}</span>
           <button type="button" onClick={() => setEditing((e) => !e)} className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-ink hover:bg-surface">
             <PencilLine className="size-3.5" /> {editing ? "Előnézet" : "Szöveg szerkesztése"}
           </button>
         </div>
         {editing ? (
-          <textarea
+          <RichTemplateEditor
             value={body}
-            onChange={(e) => {
-              setBody(e.target.value);
+            onChange={(next) => {
+              setBody(next);
               setDirty(true);
             }}
-            spellCheck
-            aria-label="A szerződés szövege"
-            className="min-h-[40rem] flex-1 resize-y px-6 py-5 font-mono text-[13px] leading-relaxed text-ink focus:outline-none"
+            // A filled field shows its value, so the text reads like the finished contract.
+            fields={draft.fields.map((f) => ({ key: f.key, label: valueOf(f.key).trim() || f.label, group: f.group }))}
+            ai={false}
+            minHeight="40rem"
+            ariaLabel="A szerződés szövege"
+            className="rounded-none border-0"
           />
         ) : (
           <article

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AssistantChat } from "./assistant-chat";
+import { VOICE_EVENT } from "./voice-event";
 
 /**
  * The assistant one tap away on every screen: a round button in the bottom-right
@@ -17,6 +18,13 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLElement>(null);
 
+  // "Mondd Flaviónak": open the panel; the chat inside starts listening.
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(VOICE_EVENT, show);
+    return () => window.removeEventListener(VOICE_EVENT, show);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     panel.current?.querySelector("textarea")?.focus();
@@ -25,8 +33,9 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // Its own page has the chat already; on Üzenetek it would cover the send button.
-  if (pathname === "/assistant" || pathname === "/messages") return null;
+  // Its own page has the chat already. On Üzenetek the round button would cover the send button, so only the voice button opens it there.
+  if (pathname === "/assistant") return null;
+  const hideButton = pathname === "/messages";
 
   return (
     <>
@@ -64,7 +73,7 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
             <X className="size-4" />
           </button>
         </header>
-        <AssistantChat aiEnabled={aiEnabled} compact />
+        <AssistantChat aiEnabled={aiEnabled} compact listenForVoice />
       </section>
       <button
         type="button"
@@ -75,6 +84,7 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
         className={cn(
           "fixed right-5 bottom-5 z-40 grid size-14 place-items-center rounded-full bg-primary text-white shadow-float transition-transform hover:scale-105 hover:bg-primary-hover sm:right-6 sm:bottom-6",
           open && "hidden sm:grid",
+          hideButton && "hidden sm:hidden",
         )}
       >
         {open ? <X className="size-5" /> : <Sparkles className="size-5" />}

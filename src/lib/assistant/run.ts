@@ -4,7 +4,8 @@ import { relativeDayTable } from "@/lib/ai/capture-prompt";
 import { llmConfig, type LlmConfig } from "@/lib/ai/config";
 import { AiError, postChat, readJson } from "@/lib/ai/extract";
 import type { CurrentUser } from "@/lib/auth";
-import { runTool, SourceRegistry, toolJsonSchemas, type Source } from "./tools";
+import type { ActionOutcome, Confirmation } from "./actions";
+import { runTool, SourceRegistry, toolJsonSchemas, type Ctx, type Source } from "./tools";
 
 const MAX_STEPS = 8;
 
@@ -18,13 +19,20 @@ Rules:
 - If the tools return nothing relevant, say clearly that the CRM has no such data. Do not guess.
 - Give exact dates and amounts from the records (dates as they appear, amounts in forints, e.g. 80 000 000 Ft or 80 M Ft).
 - "Where/how can I …" questions about using Flavio (booking a viewing, uploading photos, connecting Gmail or Outlook, …): call get_app_help and answer from it with the screen and the buttons to press, in a short step list, citing the screen like any record. Only describe screens and buttons get_app_help lists; if it has nothing for the request, say Flavio does not do that yet.
-- You can only read. You cannot send emails, call anyone, create or change tasks or records. If asked to, say so in one sentence and point to the matching feature from get_app_help. You yourself never send anything: for a send request about an incoming email, point to "Válaszvázlat"; otherwise say the agent should send it from their own email program or phone, and you may offer the short text to paste.
+- You can also act, with the tools marked "DOES IT" and "PREPARES". When the agent clearly asks for something ("csinálj egy foglalási szerződést a Kiss-ügyletre", "írj fel egy feladatot holnapra", "rögzítsd, hogy felhívtam Annát", "írj neki egy levelet"), do it; do not ask "biztosan?". The request often comes by voice: names may be misheard, so search with the base form and, if needed, only the family name or first name.
+  - First find the records with the search tools and use only ids they returned. Never invent ids. If several records could be meant and nothing tells them apart, ask one short question listing them instead of guessing.
+  - Contracts: find the deal with search_deals (or the listing/client), then create_contract. Say it is a draft to review, and cite it.
+  - Emails: draft_email only puts the email in "Kimenő levelek" for approval; never say it was sent. You never send anything yourself.
+  - book_viewing and move_deal only prepare the step: say in one sentence what will happen and that the agent can confirm it with the "Jóváhagyás" button below.
+  - After acting, answer in one or two sentences with what you did, citing the created or changed record.
+  - Deleting, archiving, sending, calling, payments and settings are not possible: say so and point to the screen from get_app_help.
 - If a client search finds nothing, try again with only the first name or the family name before saying the client does not exist.
 - For "today", "this week" and similar, use the dates given in the context.
-- Prefer short answers: a sentence or a short bullet list. No preamble.`;
+- Prefer short answers: a sentence or a short bullet list. No preamble.
+- "Nyisd meg", "mutasd", "menj a …": find the record if needed and call open_page with its href.`;
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
-export type AssistantAnswer = { answer: string; sources: Source[]; model: string; inputTokens: number; outputTokens: number };
+export type AssistantAnswer = { answer: string; sources: Source[]; confirmations: Confirmation[]; navigate: string | null; changed: boolean; model: string; inputTokens: number; outputTokens: number };
 
 function contextMessage(user: CurrentUser, now: Date) {
   return `Context (not from the user):
@@ -47,7 +55,7 @@ export function citedSources(answer: string, registry: SourceRegistry): Source[]
   return out;
 }
 
-async function runWithClaude(config: Extract<LlmConfig, { provider: "anthropic" }>, system: string, history: ChatTurn[], ctx: { user: CurrentUser; now: Date; sources: SourceRegistry }) {
+async function runWithClaude(config: Extract<LlmConfig, { provider: "anthropic" }>, system: string, history: ChatTurn[], ctx: Ctx) {
   const client = new Anthropic();
   const tools: Anthropic.Beta.BetaTool[] = toolJsonSchemas().map((t) => ({
     name: t.name,
@@ -98,14 +106,37 @@ async function runWithClaude(config: Extract<LlmConfig, { provider: "anthropic" 
 
 type OpenAiMessage =
   | { role: "system" | "user"; content: string }
-  | { role: "assistant"; content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] }
+  | { role: "assistant"; content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[]; _model?: string }
   | { role: "tool"; tool_call_id: string; content: string };
+
+/**
+ * The messages for one provider. Tool calls another provider made earlier in
+ * this request (the main one ran out of its per-minute budget halfway) can't
+ * be replayed as tool calls (Gemini wants its own signatures on them), so
+ * they are handed over as text: what was looked up and what was already done,
+ * so nothing is done twice.
+ */
+export function messagesFor(messages: OpenAiMessage[], model: string): OpenAiMessage[] {
+  const results = new Map(messages.flatMap((m) => (m.role === "tool" ? [[m.tool_call_id, m.content] as const] : [])));
+  const foreign = new Set(messages.flatMap((m) => (m.role === "assistant" && m.tool_calls?.length && m._model !== model ? m.tool_calls.map((c) => c.id) : [])));
+  const out: OpenAiMessage[] = [];
+  for (const m of messages) {
+    if (m.role === "tool" && foreign.has(m.tool_call_id)) continue;
+    if (m.role === "assistant" && m.tool_calls?.length && m._model !== model) {
+      const lines = m.tool_calls.map((c) => `- ${c.function.name}(${c.function.arguments}) → ${(results.get(c.id) ?? "").slice(0, 6000)}`);
+      out.push({ role: "user", content: `(Earlier steps of this same request, already carried out – use the results, do not repeat any action:)\n${lines.join("\n")}` });
+      continue;
+    }
+    out.push(m.role === "assistant" ? { role: "assistant", content: m.content, ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}) } : m);
+  }
+  return out;
+}
 
 async function runWithOpenAiCompatible(
   config: Extract<LlmConfig, { provider: "openai-compatible" }>,
   system: string,
   history: ChatTurn[],
-  ctx: { user: CurrentUser; now: Date; sources: SourceRegistry },
+  ctx: Ctx,
 ) {
   const tools = toolJsonSchemas().map((t) => ({ type: "function" as const, function: t }));
   const messages: OpenAiMessage[] = [{ role: "system", content: system }, ...history.map((t) => ({ role: t.role, content: t.content }))];
@@ -117,7 +148,11 @@ async function runWithOpenAiCompatible(
   for (let step = 0; step < MAX_STEPS; step++) {
     // The first step must look something up, so an answer is never made from nothing.
     const toolChoice = step === 0 && forceTool ? "required" : "auto";
-    const res = await postChat(config, () => ({ messages, tools, tool_choice: toolChoice }));
+    let sentTo = config.model;
+    const res = await postChat(config, (m) => {
+      sentTo = m;
+      return { messages: messagesFor(messages, m), tools, tool_choice: toolChoice };
+    });
     if (res.status === 429) {
       console.error("assistant 429", (await res.text()).slice(0, 300));
       throw new AiError("rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");
@@ -150,7 +185,7 @@ async function runWithOpenAiCompatible(
       const answer = (message.content ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim();
       return { answer, model, inputTokens, outputTokens };
     }
-    messages.push({ role: "assistant", content: message.content ?? null, tool_calls: message.tool_calls });
+    messages.push({ role: "assistant", content: message.content ?? null, tool_calls: message.tool_calls, _model: sentTo });
     for (const call of message.tool_calls) {
       let args: unknown = {};
       try {
@@ -164,20 +199,32 @@ async function runWithOpenAiCompatible(
   throw new AiError("too many steps", "A kérdés túl összetett volt. Próbáld konkrétabban.");
 }
 
-/** Answers a question using only read-only CRM tools; returns the answer and the records it cites. */
+/** Answers a question or carries out a request with the CRM tools; returns the answer, the records it cites, and any step waiting for confirmation. */
 export async function askAssistant(user: CurrentUser, history: ChatTurn[], now: Date): Promise<AssistantAnswer> {
   const config = llmConfig();
   if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
   const sources = new SourceRegistry();
-  const ctx = { user, now, sources };
+  const outcome: ActionOutcome = { navigate: null, confirmations: [], changed: false, done: [] };
+  const ctx: Ctx = { user, now, sources, outcome };
   // The context goes first as a user turn so the system prompt stays identical (and cacheable).
   const turns: ChatTurn[] = [{ role: "user", content: contextMessage(user, now) }, { role: "assistant", content: "Rendben." }, ...history];
-  const result =
-    config.provider === "anthropic"
-      ? await runWithClaude(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx)
-      : await runWithOpenAiCompatible(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx);
+  let result: { answer: string; model: string; inputTokens: number; outputTokens: number };
+  try {
+    result =
+      config.provider === "anthropic"
+        ? await runWithClaude(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx)
+        : await runWithOpenAiCompatible(config, ASSISTANT_SYSTEM_PROMPT, turns, ctx);
+  } catch (error) {
+    // Something was already done before the AI stopped: say so, instead of an error that invites doing it again.
+    if (!(error instanceof AiError) || (!outcome.done.length && !outcome.confirmations.length)) throw error;
+    const done = outcome.done.map((r) => `${sources.get(r)?.label ?? "kész"} [${r}]`).join(", ");
+    const answer = done
+      ? `Elkészült: ${done}.${outcome.confirmations.length ? " A többit lent jóváhagyhatod." : ""} A válaszom közben megszakadt, de ez már megtörtént, nem kell újra kérned.`
+      : "Előkészítettem, lent jóváhagyhatod.";
+    result = { answer, model: config.model, inputTokens: 0, outputTokens: 0 };
+  }
   if (!result.answer) throw new AiError("empty answer", "Az AI-asszisztens nem adott választ. Próbáld újra.");
   // Some models cite as 【S1】 or (S1); the chat links only [S1].
   const answer = result.answer.replace(/[【(（]\s*(S\d+)\s*[】)）]/g, "[$1]");
-  return { ...result, answer, sources: citedSources(answer, sources) };
+  return { ...result, answer, sources: citedSources(answer, sources), confirmations: outcome.confirmations, navigate: outcome.navigate, changed: outcome.changed };
 }

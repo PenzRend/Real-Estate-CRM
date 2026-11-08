@@ -1,8 +1,9 @@
 "use client";
 
 import { Loader2, Plus, Sparkles, Trash2, Zap } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { addEmailStartersAction, deleteEmailTemplateAction, saveEmailTemplateAction, toggleEmailTemplateAction } from "@/app/(app)/inbox/automation-actions";
+import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
@@ -51,20 +52,7 @@ const input = "h-9 w-full rounded-xl border border-border bg-background px-3 tex
 function Editor({ id, initial, onDone }: { id: string | null; initial: Draft; onDone: () => void }) {
   const [d, setD] = useState<Draft>(initial);
   const [busy, start] = useTransition();
-  const body = useRef<HTMLTextAreaElement>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
-  const insert = (text: string) => {
-    const el = body.current;
-    if (!el) return set("body", d.body + text);
-    const at = el.selectionStart ?? d.body.length;
-    const next = d.body.slice(0, at) + text + d.body.slice(el.selectionEnd ?? at);
-    set("body", next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.selectionStart = el.selectionEnd = at + text.length;
-    });
-  };
-
   return (
     <div className="reveal flex flex-col gap-3 rounded-2xl bg-surface p-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -119,21 +107,11 @@ function Editor({ id, initial, onDone }: { id: string | null; initial: Draft; on
         Tárgy
         <input value={d.subject} onChange={(e) => set("subject", e.target.value)} className={input} />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-muted">
+      <div className="flex flex-col gap-1 text-xs text-muted">
         Szöveg
-        <textarea ref={body} value={d.body} onChange={(e) => set("body", e.target.value)} rows={10} className="resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm leading-relaxed text-ink focus:border-ink focus:outline-none" />
-      </label>
-      <div className="flex flex-wrap gap-1.5">
-        {FIELDS.map(([k, l]) => (
-          <button key={k} type="button" onClick={() => insert(`{${k}}`)} className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-ink hover:bg-surface-strong">
-            {l}
-          </button>
-        ))}
-        <button type="button" onClick={() => insert("[[AI: írj egy rövid, személyes mondatot az ügyfél helyzetéről.]]")} className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">
-          <Sparkles className="size-3" /> AI-bekezdés
-        </button>
+        <RichTemplateEditor value={d.body} onChange={(v) => set("body", v)} fields={FIELDS.map(([key, label]) => ({ key, label }))} formatting={false} minHeight="14rem" ariaLabel="A levél szövege" className="rounded-2xl" />
       </div>
-      <p className="text-xs text-muted">A {"{mezők}"} az ügyfél és az ingatlan adataival töltődnek ki. Az AI-bekezdést Flavio írja meg ügyfelenként; személyes azonosító adatot nem kap.</p>
+      <p className="text-xs text-muted">A kék címkék az ügyfél és az ingatlan adataival töltődnek ki. Az AI-bekezdést Flavio írja meg ügyfelenként; személyes azonosító adatot nem kap.</p>
       <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"

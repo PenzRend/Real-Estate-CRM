@@ -9,6 +9,7 @@ import { startOfZonedDay } from "@/lib/i18n/timezone";
 import { extrasForDisplay } from "@/lib/properties/extras";
 import { searchTerm } from "@/lib/search";
 import { findDocuments } from "@/lib/office-docs/find";
+import { actionDescriptions, actionHandlers, actionSchemas, type ActionName, type ActionOutcome } from "./actions";
 import { appGuide } from "./app-guide";
 import { createClient } from "@/lib/supabase/server";
 import { categoryLabels, type Match } from "@/lib/matching/match";
@@ -43,7 +44,7 @@ export function explainMatch(m: Match) {
 // run as the signed-in user (RLS) inside their workspace. Every record a tool
 // returns gets a source reference ("S3") the answer can cite.
 
-export type SourceType = "client" | "property" | "task" | "interaction" | "email" | "page" | "document";
+export type SourceType = "client" | "property" | "task" | "interaction" | "email" | "page" | "document" | "contract" | "deal";
 export type Source = { ref: string; type: SourceType; id: string; label: string; href: string };
 
 export class SourceRegistry {
@@ -112,11 +113,13 @@ export const toolSchemas = {
     query: z.string().max(100).describe("Words from the document's name, its folder, its kind or its listing, e.g. 'megbízási szerződés', 'tulajdoni lap Bartók', 'árlista'. Empty lists the newest."),
   }),
   get_app_help: z.object({}),
+  ...actionSchemas,
 } as const;
 
 export type ToolName = keyof typeof toolSchemas;
 
 export const toolDescriptions: Record<ToolName, string> = {
+  ...actionDescriptions,
   search_clients: "Find clients (buyers, sellers, owners, investors, tenants). Returns up to 20 with status, budget, wished locations, follow-up and last contact. Without filters returns the most recently updated active clients.",
   get_client: "Full record of one client: contact, requirements, notes, recent conversations, open tasks, and matching listings.",
   search_properties: "Find listings by text, status, type, sale/rent, price range (millions HUF) or minimum rooms. Returns up to 20.",
@@ -130,7 +133,8 @@ export const toolDescriptions: Record<ToolName, string> = {
   get_app_help: "Where things are in Flavio and how to do them: every screen with its buttons. Use for 'where/how can I…' questions and when pointing the agent to a feature.",
 };
 
-type Ctx = { user: CurrentUser; sources: SourceRegistry; now: Date };
+/** `outcome` is given only by the assistant chat: without it the action tools refuse (other AI features only read). */
+export type Ctx = { user: CurrentUser; sources: SourceRegistry; now: Date; outcome?: ActionOutcome };
 
 async function searchClients(ctx: Ctx, a: z.infer<typeof toolSchemas.search_clients>) {
   const { clients, total } = await listClients(
@@ -385,7 +389,7 @@ async function appHelp(ctx: Ctx) {
   };
 }
 
-const handlers: { [K in ToolName]: (ctx: Ctx, args: z.infer<(typeof toolSchemas)[K]>) => Promise<unknown> } = {
+const handlers: { [K in Exclude<ToolName, ActionName>]: (ctx: Ctx, args: z.infer<(typeof toolSchemas)[K]>) => Promise<unknown> } = {
   search_clients: searchClients,
   get_client: getClient,
   search_properties: searchProperties,
@@ -423,9 +427,13 @@ export async function runTool(ctx: Ctx, name: string, rawArgs: unknown): Promise
     console.info(`[assistant] ${name}(${Object.keys((rawArgs as object) ?? {}).join(", ")})${parsed.success ? "" : " → invalid"}`);
   }
   if (!parsed.success) return JSON.stringify({ error: `Invalid arguments: ${parsed.error.issues.map((i) => i.message).join("; ")}` });
+  const isAction = name in actionHandlers;
+  if (isAction && name !== "search_deals" && !ctx.outcome) return JSON.stringify({ error: "Actions are not available here." });
   try {
-    const handler = handlers[name as ToolName] as (ctx: Ctx, args: unknown) => Promise<unknown>;
-    const result = await handler(ctx, parsed.data);
+    const result = isAction
+      ? await (actionHandlers[name as ActionName] as (ctx: Required<Ctx>, args: unknown) => Promise<unknown>)({ ...ctx, outcome: ctx.outcome ?? { navigate: null, confirmations: [], changed: false, done: [] } }, parsed.data)
+      : await (handlers[name as Exclude<ToolName, ActionName>] as (ctx: Ctx, args: unknown) => Promise<unknown>)(ctx, parsed.data);
+    if (isAction && ctx.outcome && result && typeof result === "object" && "done" in result && "ref" in result) ctx.outcome.done.push(String(result.ref));
     return JSON.stringify(result).slice(0, 30_000);
   } catch (error) {
     console.error("assistant tool failed", name, error instanceof Error ? error.message : error);
@@ -433,10 +441,28 @@ export async function runTool(ctx: Ctx, name: string, rawArgs: unknown): Promise
   }
 }
 
+/**
+ * The schema as the model needs it, without what only costs tokens: the
+ * "$schema" header and the id pattern repeated on every id (each step resends
+ * all tools, and Groq's free tier counts tokens per minute). The arguments
+ * are still checked against the full zod schema in runTool.
+ */
+function compact(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(compact);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "$schema" || (k === "additionalProperties" && v === false)) continue;
+    if (k === "pattern" && typeof v === "string" && v.startsWith("^[0-9a-f]{8}")) continue;
+    out[k] = compact(v);
+  }
+  return out;
+}
+
 export function toolJsonSchemas() {
   return (Object.keys(toolSchemas) as ToolName[]).map((name) => ({
     name,
     description: toolDescriptions[name],
-    parameters: z.toJSONSchema(toolSchemas[name], { io: "input" }) as Record<string, unknown>,
+    parameters: compact(z.toJSONSchema(toolSchemas[name], { io: "input" })) as Record<string, unknown>,
   }));
 }

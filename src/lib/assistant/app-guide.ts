@@ -88,7 +88,7 @@ export const appGuide: GuideEntry[] = [
     id: "assistant",
     screen: "AI-asszisztens",
     href: "/assistant",
-    how: "This chat, also available from the round button in the bottom-right corner on every screen. Answers questions about the agent's own clients, listings, tasks and emails, and where things are in Flavio. It only reads.",
+    how: "This chat, also available from the round button in the bottom-right corner on every screen. Answers questions about the agent's own clients, listings, deals, tasks and emails, and where things are in Flavio, and does things when asked: creates a task, logs a call or note, sets a follow-up date, adds a client, drafts a contract for review, writes an email into 'Kimenő levelek' for approval, opens a page; a viewing booking or moving a deal to another stage waits for 'Jóváhagyás' in the chat. It never sends anything itself and cannot delete. 'Mondd Flaviónak' (above 'Rögzítés' in the menu, the sound-wave button on a phone) or the microphone in the chat: say what to do, it listens until you stop talking.",
   },
   {
     id: "portals",

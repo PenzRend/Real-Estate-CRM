@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
 import { getCurrentUser } from "@/lib/auth";
 import { CONTRACT_KINDS, FIELD_CATALOG, isContractKind } from "@/lib/contracts/kinds";
-import { contractHtml } from "@/lib/contracts/render";
 import { officeTemplate } from "@/lib/contracts/templates";
 
 export const metadata: Metadata = { title: "Szerződés szövege" };
@@ -20,7 +19,6 @@ async function Editor({ params }: Pick<PageProps<"/contracts/templates/[kind]">,
   const user = await getCurrentUser();
   const office = await officeTemplate(user, kind);
   const def = CONTRACT_KINDS[kind];
-  const body = office?.body ?? def.body;
   return (
     <div data-wide className="flex flex-col gap-6">
       <PageHeader
@@ -37,7 +35,6 @@ async function Editor({ params }: Pick<PageProps<"/contracts/templates/[kind]">,
         knownKeys={FIELD_CATALOG.map((f) => f.key)}
         moneyKeys={MONEY_KEYS}
         canEdit={user.organization.role !== "member"}
-        initialHtml={contractHtml(kind, body, {}, office?.customFields ?? [])}
       />
     </div>
   );

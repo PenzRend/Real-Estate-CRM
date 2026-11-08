@@ -1,10 +1,11 @@
 "use client";
 
-import { Bold, Braces, Heading1, Heading2, List, Loader2, Save, Sparkles, Trash2, Wand2, X } from "lucide-react";
+import { Loader2, Save, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { deleteTemplateAction, generateDocumentAction, previewTemplateAction, saveTemplateAction } from "@/app/(app)/documents/template-actions";
+import { RichTemplateEditor } from "@/components/rich-template/rich-template-editor";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { toast } from "@/components/ui/toaster";
@@ -31,12 +32,10 @@ export function TemplateEditor({ template, folders }: { template: DocumentTempla
   const [active, setActive] = useState(template?.active ?? true);
   const [sample, setSample] = useState<RecordHit | null>(null);
   const [picking, setPicking] = useState(false);
-  const [fieldsOpen, setFieldsOpen] = useState(false);
   const [html, setHtml] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const [saving, startSave] = useTransition();
   const [making, startMake] = useTransition();
-  const box = useRef<HTMLTextAreaElement>(null);
   const readOnly = template != null && !template.canEdit;
 
   // The preview follows the text (fields filled from the sample record; AI paragraphs shown as placeholders).
@@ -50,27 +49,6 @@ export function TemplateEditor({ template, folders }: { template: DocumentTempla
       clearTimeout(t);
     };
   }, [body, sample]);
-
-  /** Wraps the selection (or inserts at the cursor). */
-  function insert(before: string, after = "", placeholder = "") {
-    const el = box.current;
-    if (!el) return;
-    const { selectionStart: a, selectionEnd: b } = el;
-    const chosen = body.slice(a, b) || placeholder;
-    const next = `${body.slice(0, a)}${before}${chosen}${after}${body.slice(b)}`;
-    setBody(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(a + before.length, a + before.length + chosen.length);
-    });
-  }
-  const lineStart = (prefix: string) => {
-    const el = box.current;
-    if (!el) return;
-    const a = body.lastIndexOf("\n", el.selectionStart - 1) + 1;
-    setBody(`${body.slice(0, a)}${prefix}${body.slice(a)}`);
-    requestAnimationFrame(() => el.focus());
-  };
 
   function save() {
     startSave(async () => {
@@ -103,7 +81,6 @@ export function TemplateEditor({ template, folders }: { template: DocumentTempla
     });
   }
 
-  const tool = "grid size-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink";
   const SampleIcon = sample ? recordIcons[sample.kind] : null;
   return (
     <div className="flex flex-col gap-6">
@@ -140,60 +117,10 @@ export function TemplateEditor({ template, folders }: { template: DocumentTempla
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <section className="flex flex-col overflow-hidden rounded-3xl border border-border bg-background">
-          <div className="relative flex flex-wrap items-center gap-1 border-b border-border px-3 py-2">
-            <button type="button" className={tool} onClick={() => lineStart("# ")} title="Címsor" aria-label="Címsor">
-              <Heading1 className="size-4" />
-            </button>
-            <button type="button" className={tool} onClick={() => lineStart("## ")} title="Alcím" aria-label="Alcím">
-              <Heading2 className="size-4" />
-            </button>
-            <button type="button" className={tool} onClick={() => insert("**", "**", "félkövér")} title="Félkövér" aria-label="Félkövér">
-              <Bold className="size-4" />
-            </button>
-            <button type="button" className={tool} onClick={() => lineStart("- ")} title="Felsorolás" aria-label="Felsorolás">
-              <List className="size-4" />
-            </button>
-            <span className="mx-1 h-5 w-px bg-border" />
-            <button type="button" onClick={() => setFieldsOpen((o) => !o)} aria-expanded={fieldsOpen} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-ink hover:bg-surface">
-              <Braces className="size-4" /> Mező beszúrása
-            </button>
-            <button type="button" onClick={() => insert("\n[[AI: ", "]]\n", "írj egy rövid, barátságos bekezdést…")} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-accent hover:bg-accent-soft">
-              <Sparkles className="size-4" /> AI-bekezdés
-            </button>
-            {fieldsOpen && (
-              <div className="pop-in absolute top-full left-2 z-30 mt-1 grid max-h-72 w-80 grid-cols-1 overflow-y-auto rounded-2xl border border-border bg-background p-1.5 shadow-float [--pop-from:-4px]">
-                {FIELD_HELP.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => {
-                      insert(`{${f.key}}`);
-                      setFieldsOpen(false);
-                    }}
-                    className="flex items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-left text-sm hover:bg-surface"
-                  >
-                    <span className="text-ink">{f.label}</span>
-                    <span className="font-mono text-[11px] text-subtle">{`{${f.key}}`}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <textarea
-            ref={box}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            readOnly={readOnly}
-            spellCheck
-            placeholder={"# Címsor\n\nKedves {vevo_nev}!\n\n[[AI: írj két mondatot arról, miért illik hozzá az ingatlan]]\n\n- **Ár:** {ingatlan_ar}"}
-            className="min-h-[28rem] flex-1 resize-y px-5 py-4 font-mono text-[13px] leading-relaxed text-ink focus:outline-none"
-            aria-label="A sablon szövege"
-          />
-          <p className="border-t border-border px-5 py-2.5 text-xs text-muted">
-            # címsor · ## alcím · **félkövér** · - felsorolás · {"{mező}"} az adatokból · [[AI: utasítás]] – ezt a bekezdést az AI írja meg, csak a rekord adataiból.
-          </p>
-        </section>
+        <div className="flex min-w-0 flex-col gap-2">
+          <RichTemplateEditor value={body} onChange={setBody} fields={FIELD_HELP} readOnly={readOnly} ariaLabel="A sablon szövege" />
+          <p className="px-2 text-xs text-muted">Írj bele, mint egy Word-dokumentumba. A kék címkék a mezők – az ügyfél, az ingatlan vagy az ügylet adatai kerülnek a helyükre; az AI-bekezdést Flavio írja meg, csak a rekord adataiból.</p>
+        </div>
 
         <section className="flex flex-col overflow-hidden rounded-3xl border border-border bg-background">
           <div className="relative flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">

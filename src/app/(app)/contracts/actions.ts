@@ -56,13 +56,6 @@ export async function deleteContractAction(id: string) {
   redirect("/contracts");
 }
 
-/** The template editor's preview: the text with every field shown as a marked label. Nothing is saved. */
-export async function previewContractTemplateAction(kind: string, body: string, customFields: CustomField[]) {
-  await getCurrentUser();
-  if (!isContractKind(kind)) return null;
-  return contractHtml(kind, String(body).slice(0, 200_000), {}, Array.isArray(customFields) ? customFields : []);
-}
-
 export async function saveContractTemplateAction(kind: string, input: { body: string; customFields: CustomField[]; sourceName: string | null }) {
   const user = await getCurrentUser();
   const r = await saveOfficeTemplate(user, String(kind), {
