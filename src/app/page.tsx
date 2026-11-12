@@ -21,14 +21,16 @@ import { Logo } from "@/components/app-shell/logo";
 import { AssistantMock, CaptureMock, MatchMock } from "@/components/landing/mockups";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { SITE, siteUrl } from "@/lib/site";
 
 // Public landing page. Signed-in visitors are sent to the dashboard by the proxy.
 // Every claim here describes a working feature; unfinished ones say "Hamarosan".
 
 export const metadata: Metadata = {
-  title: { absolute: "Flavio – AI-asszisztens ingatlanosoknak" },
+  title: { absolute: SITE.title },
   description:
     "Mondd el a hívást, az AI kitölti az ügyféladatot. Párosítás indoklással, utánkövetés, Gmail- és Outlook-integráció és forrásokkal válaszoló AI-asszisztens – magyarul.",
+  alternates: { canonical: "/" },
 };
 
 const SIGNUP = "/signup";
@@ -142,7 +144,7 @@ const features = [
 ];
 
 const steps = [
-  { title: "Regisztrálj", text: "Egy perc, bankkártya nélkül. Saját, zárt munkaterületet kapsz." },
+  { title: "Regisztrálj", text: "Egy perc a meghívókóddal, bankkártya nélkül. Saját, zárt munkaterületet kapsz." },
   { title: "Rögzíts egy hívást", text: "Mondd el, mi történt. Az AI kitölti, te jóváhagyod – az ügyfél és a teendő már bent is van." },
   { title: "Hagyd, hogy dolgozzon", text: "Párosítás, utánkövetés, levelek és válaszok – te pedig a tárgyalásra figyelhetsz." },
 ];
@@ -170,13 +172,50 @@ const faqs = [
   },
   {
     q: "Mennyibe kerül?",
-    a: "A regisztráció ingyenes, bankkártya nem kell. Az előfizetési csomagokról időben, előre szólunk.",
+    a: "A pilot ideje alatt ingyenes, bankkártya nem kell. Az előfizetési csomagokról időben, előre szólunk.",
+  },
+  {
+    q: "Hogyan tudok regisztrálni?",
+    a: "A Flavio most meghívásos pilotban fut: a regisztrációhoz meghívókód kell, amit tőlünk kapsz. Ha egy kollégád meghív a csapatába, ahhoz nem kell kód.",
   },
 ];
+
+// Structured data for search engines and AI assistants: the product, the
+// questions above, and the site, from the same text the page shows.
+function StructuredData() {
+  const url = siteUrl();
+  const data = [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: SITE.name,
+      url,
+      description: SITE.description,
+      applicationCategory: "BusinessApplication",
+      applicationSubCategory: "CRM",
+      // A web app; phones install it from the browser.
+      operatingSystem: "Web",
+      inLanguage: "hu",
+      audience: { "@type": "BusinessAudience", audienceType: "Ingatlanközvetítők" },
+      featureList: features.map((f) => f.title),
+      offers: { "@type": "Offer", price: "0", priceCurrency: "HUF", description: "Meghívásos ingyenes pilot" },
+      image: `${url}/opengraph-image`,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    },
+    { "@context": "https://schema.org", "@type": "WebSite", name: SITE.name, url, inLanguage: "hu" },
+  ];
+  // "<" escaped so text can never close the script tag.
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />;
+}
 
 export default function LandingPage() {
   return (
     <div className="overflow-x-clip">
+      <StructuredData />
       {/* Navigation */}
       <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full border border-border bg-background/85 py-2 pr-2 pl-4 backdrop-blur">
@@ -229,7 +268,7 @@ export default function LandingPage() {
           <div className="mt-9">
             <CtaButtons />
           </div>
-          <p className="mt-4 text-[13px] text-muted">Ingyenes regisztráció · Bankkártya nélkül · 1 perc</p>
+          <p className="mt-4 text-[13px] text-muted">Ingyenes pilot · Meghívókóddal · Bankkártya nélkül</p>
 
           {/* Product preview */}
           <div className="relative mx-auto mt-16 grid max-w-5xl items-start gap-4 text-left md:grid-cols-[1.15fr_1fr]">
@@ -470,7 +509,7 @@ export default function LandingPage() {
               <div className="mt-9">
                 <CtaButtons dark />
               </div>
-              <p className="mt-4 text-[13px] text-white/50">Ingyenes regisztráció · Bankkártya nélkül</p>
+              <p className="mt-4 text-[13px] text-white/50">Ingyenes pilot · Meghívókóddal · Bankkártya nélkül</p>
             </div>
           </div>
         </section>
