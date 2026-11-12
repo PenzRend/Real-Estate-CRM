@@ -2,6 +2,8 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { aiUsage } from "@/lib/ai/usage";
 import { getCurrentUser } from "@/lib/auth";
+import { daysLeft } from "@/lib/billing/access";
+import { workspaceBilling } from "@/lib/billing/data";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/i18n/format";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
@@ -29,9 +31,18 @@ function Bar({ label, used, limit }: { label: string; used: number; limit: numbe
   );
 }
 
-/** The free pilot's AI allowance, today and this month, at the foot of the menu. */
+/** The workspace's plan and AI allowance, today and this month, at the foot of the menu. */
 export async function PilotUsage() {
-  const u = await aiUsage(await getCurrentUser());
+  const user = await getCurrentUser();
+  const [u, billing] = await Promise.all([aiUsage(user), workspaceBilling(user)]);
+  const label =
+    billing.status === "trialing"
+      ? `Próbaidő: még ${daysLeft(billing.trialEndsAt)} nap`
+      : billing.status === "pilot"
+        ? "Ingyenes pilot"
+        : billing.status === "past_due"
+          ? "Elmaradt fizetés"
+          : "Előfizetés";
   const monthOut = u.monthlyLimit !== null && u.month >= u.monthlyLimit;
   const dayOut = u.today >= u.dailyLimit;
   // The month is counted in Budapest time (see monthStart); noon keeps the date clear of the zone shift.
@@ -40,12 +51,12 @@ export async function PilotUsage() {
 
   return (
     <Link
-      href="/settings#ai-keret"
+      href={billing.status === "pilot" ? "/settings#ai-keret" : "/billing"}
       className="flex flex-col gap-2 rounded-2xl border border-border px-3.5 py-3 transition-colors hover:bg-surface"
-      aria-label={`Ingyenes pilot: ma ${u.today} / ${u.dailyLimit}${u.monthlyLimit !== null ? `, ebben a hónapban ${u.month} / ${u.monthlyLimit}` : ""} AI-hívás`}
+      aria-label={`${label}: ma ${u.today} / ${u.dailyLimit}${u.monthlyLimit !== null ? `, ebben a hónapban ${u.month} / ${u.monthlyLimit}` : ""} AI-hívás`}
     >
-      <span className="flex items-center gap-1.5 text-xs font-medium text-ink">
-        <Sparkles className="size-3.5" /> Ingyenes pilot · AI-hívások
+      <span className={cn("flex items-center gap-1.5 text-xs font-medium", billing.status === "past_due" ? "text-danger" : "text-ink")}>
+        <Sparkles className="size-3.5" /> {label} · AI-hívások
       </span>
       <Bar label="Ma" used={u.today} limit={u.dailyLimit} />
       {u.monthlyLimit !== null && <Bar label="Ebben a hónapban" used={u.month} limit={u.monthlyLimit} />}

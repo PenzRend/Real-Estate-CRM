@@ -1,6 +1,8 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { startOfZonedDay, utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
+import { hasAccess } from "@/lib/billing/access";
+import { workspaceBilling } from "@/lib/billing/data";
 import { createClient } from "@/lib/supabase/server";
 
 // Per-user limit on bursts of expensive AI calls, enforced on the server.
@@ -51,17 +53,26 @@ export async function aiUsage(user: CurrentUser): Promise<AiUsage> {
       .eq("organization_id", user.organization.id)
       .neq("status", "rejected")
       .gte("created_at", since);
-  const [today, month, org] = await Promise.all([
-    count(dayStart()),
-    count(monthStart()),
-    supabase.from("organizations").select("ai_daily_limit, ai_monthly_limit").eq("id", user.organization.id).maybeSingle(),
-  ]);
-  const own = org.data as { ai_daily_limit: number | null; ai_monthly_limit: number | null } | null;
+  // "*": the billing columns may not exist yet on an older database.
+  const [today, month, org] = await Promise.all([count(dayStart()), count(monthStart()), supabase.from("organizations").select("*").eq("id", user.organization.id).maybeSingle()]);
+  const own = org.data as { ai_daily_limit: number | null; ai_monthly_limit: number | null; billing_status?: string; plan_id?: string | null; seats?: number | null } | null;
+  // A paying workspace gets its plan's caps times its seats; pilots and trials the server defaults.
+  let planDaily: number | null = null;
+  let planMonthly: number | null = null;
+  if (own?.plan_id && (own.billing_status === "active" || own.billing_status === "past_due" || own.billing_status === "canceled")) {
+    const { data: plan } = await supabase.from("plans").select("ai_daily_per_seat, ai_monthly_per_seat").eq("id", own.plan_id).maybeSingle();
+    const p = plan as { ai_daily_per_seat: number; ai_monthly_per_seat: number | null } | null;
+    const seats = Math.max(1, own.seats ?? 1);
+    if (p) {
+      planDaily = p.ai_daily_per_seat * seats;
+      planMonthly = p.ai_monthly_per_seat === null ? null : p.ai_monthly_per_seat * seats;
+    }
+  }
   return {
     today: today.count ?? 0,
-    dailyLimit: own?.ai_daily_limit ?? defaultDailyLimit(),
+    dailyLimit: own?.ai_daily_limit ?? planDaily ?? defaultDailyLimit(),
     month: month.count ?? 0,
-    monthlyLimit: own?.ai_monthly_limit ?? defaultMonthlyLimit(),
+    monthlyLimit: own?.ai_monthly_limit ?? (planDaily !== null ? planMonthly : defaultMonthlyLimit()),
   };
 }
 
@@ -69,10 +80,12 @@ export async function aiUsage(user: CurrentUser): Promise<AiUsage> {
 export async function aiLimitMessage(user: CurrentUser): Promise<string | null> {
   const supabase = await createClient();
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-  const [hour, usage] = await Promise.all([
+  const [hour, usage, billing] = await Promise.all([
     supabase.from("ai_processing_logs").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", hourAgo),
     aiUsage(user),
+    workspaceBilling(user),
   ]);
+  if (!hasAccess(billing)) return "Az AI-funkciókhoz aktív előfizetés kell. Az Előfizetés oldalon tudod rendezni.";
   if (usage.monthlyLimit !== null && usage.month >= usage.monthlyLimit) {
     return "Elfogyott a munkaterület havi AI-kerete. A hónap elején újraindul; ha előbb kell, írj nekünk a Visszajelzés gombbal.";
   }

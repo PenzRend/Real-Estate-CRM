@@ -63,11 +63,11 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
 
   const next = safePath(formData.get("next"), "/dashboard");
   const supabase = await createClient();
-  // A team invitation needs no code; the sign-up trigger checks the same and is the real gate.
-  const invited = next.startsWith("/invite/");
+  // A code is optional: a valid one gives 30 free days, without one the
+  // account starts at the payment page. A mistyped code is caught here, so
+  // nobody loses their trial to a typo (the sign-up trigger checks it again).
   const code = parsed.data.signup_code;
-  if (!invited) {
-    if (!code) return { error: "Add meg a meghívókódot, amit tőlünk kaptál.", values };
+  if (code) {
     const { data: status } = await supabase.rpc("signup_code_status", { p_code: code, p_email: parsed.data.email });
     if (status !== "open") return { error: codeErrors[status as string] ?? codeErrors.unknown, values };
   }
@@ -81,7 +81,7 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
     },
   });
   // The trigger refused the account: a 500 "Database error saving new user", with no error code, is the only sign of it.
-  if (error && /database error saving new user/i.test(error.message)) return { error: invited ? "Ehhez a címhez nincs érvényes meghívó. Kérj új linket attól, aki meghívott." : codeErrors.unknown, values };
+  if (error && /database error saving new user/i.test(error.message)) return { error: codeErrors.unknown, values };
   if (error) return { error: translate(error), values };
 
   // Email confirmation disabled in Supabase → already signed in.

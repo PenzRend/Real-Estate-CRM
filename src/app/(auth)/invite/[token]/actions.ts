@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { WORKSPACE_COOKIE } from "@/lib/auth";
+import { syncSeats } from "@/lib/billing/data";
 import { acceptInvitation } from "@/lib/team";
 
 export type JoinState = { error?: string };
@@ -11,6 +12,8 @@ export type JoinState = { error?: string };
 export async function joinAction(token: string): Promise<JoinState> {
   const result = await acceptInvitation(token);
   if (!result.ok) return { error: result.error };
+  // One more seat on the office's subscription, if it has one.
+  await syncSeats(result.organizationId).catch((e) => console.error("syncSeats", e instanceof Error ? e.message : e));
   (await cookies()).set(WORKSPACE_COOKIE, result.organizationId, {
     httpOnly: true,
     sameSite: "lax",

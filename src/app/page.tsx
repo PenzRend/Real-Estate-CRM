@@ -144,7 +144,7 @@ const features = [
 ];
 
 const steps = [
-  { title: "Regisztrálj", text: "Egy perc a meghívókóddal, bankkártya nélkül. Saját, zárt munkaterületet kapsz." },
+  { title: "Regisztrálj", text: "Egy perc. Meghívókóddal 30 napig ingyenes; saját, zárt munkaterületet kapsz." },
   { title: "Rögzíts egy hívást", text: "Mondd el, mi történt. Az AI kitölti, te jóváhagyod – az ügyfél és a teendő már bent is van." },
   { title: "Hagyd, hogy dolgozzon", text: "Párosítás, utánkövetés, levelek és válaszok – te pedig a tárgyalásra figyelhetsz." },
 ];
@@ -172,11 +172,11 @@ const faqs = [
   },
   {
     q: "Mennyibe kerül?",
-    a: "A pilot ideje alatt ingyenes, bankkártya nem kell. Az előfizetési csomagokról időben, előre szólunk.",
+    a: "Ingatlanosonként havi előfizetés, éves fizetésnél két hónap ingyen. Meghívókóddal az első 30 nap ingyenes, és bármikor lemondhatod. Az aktuális árat a regisztráció után, az Előfizetés oldalon látod.",
   },
   {
     q: "Hogyan tudok regisztrálni?",
-    a: "A Flavio most meghívásos pilotban fut: a regisztrációhoz meghívókód kell, amit tőlünk kapsz. Ha egy kollégád meghív a csapatába, ahhoz nem kell kód.",
+    a: "Regisztrálj, és válassz előfizetést. Ha meghívókódot kaptál tőlünk, add meg a regisztrációkor: az első 30 nap ingyenes. Ha egy kollégád meghív a csapatába, az iroda előfizetésével dolgozol.",
   },
 ];
 
@@ -198,7 +198,7 @@ function StructuredData() {
       inLanguage: "hu",
       audience: { "@type": "BusinessAudience", audienceType: "Ingatlanközvetítők" },
       featureList: features.map((f) => f.title),
-      offers: { "@type": "Offer", price: "0", priceCurrency: "HUF", description: "Meghívásos ingyenes pilot" },
+      offers: { "@type": "Offer", priceCurrency: "HUF", description: "Havi vagy éves előfizetés ingatlanosonként; meghívókóddal 30 nap ingyenes próbaidő" },
       image: `${url}/opengraph-image`,
     },
     {
@@ -268,7 +268,7 @@ export default function LandingPage() {
           <div className="mt-9">
             <CtaButtons />
           </div>
-          <p className="mt-4 text-[13px] text-muted">Ingyenes pilot · Meghívókóddal · Bankkártya nélkül</p>
+          <p className="mt-4 text-[13px] text-muted">Meghívókóddal 30 napig ingyenes</p>
 
           {/* Product preview */}
           <div className="relative mx-auto mt-16 grid max-w-5xl items-start gap-4 text-left md:grid-cols-[1.15fr_1fr]">
@@ -509,7 +509,7 @@ export default function LandingPage() {
               <div className="mt-9">
                 <CtaButtons dark />
               </div>
-              <p className="mt-4 text-[13px] text-white/50">Ingyenes pilot · Meghívókóddal · Bankkártya nélkül</p>
+              <p className="mt-4 text-[13px] text-white/50">Meghívókóddal 30 napig ingyenes</p>
             </div>
           </div>
         </section>

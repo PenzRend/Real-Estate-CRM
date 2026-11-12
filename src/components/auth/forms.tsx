@@ -80,14 +80,13 @@ export function SignupForm({ next, email, code }: { next?: string; email?: strin
         <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} required />
       </Field>
       {!invited && (
-        <Field label="Meghívókód" htmlFor="signup_code" hint="A Flavio most meghívásos. A kódot tőlünk kapod.">
+        <Field label="Meghívókód (ha van)" htmlFor="signup_code" hint="Kóddal 30 napig ingyenes. Kód nélkül a regisztráció után előfizetéssel kezdheted.">
           <Input
             id="signup_code"
             name="signup_code"
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
-            required
             maxLength={20}
             placeholder="ABCD-1234"
             className="font-mono uppercase"

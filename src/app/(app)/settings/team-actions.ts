@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser, WORKSPACE_COOKIE } from "@/lib/auth";
+import { syncSeats } from "@/lib/billing/data";
 import { createClient } from "@/lib/supabase/server";
 import { canManageTeam, hashInviteToken, INVITE_DAYS, inviteLink, listTeam, listWorkspaces, newInviteToken } from "@/lib/team";
 
@@ -93,6 +94,7 @@ export async function removeMemberAction(userId: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("organization_members").delete().eq("organization_id", user.organization.id).eq("user_id", userId);
   if (error) console.error("remove member", error.message);
+  else await syncSeats(user.organization.id).catch((e) => console.error("syncSeats", e instanceof Error ? e.message : e));
   refresh();
 }
 
@@ -106,6 +108,7 @@ export async function leaveWorkspaceAction(): Promise<void> {
     console.error("leave workspace", error.message);
     return;
   }
+  await syncSeats(user.organization.id).catch((e) => console.error("syncSeats", e instanceof Error ? e.message : e));
   (await cookies()).delete(WORKSPACE_COOKIE);
   redirect("/dashboard");
 }

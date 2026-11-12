@@ -2,6 +2,7 @@ import { ArrowRight, CalendarDays, Download, LogOut, Mail, MessageSquare, Puzzle
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ReopenTourButton } from "@/components/app-shell/product-tour";
 import { NotificationsSetting } from "@/components/settings/notifications";
 import { PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { TeamInvites } from "@/components/settings/team";
@@ -254,6 +255,13 @@ async function SettingsContent() {
             )}
             .
           </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4 sm:col-span-2">
+            <div>
+              <p className="text-sm font-medium text-ink">Bemutató</p>
+              <p className="mt-0.5 text-sm text-muted">Egy perces körbevezetés: mi hol van a Flavióban.</p>
+            </div>
+            <ReopenTourButton />
+          </div>
           {isPlatformAdmin(user) && (
             <Connection icon={ShieldCheck} title="Pilot admin" status="Meghívókódok és a munkaterületek AI-keretei." href="/admin" cta="Megnyitás" />
           )}

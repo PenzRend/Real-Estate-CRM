@@ -9,7 +9,7 @@ export function GET() {
 
 > ${SITE.description}
 
-Flavio is a Hungarian-language CRM for real estate agents in Hungary, with an AI assistant built in. It is currently in an invite-only free pilot.
+Flavio is a Hungarian-language CRM for real estate agents in Hungary, with an AI assistant built in. It is a paid subscription per agent (monthly or yearly); an invitation code gives a 30-day free trial.
 
 ## Mit csinál
 
@@ -31,7 +31,7 @@ Flavio is a Hungarian-language CRM for real estate agents in Hungary, with an AI
 
 ## Hozzáférés
 
-- A pilot meghívásos és ingyenes, bankkártya nem kell. Regisztráció meghívókóddal: ${url}/signup
+- Havi vagy éves előfizetés ingatlanosonként; éves fizetésnél két hónap ingyen. Meghívókóddal az első 30 nap ingyenes. Regisztráció: ${url}/signup
 - Nyelv: magyar.
 
 ## Linkek

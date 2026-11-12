@@ -9,6 +9,8 @@ import { InstallBanner } from "@/components/app-shell/install-banner";
 import { PilotUsage } from "@/components/app-shell/pilot-usage";
 import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
 import { TeamGate } from "@/components/app-shell/team-gate";
+import { TourGate } from "@/components/app-shell/tour-gate";
+import { BillingGate } from "@/components/app-shell/billing-gate";
 import { llmConfig } from "@/lib/ai/config";
 
 // Signed-out visitors are redirected by src/proxy.ts; pages verify the user
@@ -51,6 +53,12 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <AssistantBubble aiEnabled={llmConfig() != null} />
       </Suspense>
       <CommandPalette />
+      <Suspense>
+        <BillingGate />
+      </Suspense>
+      <Suspense>
+        <TourGate />
+      </Suspense>
       <Toaster />
     </div>
   );

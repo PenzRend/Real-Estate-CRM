@@ -319,6 +319,98 @@ export async function listFeedback(): Promise<FeedbackItem[]> {
   }));
 }
 
+export type WorkspaceBillingRow = {
+  id: string;
+  name: string;
+  isPersonal: boolean;
+  createdAt: string;
+  status: string;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  interval: string | null;
+  seats: number | null;
+  stripeCustomerId: string | null;
+};
+
+/** Every workspace's billing state, newest first. Empty before the billing migration. */
+export async function listWorkspaceBilling(): Promise<WorkspaceBillingRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data, error } = await admin
+    .from("organizations")
+    .select("id, name, is_personal, created_at, billing_status, trial_ends_at, current_period_end, cancel_at_period_end, billing_interval, seats, stripe_customer_id")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) {
+    console.error("listWorkspaceBilling failed", error.code ?? error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    isPersonal: r.is_personal,
+    createdAt: r.created_at,
+    status: r.billing_status,
+    trialEndsAt: r.trial_ends_at,
+    currentPeriodEnd: r.current_period_end,
+    cancelAtPeriodEnd: r.cancel_at_period_end,
+    interval: r.billing_interval,
+    seats: r.seats,
+    stripeCustomerId: r.stripe_customer_id,
+  }));
+}
+
+export type Payment = {
+  id: string;
+  organizationId: string | null;
+  amount: number;
+  paidAt: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  description: string | null;
+  customerEmail: string | null;
+  customerName: string | null;
+  customerAddress: string | null;
+  customerTaxId: string | null;
+  receiptUrl: string | null;
+  stripeNumber: string | null;
+  invoiceNumber: string | null;
+  invoicedAt: string | null;
+};
+
+/** Payments from Stripe, newest first, with what the Hungarian invoice needs. */
+export async function listPayments(): Promise<Payment[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data, error } = await admin
+    .from("payments")
+    .select("id, organization_id, amount_huf, paid_at, period_start, period_end, description, customer_email, customer_name, customer_address, customer_tax_id, receipt_url, stripe_invoice_number, invoice_number, invoiced_at")
+    .order("paid_at", { ascending: false })
+    .limit(300);
+  if (error) {
+    console.error("listPayments failed", error.code ?? error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    organizationId: r.organization_id,
+    amount: Number(r.amount_huf),
+    paidAt: r.paid_at,
+    periodStart: r.period_start,
+    periodEnd: r.period_end,
+    description: r.description,
+    customerEmail: r.customer_email,
+    customerName: r.customer_name,
+    customerAddress: r.customer_address,
+    customerTaxId: r.customer_tax_id,
+    receiptUrl: r.receipt_url,
+    stripeNumber: r.stripe_invoice_number,
+    invoiceNumber: r.invoice_number,
+    invoicedAt: r.invoiced_at,
+  }));
+}
+
 /** Which server settings are present. Names and yes/no only; secret values never leave the server. */
 export function configStatus() {
   const has = (...names: string[]) => names.every((n) => Boolean(process.env[n]));
@@ -344,6 +436,8 @@ export function configStatus() {
       { name: "PRIVACY_*", ok: has("PRIVACY_CONTROLLER", "PRIVACY_EMAIL"), what: "Adatkezelési tájékoztató adatai" },
       { name: "AI_MONTHLY_LIMIT", ok: has("AI_MONTHLY_LIMIT"), what: "Havi AI-keret", optional: true },
       { name: "AI_DAILY_LIMIT", ok: has("AI_DAILY_LIMIT"), what: "Napi AI-keret (ha nincs: 100)", optional: true },
+      { name: "STRIPE_SECRET_KEY", ok: has("STRIPE_SECRET_KEY"), what: "Kártyás fizetés (Stripe)" },
+      { name: "STRIPE_WEBHOOK_SECRET", ok: has("STRIPE_WEBHOOK_SECRET"), what: "Fizetések visszaigazolása a Stripe-tól" },
     ] as { name: string; ok: boolean; what: string; optional?: boolean }[],
   };
 }
