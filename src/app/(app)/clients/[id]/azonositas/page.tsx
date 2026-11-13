@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IdentificationForm } from "@/components/aml/identification-form";
+import { visionAvailable } from "@/lib/aml/scan";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
@@ -33,7 +34,7 @@ async function Identification({ params }: Pick<PageProps<"/clients/[id]/azonosit
         title="Ügyfél-azonosítás"
         description={
           existing
-            ? `Azonosítva: ${formatDate(existing.verifiedOn)}. Az adatokat a pénzmosás elleni törvény szerint 8 évig meg kell őrizni.`
+            ? `Azonosítva: ${formatDate(existing.verifiedOn).replace(/\.$/, "")}. Az adatokat a pénzmosás elleni törvény szerint 8 évig meg kell őrizni.`
             : "A pénzmosás elleni törvény (Pmt.) szerint az ingatlanközvetítőnek azonosítania kell az ügyfelét az üzleti kapcsolat előtt."
         }
         actions={
@@ -44,7 +45,7 @@ async function Identification({ params }: Pick<PageProps<"/clients/[id]/azonosit
           ) : undefined
         }
       />
-      <IdentificationForm clientId={id} kind={existing?.kind ?? "person"} values={values} />
+      <IdentificationForm clientId={id} kind={existing?.kind ?? "person"} values={values} canScan={visionAvailable()} />
     </div>
   );
 }

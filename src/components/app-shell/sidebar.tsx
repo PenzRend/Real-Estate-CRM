@@ -1,6 +1,6 @@
 "use client";
 
-import { AudioLines, Loader2, Menu, Mic, Search, X } from "lucide-react";
+import { Loader2, Menu, Mic, Search, X } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
@@ -123,7 +123,12 @@ export function TeamNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** Say what to do ("készíts foglalási szerződést a Kiss-ügyletre"): the assistant opens, listens and does it. */
+/**
+ * The one main button: tell Flavio what happened ("beszéltem Kiss Annával…")
+ * or what to do ("írj fel egy feladatot holnapra"). The assistant opens,
+ * listens, saves the conversation, the client's needs and tasks, and asks
+ * what's missing.
+ */
 function VoiceButton({ onNavigate, compact = false }: { onNavigate?: () => void; compact?: boolean }) {
   return (
     <button
@@ -132,29 +137,16 @@ function VoiceButton({ onNavigate, compact = false }: { onNavigate?: () => void;
         onNavigate?.();
         window.dispatchEvent(new Event(VOICE_EVENT));
       }}
-      title="Mondd Flaviónak – például: „írj fel egy feladatot holnapra”"
+      title="Mondd el, mi történt vagy mit tegyen – például: „beszéltem Kiss Annával, 3 szobást keres”"
       aria-label="Mondd Flaviónak"
       className={cn(
-        "flex items-center justify-center gap-2 rounded-full border border-accent/30 bg-accent-soft/50 text-sm font-medium text-accent transition-colors hover:border-accent/60 hover:bg-accent-soft",
-        compact ? "size-9" : "h-11",
+        "flex items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-white transition-colors hover:bg-primary-hover",
+        compact ? "h-9 px-3.5" : "h-11",
       )}
     >
-      <AudioLines className="size-4" />
-      {!compact && "Mondd Flaviónak"}
+      <Mic className="size-4" />
+      {compact ? "Flavio" : "Mondd Flaviónak"}
     </button>
-  );
-}
-
-/** The main action: record what just happened. Always one tap away. */
-function CaptureButton({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <Link
-      href="/interactions/new"
-      onClick={onNavigate}
-      className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-    >
-      <Mic className="size-4" /> Rögzítés
-    </Link>
   );
 }
 
@@ -184,7 +176,6 @@ export function Sidebar({ account, team, plan }: { account: ReactNode; team?: Re
       </div>
       <div className="flex flex-col gap-4">
         <VoiceButton />
-        <CaptureButton />
         <SearchButton />
         <NavLinks />
         {team}
@@ -230,9 +221,6 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
             <Search className="size-4" />
           </button>
           <VoiceButton compact />
-          <Link href="/interactions/new" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-medium text-white">
-            <Mic className="size-4" /> Rögzítés
-          </Link>
         </div>
       </div>
       {open && (
@@ -253,7 +241,6 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
             </div>
             <div className="flex flex-col gap-4">
               <VoiceButton onNavigate={() => setOpen(false)} />
-              <CaptureButton onNavigate={() => setOpen(false)} />
               <NavLinks onNavigate={() => setOpen(false)} />
               {/* Streamed from the server, so it closes the menu itself when a link is followed. */}
               <div onClick={(e) => (e.target as Element).closest("a") && setOpen(false)}>{team}</div>

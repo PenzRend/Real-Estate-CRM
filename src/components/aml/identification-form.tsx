@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { ID_DOCUMENTS } from "@/lib/aml/identification";
+import { IdScan } from "./id-scan";
 import { cn } from "@/lib/cn";
 
 type Values = Record<string, string>;
@@ -17,7 +18,18 @@ type Values = Record<string, string>;
  * beneficial owners), plus the PEP declaration, the source of funds and the
  * purpose. Saved encrypted.
  */
-export function IdentificationForm({ clientId, kind: initialKind, values: initial }: { clientId: string; kind: "person" | "company"; values: Values }) {
+export function IdentificationForm({
+  clientId,
+  kind: initialKind,
+  values: initial,
+  canScan = false,
+}: {
+  clientId: string;
+  kind: "person" | "company";
+  values: Values;
+  /** A vision model is configured: offer filling the form from photos. */
+  canScan?: boolean;
+}) {
   const [state, action, pending] = useActionState<IdentificationState, FormData>(saveIdentificationAction.bind(null, clientId), {});
   const [kind, setKind] = useState(initialKind);
   const v = { ...initial, ...(state.values ?? {}) };
@@ -55,6 +67,7 @@ export function IdentificationForm({ clientId, kind: initialKind, values: initia
 
         {kind === "person" ? (
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {canScan && <IdScan clientId={clientId} />}
             {field("full_name", "Családi és utónév")}
             {field("birth_name", "Születési név", { hint: "Ha eltér." })}
             {field("mother_name", "Anyja születési neve")}

@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, AudioLines, BellRing, Building2, Inbox, Mic, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, Building2, Inbox, Mic, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { finishTourAction } from "@/app/(app)/tour-actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
-// The welcome walkthrough: what Flavio does and where it is, in six short
+// The welcome walkthrough: what Flavio does and where it is, in five short
 // steps. Shown once to a new user; Settings can open it again.
 
 export const TOUR_EVENT = "flavio:open-tour";
@@ -20,15 +20,9 @@ const STEPS: { icon: typeof Mic; title: string; text: string; where: string }[] 
   },
   {
     icon: Mic,
-    title: "Rögzítés: mondd el a hívást",
-    text: "Hívás vagy megtekintés után nyomd meg, és mondd el pár mondatban, mi történt. Az AI kitölti az ügyfelet, a keresését és a teendőt, te pedig mezőnként jóváhagyod. Semmi nem mentődik a tudtod nélkül.",
-    where: "Bal oldalt (telefonon fent) a fekete Rögzítés gomb.",
-  },
-  {
-    icon: AudioLines,
-    title: "Mondd Flaviónak",
-    text: "Kérdezz vagy kérj valamit, szóban vagy írásban: „Kiket kell ma visszahívnom?”, „Írj fel egy feladatot holnap 10-re”. Csak a te adataidból válaszol, és megmutatja, honnan tudja.",
-    where: "A Mondd Flaviónak gomb, vagy a jobb alsó sarokban lévő buborék.",
+    title: "Mondd Flaviónak – egy gomb mindenre",
+    text: "Hívás vagy megtekintés után mondd el, mi történt: „Beszéltem Kiss Annával, 3 szobást keres a XI. kerületben 80 millióig, pénteken hívjam vissza.” Flavio felveszi az ügyfelet, elmenti az igényeit és a teendőt, és rákérdez, ha valami fontos hiányzik. Kérdezni is tőle tudsz: „Kiket kell ma visszahívnom?”",
+    where: "Bal oldalt (telefonon fent) a fekete Mondd Flaviónak gomb, vagy a jobb alsó buborék.",
   },
   {
     icon: Building2,

@@ -34,6 +34,19 @@ const LOCAL_DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
 const LOCAL_TIME = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "YYYY-MM-DDTHH:mm (Budapest)");
 const kinds = CONTRACT_ORDER as [ContractKind, ...ContractKind[]];
 
+/** What a client is looking for: the same fields as the client form's "Keresési igények". */
+const needsShape = {
+  budget_min_million_huf: z.number().positive().optional(),
+  budget_max_million_huf: z.number().positive().optional(),
+  locations: z.array(z.string().max(100)).max(10).optional().describe("Cities, districts or areas, e.g. ['Budapest XI. kerület', 'Budaörs']."),
+  property_types: z.array(z.enum(["apartment", "house", "plot", "commercial", "other"])).max(5).optional(),
+  min_rooms: z.number().min(0).max(50).optional(),
+  min_area_sqm: z.number().min(0).max(100000).optional(),
+  max_area_sqm: z.number().min(0).max(100000).optional(),
+  move_by: LOCAL_DAY.optional().describe("When they want to move in / buy by."),
+  other_requirements: z.string().max(1000).optional().describe("Other wishes in a few words: balcony, lift, parking, quiet street…"),
+};
+
 export const actionSchemas = {
   search_deals: z.object({
     query: z.string().max(100).optional().describe("Buyer's or seller's name, or the listing's title, address or reference number (e.g. TESZT-001), in base form."),
@@ -59,10 +72,17 @@ export const actionSchemas = {
     client_type: z.enum(["buyer", "seller", "owner", "investor", "tenant", "other"]).default("buyer"),
     phone: z.string().max(40).optional(),
     email: z.string().email().max(200).optional(),
-    budget_min_million_huf: z.number().positive().optional(),
-    budget_max_million_huf: z.number().positive().optional(),
-    locations: z.array(z.string().max(100)).max(10).optional(),
+    ...needsShape,
     note: z.string().max(2000).optional().describe("Anything else the agent said about them."),
+  }),
+  update_client: z.object({
+    client_id: UUID,
+    phone: z.string().max(40).optional(),
+    email: z.string().email().max(200).optional(),
+    client_type: z.enum(["buyer", "seller", "owner", "investor", "tenant", "other"]).optional(),
+    status: z.enum(["new_lead", "contacted", "qualified", "active", "negotiation", "converted", "lost"]).optional(),
+    ...needsShape,
+    add_locations: z.boolean().default(true).describe("true: add the locations to the ones already saved; false: replace them."),
   }),
   create_contract: z
     .object({
@@ -100,7 +120,8 @@ export const actionDescriptions: Record<ActionName, string> = {
   create_task: "DOES IT: creates a task for the agent (optionally for a client or listing).",
   add_note: "DOES IT: logs a call, meeting, email or note on a client's timeline (like 'Rögzítés'), optionally with the next follow-up day.",
   set_follow_up: "DOES IT: sets when to contact a client next.",
-  create_client: "DOES IT: adds a new client. Search first with search_clients so you don't create a duplicate.",
+  create_client: "DOES IT: adds a new client with what is known: contact details and what they are looking for. Search first with search_clients so you don't create a duplicate.",
+  update_client: "DOES IT: saves new details about an existing client: phone, email, type, status, and what they are looking for (budget, locations, property types, rooms, size, move date, other wishes). Only the fields you pass change.",
   create_contract: `DOES IT: drafts a contract for the agent to review and approve (never final). Kinds: ${CONTRACT_ORDER.map((k) => `${k} = ${CONTRACT_KINDS[k].label}`).join("; ")}. foglalasi, adasveteli and atadas take a deal_id; megbizasi a property_id; megtekintesi a client_id and a property_id; berleti a deal_id.`,
   draft_email: "DOES IT: writes an email to a client and puts it in 'Kimenő levelek' for the agent to read and approve. It is NOT sent until the agent approves it there.",
   book_viewing: "PREPARES (the agent confirms with a button): a viewing for a client at a listing. Booking may send the office's automatic emails, so it waits for the agent.",
@@ -253,8 +274,7 @@ async function createClientRecord(ctx: Ctx, a: z.infer<typeof actionSchemas.crea
       status: "new_lead",
       phone: a.phone ?? null,
       email: a.email ?? null,
-      budget_min: millions(a.budget_min_million_huf),
-      budget_max: millions(a.budget_max_million_huf),
+      ...needsColumns(a),
       preferred_locations: a.locations ?? [],
       notes: a.note ?? null,
       lead_source: "AI-asszisztens",
@@ -267,6 +287,57 @@ async function createClientRecord(ctx: Ctx, a: z.infer<typeof actionSchemas.crea
   after(() => onEvent(ctx.user, { type: "client_created", clientId: id }));
   ctx.outcome.changed = true;
   return { done: true, ref: ctx.sources.add("client", id, a.full_name, `/clients/${id}`) };
+}
+
+type Needs = { [K in keyof typeof needsShape]?: z.infer<(typeof needsShape)[K]> };
+
+/** The needs the agent gave, as client columns; fields not given are left out (unchanged). */
+function needsColumns(a: Needs) {
+  const out: Record<string, unknown> = {};
+  if (a.budget_min_million_huf != null) out.budget_min = millions(a.budget_min_million_huf);
+  if (a.budget_max_million_huf != null) out.budget_max = millions(a.budget_max_million_huf);
+  if (a.property_types?.length) out.preferred_property_types = a.property_types;
+  if (a.min_rooms != null) out.min_rooms = a.min_rooms;
+  if (a.min_area_sqm != null) out.min_area_sqm = a.min_area_sqm;
+  if (a.max_area_sqm != null) out.max_area_sqm = a.max_area_sqm;
+  if (a.move_by) out.desired_move_date = a.move_by;
+  if (a.other_requirements) out.other_requirements = a.other_requirements;
+  return out;
+}
+
+async function updateClientRecord(ctx: Ctx, a: z.infer<typeof actionSchemas.update_client>) {
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("clients")
+    .select("full_name, preferred_locations, other_requirements, budget_min, budget_max")
+    .eq("id", a.client_id)
+    .eq("organization_id", ctx.user.organization.id)
+    .maybeSingle();
+  if (!current) return { error: "Unknown client." };
+  const changes: Record<string, unknown> = { ...needsColumns(a) };
+  if (a.phone) changes.phone = a.phone;
+  if (a.email) changes.email = a.email;
+  if (a.client_type) changes.client_type = a.client_type;
+  if (a.status) changes.status = a.status;
+  if (a.locations?.length) {
+    const before = (current.preferred_locations as string[] | null) ?? [];
+    changes.preferred_locations = a.add_locations ? [...new Set([...before, ...a.locations])].slice(0, 20) : a.locations;
+  }
+  if (a.other_requirements && current.other_requirements && a.other_requirements !== current.other_requirements) {
+    changes.other_requirements = `${current.other_requirements}; ${a.other_requirements}`.slice(0, 2000);
+  }
+  // A new maximum below the saved minimum (or the other way) replaces the stale end.
+  const min = (changes.budget_min ?? current.budget_min) as number | null;
+  const max = (changes.budget_max ?? current.budget_max) as number | null;
+  if (min != null && max != null && Number(min) > Number(max)) {
+    if ("budget_max" in changes) changes.budget_min = null;
+    else changes.budget_max = null;
+  }
+  if (!Object.keys(changes).length) return { done: false, note: "Nothing to change." };
+  const { error } = await supabase.from("clients").update(changes).eq("id", a.client_id).eq("organization_id", ctx.user.organization.id);
+  if (error) return { error: "Could not save (check that the minimums are not above the maximums)." };
+  ctx.outcome.changed = true;
+  return { done: true, saved: Object.keys(changes), ref: ctx.sources.add("client", a.client_id, current.full_name as string, `/clients/${a.client_id}`) };
 }
 
 async function createContract(ctx: Ctx, a: z.infer<typeof actionSchemas.create_contract>) {
@@ -330,6 +401,7 @@ export const actionHandlers: { [K in ActionName]: (ctx: Ctx, args: z.infer<(type
   add_note: addNote,
   set_follow_up: setFollowUp,
   create_client: createClientRecord,
+  update_client: updateClientRecord,
   create_contract: createContract,
   draft_email: draftEmail,
   book_viewing: prepareViewing,

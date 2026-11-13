@@ -60,11 +60,11 @@ describe("tool definitions", () => {
   it("are lookups, plus a fixed list of actions that say what they do", () => {
     const names = toolJsonSchemas().map((t) => t.name);
     expect(names.sort()).toEqual(Object.keys(toolSchemas).sort());
-    const actions = ["create_task", "add_note", "set_follow_up", "create_client", "create_contract", "draft_email", "book_viewing", "move_deal", "open_page"];
+    const actions = ["create_task", "add_note", "set_follow_up", "create_client", "update_client", "create_contract", "draft_email", "book_viewing", "move_deal", "open_page"];
     for (const name of names) if (!actions.includes(name)) expect(name).toMatch(/^(search|get|list|recent|find)_/);
     for (const t of toolJsonSchemas()) expect(t.parameters.type).toBe("object");
     for (const t of toolJsonSchemas().filter((t) => ["book_viewing", "move_deal"].includes(t.name))) expect(t.description).toMatch(/^PREPARES/);
-    for (const t of toolJsonSchemas().filter((t) => ["create_task", "add_note", "create_client", "create_contract", "draft_email"].includes(t.name))) expect(t.description).toMatch(/^DOES IT/);
+    for (const t of toolJsonSchemas().filter((t) => ["create_task", "add_note", "create_client", "update_client", "create_contract", "draft_email"].includes(t.name))) expect(t.description).toMatch(/^DOES IT/);
     expect(toolJsonSchemas().find((t) => t.name === "draft_email")?.description).toContain("NOT sent");
   });
 
