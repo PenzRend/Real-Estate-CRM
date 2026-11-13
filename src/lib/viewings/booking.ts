@@ -5,7 +5,7 @@ import { findMentionedProperty } from "@/lib/away/logic";
 import type { Option } from "@/lib/db/activity";
 import { listMailboxes } from "@/lib/mail/sync";
 import { createClient } from "@/lib/supabase/server";
-import { cleanProposedTimes, defaultSlot } from "./logic";
+import { cleanProposedTimes, freeSlot } from "./logic";
 
 // What the booking dialog starts from: the client (or the inquirer to save as
 // one), the listing the conversation is about, the times the client proposed,
@@ -16,10 +16,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export type PropertyOption = Option & { location: string | null };
 
 export type BookingPrep = {
-  client: { id: string; name: string; email: string | null } | null;
+  client: { id: string; name: string; email: string | null; phone: string | null } | null;
   /** The email's sender, to save as a new client, when they aren't one yet. */
   inquirer: { name: string; email: string | null; phone: string | null } | null;
-  clients: (Option & { email: string | null })[];
+  clients: (Option & { email: string | null; phone: string | null })[];
   properties: PropertyOption[];
   propertyId: string | null;
   /** Budapest wall-clock times; the first is preselected. */
@@ -27,6 +27,8 @@ export type BookingPrep = {
   /** The times came from the client's email. */
   timesFromEmail: boolean;
   calendar: { connected: boolean; allowed: boolean; email: string | null; provider: MailProvider | null };
+  /** The agent's own scheduled viewings from today on, to warn about a clash. */
+  busy: { startsAt: string; durationMinutes: number; label: string }[];
 };
 
 type AiViewing = { requested?: boolean; times?: unknown; name?: unknown; phone?: unknown };
@@ -67,7 +69,7 @@ export async function prepareBooking(user: CurrentUser, p: { clientId?: string |
 
   const clientId = p.clientId ?? email?.client_id ?? null;
   const { data: client } = clientId && UUID.test(clientId)
-    ? await supabase.from("clients").select("id, full_name, email").eq("id", clientId).eq("organization_id", org).maybeSingle()
+    ? await supabase.from("clients").select("id, full_name, email, phone").eq("id", clientId).eq("organization_id", org).maybeSingle()
     : { data: null };
 
   // The listing: given, named in the email, or the one last discussed with the client.
@@ -101,13 +103,31 @@ export async function prepareBooking(user: CurrentUser, p: { clientId?: string |
   // The calendar new events go in: one that has the permission, else a Google or Outlook account that can be asked for it.
   const usable = mailboxes.filter((m) => m.status !== "revoked" && m.provider !== "imap");
   const mailbox = usable.find((m) => m.can_calendar) ?? usable[0] ?? null;
+
+  const { data: upcoming } = await supabase
+    .from("viewings")
+    .select("starts_at, duration_minutes, client:clients(full_name), property:properties(title)")
+    .eq("organization_id", org)
+    .eq("created_by", user.id)
+    .eq("status", "scheduled")
+    .gte("starts_at", new Date(now.getTime() - 86_400_000).toISOString())
+    .order("starts_at")
+    .limit(300);
+  type Upcoming = { starts_at: string; duration_minutes: number; client: { full_name: string } | null; property: { title: string } | null };
+  const busy = ((upcoming ?? []) as unknown as Upcoming[]).map((v) => ({
+    startsAt: v.starts_at,
+    durationMinutes: v.duration_minutes,
+    label: [v.client?.full_name, v.property?.title].filter(Boolean).join(" · "),
+  }));
+
   return {
-    client: client ? { id: client.id, name: client.full_name, email: client.email } : null,
+    busy,
+    client: client ? { id: client.id, name: client.full_name, email: client.email, phone: client.phone } : null,
     inquirer: inquirer && (inquirer.name || inquirer.email) ? { ...inquirer, name: inquirer.name } : null,
-    clients: (clients.data ?? []).map((c) => ({ id: c.id, name: c.full_name, detail: c.phone ?? c.email, email: c.email })),
+    clients: (clients.data ?? []).map((c) => ({ id: c.id, name: c.full_name, detail: c.phone ?? c.email, email: c.email, phone: c.phone })),
     properties,
     propertyId,
-    times: proposed.length ? proposed : [defaultSlot(now)],
+    times: proposed.length ? proposed : [freeSlot(now, busy)],
     timesFromEmail: proposed.length > 0,
     calendar: {
       connected: Boolean(mailbox),

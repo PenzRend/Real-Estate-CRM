@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitingFeedback, cleanProposedTimes, defaultSlot, fillTimePlaceholders, followUpFor, relationFor, spokenTime } from "@/lib/viewings/logic";
+import { awaitingFeedback, cleanProposedTimes, defaultSlot, freeSlot, fillTimePlaceholders, followUpFor, relationFor, spokenTime } from "@/lib/viewings/logic";
 
 const now = new Date("2026-10-27T10:00:00Z"); // Tuesday, 11:00 in Budapest
 
@@ -15,6 +15,16 @@ describe("proposed times from an email", () => {
 
   it("defaults to tomorrow 17:00 Budapest time", () => {
     expect(defaultSlot(now)).toBe("2026-10-28T17:00");
+  });
+
+  it("suggests the first time that doesn't clash with the agent's viewings", () => {
+    // 2026-10-28 is after the clock change: 17:00 Budapest = 16:00 UTC.
+    expect(freeSlot(now, [])).toBe("2026-10-28T17:00");
+    expect(freeSlot(now, [{ startsAt: "2026-10-28T16:00:00Z", durationMinutes: 45 }])).toBe("2026-10-28T18:00");
+    // 17:30–18:30 blocks both 17:00 (45 min) and 18:00: next is 16:00.
+    expect(freeSlot(now, [{ startsAt: "2026-10-28T16:30:00Z", durationMinutes: 60 }])).toBe("2026-10-28T16:00");
+    // An earlier viewing that ends exactly at 17:00 is no clash.
+    expect(freeSlot(now, [{ startsAt: "2026-10-28T15:15:00Z", durationMinutes: 45 }])).toBe("2026-10-28T17:00");
   });
 });
 

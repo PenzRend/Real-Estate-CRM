@@ -124,7 +124,8 @@ export function FeedbackDialog({ viewing, onClose }: { viewing: Viewing; onClose
                 {error}
               </p>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
+            {/* Pinned to the bottom: the outcomes fill a phone screen, Mentés stays in reach. */}
+            <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-wrap justify-end gap-2 border-t border-border bg-background px-6 py-3">
               <Button variant="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
                 Később
               </Button>

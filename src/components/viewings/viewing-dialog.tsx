@@ -1,10 +1,12 @@
 "use client";
 
-import { CalendarCheck, CalendarPlus, CheckCircle2, Loader2, Sparkles, X } from "lucide-react";
+import { CalendarCheck, CalendarPlus, CheckCircle2, Loader2, MessageCircle, MessageSquare, Sparkles, TriangleAlert, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { bookViewingAction, prepareBookingAction, updateViewingAction } from "@/app/(app)/viewings/actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { messageLinks } from "@/lib/contact";
+import { confirmationText } from "@/lib/viewings/reminder";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { formatDateTime } from "@/lib/i18n/format";
 import { utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
@@ -122,6 +124,24 @@ export function ViewingDialog(
   }
 
   const ready = Boolean(start) && (editing || (propertyId && hasClient));
+
+  // Another of the agent's viewings overlapping the chosen time: a warning, not a block.
+  const startUtc = start ? zonedLocalToUtc(start) : null;
+  const clash = (() => {
+    if (!prep || !startUtc) return null;
+    const s = new Date(startUtc).getTime();
+    const e = s + duration * 60_000;
+    return prep.busy.find((b) => {
+      const bs = new Date(b.startsAt).getTime();
+      return bs < e && s < bs + b.durationMinutes * 60_000;
+    }) ?? null;
+  })();
+
+  // After booking: the confirmation, ready to send from the agent's own phone.
+  const picked = prep?.client ?? prep?.clients.find((c) => c.id === clientId) ?? null;
+  const clientPhone = picked?.phone ?? (newClient?.phone.trim() || null);
+  const clientName = picked?.name ?? newClient?.full_name ?? "";
+  const confirmLinks = done ? messageLinks(clientPhone, confirmationText({ clientName, startsAt: done.startsAt, place: location })) : null;
   const calendarNote = done ? calendarMessages[done.calendar] : null;
 
   return (
@@ -156,6 +176,19 @@ export function ViewingDialog(
               <a href={enableCalendarHref(pathname)} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-ink underline-offset-2 hover:underline">
                 <CalendarPlus className="size-4" /> Naptár engedélyezése
               </a>
+            )}
+            {!editing && confirmLinks && (
+              <div className="flex flex-col gap-2 rounded-2xl bg-surface p-3">
+                <p className="text-sm text-text">Küldd el az ügyfélnek az időpontot és a címet:</p>
+                <div className="flex flex-wrap gap-2">
+                  <a href={confirmLinks.sms} className={buttonClasses("secondary", "sm")}>
+                    <MessageSquare /> SMS
+                  </a>
+                  <a href={confirmLinks.whatsapp} target="_blank" rel="noreferrer" className={buttonClasses("secondary", "sm")}>
+                    <MessageCircle /> WhatsApp
+                  </a>
+                </div>
+              </div>
             )}
             <p className="text-xs text-muted">A megtekintés után itt kérdezünk rá, hogyan sikerült, és a válasz az ügyfél idővonalára kerül.</p>
             <div>
@@ -281,6 +314,16 @@ export function ViewingDialog(
               </Field>
             </div>
 
+            {clash && (
+              <p role="status" className="flex items-start gap-2 rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  Ütközik egy másik megtekintéseddel: {formatDateTime(clash.startsAt)}
+                  {clash.label && `, ${clash.label}`}.
+                </span>
+              </p>
+            )}
+
             <Field label="Helyszín" htmlFor="v-location">
               <Input
                 id="v-location"
@@ -330,11 +373,13 @@ export function ViewingDialog(
               </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="ghost" onClick={() => dialog.current?.close()} disabled={busy}>
+            {/* Pinned to the bottom: on a small phone the form scrolls, the button stays in reach. */}
+            <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background px-6 py-3">
+              {/* On a phone the X closes it; the main button gets the full width. */}
+              <Button variant="ghost" onClick={() => dialog.current?.close()} disabled={busy} className="max-sm:hidden">
                 Mégse
               </Button>
-              <Button onClick={save} disabled={!ready || busy}>
+              <Button onClick={save} disabled={!ready || busy} className="max-sm:flex-1">
                 {busy ? <Loader2 className="animate-spin" /> : <CalendarCheck />} {editing ? "Mentés" : "Megtekintés foglalása"}
               </Button>
             </div>

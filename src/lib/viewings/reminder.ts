@@ -19,6 +19,28 @@ export type ReminderFacts = {
 /** A map search for the address (opens the map app on a phone). */
 export const mapsUrl = (place: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 
+/**
+ * The short confirmation an agent texts the client right after booking
+ * (SMS or WhatsApp, from their own phone): when, where, and a map link.
+ */
+export function confirmationText(f: { clientName: string; startsAt: string; place: string | null }): string {
+  const at = new Date(f.startsAt);
+  const day = new Intl.DateTimeFormat("hu-HU", { month: "long", day: "numeric", weekday: "long", timeZone: DEFAULT_TIMEZONE }).format(at);
+  const time = new Intl.DateTimeFormat("hu-HU", { hour: "2-digit", minute: "2-digit", timeZone: DEFAULT_TIMEZONE }).format(at);
+  // Hungarian order: the first name is the last word.
+  const first = f.clientName.trim().split(/\s+/).at(-1);
+  const place = f.place?.trim();
+  return [
+    first ? `Kedves ${first}!` : "Jó napot!",
+    // Hungarian house numbers end in a period ("tere 5."): no second one.
+    `Megerősítem a megtekintést: ${day}, ${time}${place ? `, ${place}` : ""}`.replace(/\.?$/, "."),
+    place ? `Térkép: ${mapsUrl(place)}` : null,
+    "Ha közbejön valami, kérem, jelezze.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function reminderEmail(f: ReminderFacts): { subject: string; body: string } {
   const at = new Date(f.startsAt);
   const time = new Intl.DateTimeFormat("hu-HU", { hour: "2-digit", minute: "2-digit", timeZone: DEFAULT_TIMEZONE }).format(at);

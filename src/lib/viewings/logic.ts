@@ -87,6 +87,33 @@ export function defaultSlot(now: Date): string {
   return `${utcToZonedLocal(tomorrow.toISOString()).slice(0, 10)}T17:00`;
 }
 
+/**
+ * The first suggested time that doesn't clash with the agent's other
+ * viewings: tomorrow 17:00 first, then the other usual hours, then the next
+ * days. Falls back to tomorrow 17:00 when a whole week is full.
+ */
+export function freeSlot(now: Date, busy: { startsAt: string; durationMinutes: number }[], minutes: number = DEFAULT_DURATION): string {
+  const hours = [17, 18, 16, 15, 10, 11, 12, 13, 14, 19];
+  const taken = (local: string) => {
+    const utc = zonedLocalToUtc(local);
+    if (!utc) return false;
+    const s = new Date(utc).getTime();
+    const e = s + minutes * 60_000;
+    return busy.some((b) => {
+      const bs = new Date(b.startsAt).getTime();
+      return bs < e && s < bs + b.durationMinutes * 60_000;
+    });
+  };
+  for (let d = 1; d <= 7; d++) {
+    const day = utcToZonedLocal(new Date(now.getTime() + d * DAY).toISOString()).slice(0, 10);
+    for (const h of hours) {
+      const local = `${day}T${String(h).padStart(2, "0")}:00`;
+      if (!taken(local)) return local;
+    }
+  }
+  return defaultSlot(now);
+}
+
 /** Fills date placeholders like [időpont] in a reply with the booked time. */
 export function fillTimePlaceholders(text: string, when: string) {
   return text.replace(/\[(?:javasolt |megtekintési |pontos )?(?:időpont|dátum|nap és időpont|dátum és időpont|időpontot)\]/gi, when);
