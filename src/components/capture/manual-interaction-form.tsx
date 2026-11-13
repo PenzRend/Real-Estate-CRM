@@ -16,7 +16,8 @@ export function ManualInteractionForm({
 }: {
   clients: Option[];
   properties: Option[];
-  defaults: { clientId?: string; propertyId?: string; type?: string };
+  /** `notes`: text already typed for the AI, carried over when switching to manual. */
+  defaults: { clientId?: string; propertyId?: string; type?: string; notes?: string };
 }) {
   const [state, action, pending] = useActionState<InteractionFormState, FormData>(createInteractionAction, {});
   const [now] = useState(() => utcToZonedLocal(new Date().toISOString()));
@@ -59,7 +60,7 @@ export function ManualInteractionForm({
         </div>
         <div className="sm:col-span-2">
           <Field label="Részletes jegyzet" htmlFor="notes" error={e.notes}>
-            <Textarea id="notes" name="notes" defaultValue={v.notes} />
+            <Textarea id="notes" name="notes" defaultValue={v.notes ?? defaults.notes} />
           </Field>
         </div>
         <div className="sm:col-span-2">

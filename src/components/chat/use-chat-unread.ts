@@ -22,7 +22,9 @@ export function useChatUnread(pathname: string | null) {
     const supabase = createBrowserSupabase();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
-      .channel("chat-unread")
+      // A fresh name each time: the previous channel may still be closing, and
+      // reusing its name returns that subscribed channel, which rejects `.on()`.
+      .channel(`chat-unread-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => {
         // The open conversation marks its messages read first; count a moment later.
         clearTimeout(timer);

@@ -71,7 +71,7 @@ export function ChatView({
     const supabase = createBrowserSupabase();
     const catchUp = () => void loadMessagesAction(current).then(setMessages);
     const channel = supabase
-      .channel(`chat-${me}`)
+      .channel(`chat-${me}-${crypto.randomUUID()}`) // unique: the previous one may still be closing
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
         const m = payload.new as { id: string; sender_id: string; recipient_id: string | null; body: string; created_at: string; ref_kind: string | null };
         const ofThis = current === "office" ? m.recipient_id == null : (m.sender_id === current && m.recipient_id === me) || (m.sender_id === me && m.recipient_id === current);

@@ -102,7 +102,7 @@ export function CaptureWorkspace({
       </div>
 
       {mode === "manual" ? (
-        <ManualInteractionForm clients={clients} properties={properties} defaults={defaults} />
+        <ManualInteractionForm clients={clients} properties={properties} defaults={{ ...defaults, notes: text.trim() || undefined }} />
       ) : !aiEnabled ? (
         <div className="flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-soft px-5 py-4 text-sm text-warning">
           <PlugZap className="mt-0.5 size-4 shrink-0" />
@@ -134,7 +134,23 @@ export function CaptureWorkspace({
               </Button>
             </div>
           </div>
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          {error && (
+            <div role="alert" className="flex flex-col gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger sm:flex-row sm:items-center sm:justify-between">
+              <p>{error}</p>
+              {/* Never a dead end: the note goes on into the manual form. */}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  setError(null);
+                  setMode("manual");
+                }}
+              >
+                <PenLine /> Mentés kézzel
+              </Button>
+            </div>
+          )}
           <p className="text-xs text-muted">
             Az AI kigyűjti az ügyfél igényeit, a határidőket és a teendőket. Mentés előtt mindent látsz és javíthatsz.
             A hangfelvételt nem tároljuk, csak a leírt szöveget.

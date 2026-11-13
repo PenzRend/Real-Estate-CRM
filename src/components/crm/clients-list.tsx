@@ -35,10 +35,16 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
   const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
     <Form action="/clients" scroll={false} className="flex flex-col gap-2" role="search">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
-          <Input name="q" defaultValue={filters.q} placeholder="Név, e-mail vagy telefonszám" aria-label="Keresés" className="pl-10" />
+      {/* On a phone two rows (search, then the two filters side by side), so the list starts high. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        <div className="col-span-2 flex gap-2 sm:flex-1">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" />
+            <Input name="q" defaultValue={filters.q} placeholder="Név, e-mail vagy telefonszám" aria-label="Keresés" className="pl-10" />
+          </div>
+          <Button type="submit" className="h-11 w-11 max-sm:px-0 sm:hidden" aria-label="Szűrés">
+            <Search />
+          </Button>
         </div>
         <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
           <option value="">Minden státusz</option>
@@ -58,7 +64,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
             </option>
           ))}
         </Select>
-        <Button type="submit" className="h-11">
+        <Button type="submit" className="h-11 max-sm:hidden">
           Szűrés
         </Button>
       </div>
