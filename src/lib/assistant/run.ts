@@ -149,10 +149,17 @@ async function runWithOpenAiCompatible(
     // The first step must look something up, so an answer is never made from nothing.
     const toolChoice = step === 0 && forceTool ? "required" : "auto";
     let sentTo = config.model;
-    const res = await postChat(config, (m) => {
-      sentTo = m;
-      return { messages: messagesFor(messages, m), tools, tool_choice: toolChoice };
-    });
+    const res = await postChat(
+      config,
+      (m) => {
+        sentTo = m;
+        // Low reasoning effort: a chat answer on a phone can't wait a minute.
+        return { messages: messagesFor(messages, m), tools, tool_choice: toolChoice, ...(/gpt-oss/i.test(m) ? { reasoning_effort: "low" } : {}) };
+      },
+      undefined,
+      // A provider that hangs gives way to the fallback after 35 s instead of 90.
+      35_000,
+    );
     if (res.status === 429) {
       console.error("assistant 429", (await res.text()).slice(0, 300));
       throw new AiError("rate limit", "Az AI-szolgáltatás most túlterhelt. Próbáld újra egy perc múlva.");

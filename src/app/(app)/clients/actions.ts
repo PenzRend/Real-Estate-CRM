@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { removeCalendarEvents, upcomingCalendarEvents } from "@/lib/viewings/data";
 import { parseClientForm, type ClientFieldErrors } from "@/lib/validation/client";
+import { zonedLocalToUtc } from "@/lib/i18n/timezone";
+import { z } from "zod";
 
 export type ClientFormState = {
   errors?: ClientFieldErrors;
@@ -137,4 +139,40 @@ export async function eraseClientAction(id: string, confirmName: string): Promis
   }
   await removeCalendarEvents(user, events);
   redirect("/clients?erased=1");
+}
+
+export type QuickEditResult = { ok: true } | { ok: false; error: string };
+
+const quickEdit = z.object({
+  full_name: z.string().trim().min(1, "Add meg az ügyfél nevét.").max(200),
+  phone: z.string().trim().max(50),
+  email: z.union([z.literal(""), z.email("Érvénytelen e-mail-cím.").max(320)]),
+  status: z.enum(["new_lead", "contacted", "qualified", "active", "negotiation", "converted", "lost"]),
+  /** Budapest wall-clock time from the form, or empty. */
+  next_follow_up_at: z.string().max(20),
+});
+
+/** The client's name, status, phone, email and next follow-up, edited in place on their page. */
+export async function quickEditClientAction(id: string, input: unknown): Promise<QuickEditResult> {
+  const user = await getCurrentUser();
+  const parsed = quickEdit.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const d = parsed.data;
+  const followUp = d.next_follow_up_at ? zonedLocalToUtc(d.next_follow_up_at) : null;
+  if (d.next_follow_up_at && !followUp) return { ok: false, error: "Érvénytelen időpont." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("clients")
+    .update({ full_name: d.full_name, phone: d.phone || null, email: d.email || null, status: d.status, next_follow_up_at: followUp })
+    .eq("id", id)
+    .eq("organization_id", user.organization.id)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("quickEditClientAction failed", error.code);
+    return { ok: false, error: SAVE_FAILED };
+  }
+  if (!data) return { ok: false, error: "Ez az ügyfél nem található, vagy nincs jogosultságod módosítani." };
+  refresh();
+  return { ok: true };
 }

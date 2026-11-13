@@ -1,10 +1,11 @@
-import { Archive, CalendarClock, ChevronLeft, Mail, Mic, Pencil, Phone, RefreshCw, Sparkles } from "lucide-react";
+import { Archive, ChevronLeft, Mic, Pencil, Phone, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { ClientContactPanel } from "./client-contact-panel";
 import { ContactBar } from "./contact-bar";
 import type { ReactNode } from "react";
 import { Badge, ClientStatusBadge } from "@/components/ui/badge";
 import { ArrowLink, ButtonLink } from "@/components/ui/button";
-import { Card, CardHeader, Panel } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/page";
 import { RecordTabs } from "@/components/ui/record-tabs";
 import { formatArea, formatDate, formatDateTime, formatNumber, formatPrice } from "@/lib/i18n/format";
@@ -110,28 +111,10 @@ export function ClientDetailView({
 
         {!archivedAt && <ContactBar clientId={client.id} phone={client.phone} email={client.email} clientName={client.fullName} agentName={agentName} />}
 
-        <Panel className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
-          {[
-            { icon: Phone, label: "Telefon", value: client.phone, href: client.phone ? `tel:${client.phone}` : null },
-            { icon: Mail, label: "E-mail", value: client.email, href: client.email ? `mailto:${client.email}` : null },
-            { icon: CalendarClock, label: "Következő utánkövetés", value: client.nextFollowUpAt ? formatDateTime(client.nextFollowUpAt) : null },
-            { icon: RefreshCw, label: "Utolsó kapcsolat", value: client.lastContactedAt ? formatDate(client.lastContactedAt) : null },
-          ].map(({ icon: Icon, label, value, href }) => (
-            <div key={label} className="flex items-center gap-3 px-5 py-4">
-              <Icon className="size-4 shrink-0 text-subtle" />
-              <div className="min-w-0">
-                <p className="text-xs text-muted">{label}</p>
-                {href && value ? (
-                  <a href={href} className="block truncate text-sm font-medium text-ink hover:underline">
-                    {value}
-                  </a>
-                ) : (
-                  <p className="truncate text-sm font-medium text-ink">{value ?? "—"}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </Panel>
+        <ClientContactPanel
+          editable={!archivedAt}
+          client={{ id: client.id, fullName: client.fullName, status: client.status, phone: client.phone, email: client.email, nextFollowUpAt: client.nextFollowUpAt, lastContactedAt: client.lastContactedAt }}
+        />
       </header>
 
       <RecordTabs

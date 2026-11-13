@@ -25,6 +25,16 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
     return () => window.removeEventListener(VOICE_EVENT, show);
   }, []);
 
+  // On a phone the panel covers the screen: the page behind it must not scroll.
+  useEffect(() => {
+    if (!open || !window.matchMedia("(max-width: 639px)").matches) return;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     panel.current?.querySelector("textarea")?.focus();
@@ -51,7 +61,7 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
         onClick={(e) => {
           if ((e.target as Element).closest("a") && window.matchMedia("(max-width: 639px)").matches) setOpen(false);
         }}
-        className="pop-in fixed inset-0 z-40 flex origin-bottom-right flex-col bg-background [--pop-from:16px] sm:inset-auto sm:right-6 sm:bottom-24 sm:h-[min(640px,calc(100dvh-8rem))] sm:w-[400px] sm:rounded-3xl sm:border sm:border-border sm:shadow-float"
+        className="pop-in fixed inset-0 z-40 flex origin-bottom-right flex-col overscroll-contain bg-background [--pop-from:16px] sm:inset-auto sm:right-6 sm:bottom-24 sm:h-[min(640px,calc(100dvh-8rem))] sm:w-[400px] sm:rounded-3xl sm:border sm:border-border sm:shadow-float"
       >
         <header className="flex items-center gap-2 border-b border-border px-4 py-3">
           <span className="grid size-7 place-items-center rounded-full bg-accent-soft text-accent">

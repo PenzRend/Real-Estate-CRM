@@ -86,9 +86,9 @@ export async function readJson(res: Response): Promise<unknown> {
  * user's action. Interactive chat keeps this short; background-ish work like
  * an import can afford a minute.
  */
-export async function postWithRetry(url: string, init: RequestInit, maxWaitSeconds = 20) {
+export async function postWithRetry(url: string, init: RequestInit, maxWaitSeconds = 20, timeoutMs = 90_000) {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetchOrAiError(url, { ...init, signal: AbortSignal.timeout(90_000) });
+    const res = await fetchOrAiError(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
     const wait = Number(res.headers.get("retry-after"));
     if (res.status !== 429 || attempt >= 2 || !(wait > 0 && wait <= maxWaitSeconds)) return res;
     await new Promise((r) => setTimeout(r, wait * 1000 + 250));
@@ -107,7 +107,7 @@ export const shouldFallBack = (status: number) => status === 413 || status === 4
  * and a fallback provider is configured, the same request goes there instead,
  * so a free tier's daily limit doesn't stop the agents' work.
  */
-export async function postChat(config: OpenAiCompatibleConfig, body: (model: string) => object, maxWaitSeconds?: number) {
+export async function postChat(config: OpenAiCompatibleConfig, body: (model: string) => object, maxWaitSeconds?: number, timeoutMs?: number) {
   const send = (c: OpenAiCompatibleConfig) =>
     postWithRetry(
       `${c.baseUrl}/chat/completions`,
@@ -117,6 +117,7 @@ export async function postChat(config: OpenAiCompatibleConfig, body: (model: str
         body: JSON.stringify({ model: c.model, ...body(c.model) }),
       },
       maxWaitSeconds,
+      timeoutMs,
     );
   const fallback = llmFallbackConfig();
   if (!fallback) return send(config);
@@ -129,6 +130,12 @@ export async function postChat(config: OpenAiCompatibleConfig, body: (model: str
     if (!(error instanceof AiError)) throw error;
     console.warn(`ai ${config.model} unreachable, using ${fallback.model}`);
   }
+  const res = await send(fallback);
+  // "High demand" (503) on the fallback is usually over in a moment: one more try.
+  if (res.status < 500) return res;
+  console.warn(`ai ${res.status} from ${fallback.model}, retrying once`);
+  await res.body?.cancel();
+  await new Promise((r) => setTimeout(r, 1500));
   return send(fallback);
 }
 

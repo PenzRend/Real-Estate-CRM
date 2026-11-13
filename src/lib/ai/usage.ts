@@ -1,4 +1,5 @@
 import "server-only";
+import { refresh } from "next/cache";
 import type { CurrentUser } from "@/lib/auth";
 import { startOfZonedDay, utcToZonedLocal, zonedLocalToUtc } from "@/lib/i18n/timezone";
 import { hasAccess } from "@/lib/billing/access";
@@ -117,4 +118,14 @@ export async function logAiUsage(
     output_tokens: entry.outputTokens ?? null,
   });
   if (error) console.error("logAiUsage failed", error.code);
+  // The menu's AI allowance shows the new count without a reload (on an
+  // installed iPhone app there is no reload button). Only a Server Action can
+  // refresh the page; elsewhere (routes, background work) this is skipped.
+  if (!error && entry.status !== "rejected") {
+    try {
+      refresh();
+    } catch {
+      // Not in a Server Action.
+    }
+  }
 }
