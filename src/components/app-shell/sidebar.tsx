@@ -209,8 +209,9 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
   }, [open]);
 
   return (
-    <div className="lg:hidden">
-      <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
+    <>
+      {/* Sticky on the outer element: inside a wrapper only as tall as itself it would scroll away. */}
+      <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
         {/* The menu button sits on the left, where the menu slides in from. */}
         <div className="flex items-center gap-2">
           <button
@@ -235,9 +236,10 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
         </div>
       </div>
       {open && (
-        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menü">
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menü">
           <button type="button" className="drawer-backdrop absolute inset-0 bg-ink/20" aria-label="Menü bezárása" onClick={() => setOpen(false)} />
-          <div className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 bg-background px-4 py-5 shadow-float">
+          {/* Scrolls on its own: an expanded section must not push the bottom out of reach. */}
+          <div className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 overflow-y-auto overscroll-contain bg-background px-4 py-5 shadow-float">
             <div className="flex items-center justify-between px-2">
               <Logo />
               <button
@@ -264,6 +266,6 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
