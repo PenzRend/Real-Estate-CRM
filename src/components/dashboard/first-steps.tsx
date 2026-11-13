@@ -17,10 +17,10 @@ const KEY = "flavio:first-steps-hidden-until";
 const content: Record<FirstStep["id"], { title: string; why: string; icon: typeof Building2; action: { label: string; href?: string; voice?: boolean }; alt?: { label: string; href: string } }> = {
   property: {
     title: "Vedd fel az első ingatlanodat",
-    why: "Elég bemásolni a hirdetés linkjét: a fotók és az adatok maguktól bekerülnek.",
+    why: "Elég bemásolni a hirdetés linkjét: a fotók és az adatok maguktól bekerülnek. Sok ingatlannál hozd át mindet egyszerre Excelből.",
     icon: Building2,
     action: { label: "Importálás linkből", href: "/properties/import" },
-    alt: { label: "Kézzel", href: "/properties/new" },
+    alt: { label: "Excelből", href: "/properties/import/table" },
   },
   client: {
     title: "Hozd át az ügyfeleidet",

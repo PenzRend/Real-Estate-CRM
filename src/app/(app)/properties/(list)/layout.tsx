@@ -1,4 +1,4 @@
-import { Download, Plus } from "lucide-react";
+import { Download, FileSpreadsheet, Plus } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
 import { PropertyFiltersFromUrl, PropertyFiltersPlaceholder } from "@/components/crm/filter-bars";
 import { ButtonLink } from "@/components/ui/button";
@@ -14,6 +14,9 @@ export default function PropertiesLayout({ children }: { children: ReactNode }) 
         description="Eladó és kiadó ingatlanaid, fotókkal és illő ügyfelekkel."
         actions={
           <>
+            <ButtonLink href="/properties/import/table" variant="secondary">
+              <FileSpreadsheet /> Táblázatból
+            </ButtonLink>
             <ButtonLink href="/properties/import" variant="secondary">
               <Download /> Importálás hirdetésből
             </ButtonLink>

@@ -222,7 +222,7 @@ async function SettingsContent() {
             cta={calendarParts.length ? "Kezelés" : "Beállítás"}
           />
           <PhoneKeys keys={phoneKeys} appUrl={process.env.ANDROID_APP_URL || null} />
-          <ListingFeed active={feed.exists} listings={feed.listings} lastFetchedAt={feed.lastFetchedAt} canManage={canManageTeam(user)} />
+          <ListingFeed active={feed.exists} listings={feed.listings} lastFetchedAt={feed.lastFetchedAt} canManage={canManageTeam(user)} jofogas={feed.jofogas} />
         </FormSection>
 
         <FormSection number="04" title="Adatok" description="Az összes ügyfél, ingatlan, feladat, előzmény és megtekintés egy Excel-fájlban.">

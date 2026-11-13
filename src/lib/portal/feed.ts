@@ -5,6 +5,7 @@ import { appOrigin } from "@/lib/origin";
 import { hashSecretToken, newSecretToken } from "@/lib/secret-token";
 import { createClient } from "@/lib/supabase/server";
 import { buildListingFeed, type FeedListing } from "./feed-xml";
+import { buildJofogasFeed, type JofogasListing } from "./jofogas-xml";
 
 // The workspace's portal export link. Portals fetch it without cookies: the
 // token is the key, only its hash is stored, and a new link replaces the old.
@@ -12,10 +13,12 @@ import { buildListingFeed, type FeedListing } from "./feed-xml";
 export async function feedStatus(user: CurrentUser) {
   const supabase = await createClient();
   const [{ data: feed }, { count }] = await Promise.all([
-    supabase.from("listing_feeds").select("created_at, updated_at, last_fetched_at").eq("organization_id", user.organization.id).maybeSingle(),
+    supabase.from("listing_feeds").select("*").eq("organization_id", user.organization.id).maybeSingle(),
     supabase.from("properties").select("id", { count: "exact", head: true }).eq("organization_id", user.organization.id).eq("portal_export", true).is("archived_at", null),
   ]);
-  return { exists: Boolean(feed), lastFetchedAt: (feed?.last_fetched_at as string | null) ?? null, listings: count ?? 0 };
+  // select("*"): before the Jófogás columns exist, the rest still loads.
+  const jofogas: JofogasConfig = { partnerId: (feed?.jofogas_partner_id as string | null | undefined) ?? null, phone: (feed?.jofogas_phone as string | null | undefined) ?? null };
+  return { exists: Boolean(feed), lastFetchedAt: (feed?.last_fetched_at as string | null) ?? null, listings: count ?? 0, jofogas };
 }
 
 /** A new feed link (owner or admin); an earlier link stops working. Returns the https URL. */
@@ -67,4 +70,35 @@ export async function setPortalExport(user: CurrentUser, propertyId: string, on:
   const supabase = await createClient();
   const { error } = await supabase.from("properties").update({ portal_export: on }).eq("organization_id", user.organization.id).eq("id", propertyId);
   if (error) throw new Error(`portal export toggle failed: ${error.message}`);
+}
+
+/** The same feed in Jófogás's format, or null when the link is unknown. */
+export async function jofogasFeedXml(token: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("listing_feed", { p_token_hash: hashSecretToken(token) });
+  if (error) throw new Error(`listing_feed failed: ${error.message}`);
+  if (!data) return null;
+  const feed = data as { agency: string; jofogas?: { partner_id: string | null; phone: string | null; email: string | null }; listings: JofogasListing[] };
+  const origin = await appOrigin();
+  return buildJofogasFeed({
+    agency: feed.agency,
+    settings: { partnerId: feed.jofogas?.partner_id ?? null, phone: feed.jofogas?.phone ?? null, email: feed.jofogas?.email ?? null },
+    listings: feed.listings,
+    photoUrl: (id) => `${origin}/api/feed/${token}/photo/${id}`,
+  });
+}
+
+export type JofogasConfig = { partnerId: string | null; phone: string | null };
+
+/** The Jófogás partner ID and mobile number next to the feed link (managers only). */
+export async function saveJofogasConfig(user: CurrentUser, config: JofogasConfig) {
+  if (user.organization.role === "member") throw new Error("only managers change the feed");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("listing_feeds")
+    .update({ jofogas_partner_id: config.partnerId, jofogas_phone: config.phone })
+    .eq("organization_id", user.organization.id)
+    .select("id");
+  if (error) throw new Error(`jofogas config failed: ${error.message}`);
+  return Boolean(data?.length);
 }
