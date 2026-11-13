@@ -14,6 +14,7 @@ import { ViewingsCard } from "@/components/viewings/viewings-card";
 import { listOpenViewings } from "@/lib/viewings/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PageSuspense } from "@/components/ui/page-suspense";
+import { InstallBanner } from "@/components/app-shell/install-banner";
 import { DealsPulse } from "@/components/deals/deals-pulse";
 import { dealSummary } from "@/lib/deals/data";
 import { MyMonth } from "@/components/team/my-month";
@@ -109,8 +110,12 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
 // Request-time content streams in behind Suspense so navigation stays instant.
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
-    <PageSuspense>
-      <DashboardContent searchParams={searchParams} />
-    </PageSuspense>
+    <>
+      {/* Only here: on every page it would take a fifth of a phone screen. */}
+      <InstallBanner />
+      <PageSuspense>
+        <DashboardContent searchParams={searchParams} />
+      </PageSuspense>
+    </>
   );
 }

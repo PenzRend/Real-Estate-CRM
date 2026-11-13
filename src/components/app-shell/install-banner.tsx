@@ -2,13 +2,12 @@
 
 import { Share, Smartphone, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 // On a phone, in the browser: "put Flavio on your home screen" – Android's own
 // install prompt, or the two iPhone steps – then notifications in Beállítások.
 // Never on a computer, never once installed; "Később" hides it for two weeks.
-// Shown on the overview only.
+// Mounted on the overview page only.
 
 const KEY = "flavio:install-hidden-until";
 const CHANGED = "flavio:install-banner";
@@ -34,7 +33,6 @@ function platform(): "ios" | "android" | null {
 }
 
 export function InstallBanner() {
-  const pathname = usePathname();
   const kind = useSyncExternalStore(subscribe, platform, () => null);
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
 
@@ -48,8 +46,7 @@ export function InstallBanner() {
     return () => window.removeEventListener("beforeinstallprompt", keep);
   }, []);
 
-  // Only on the overview: on every page it would take a fifth of a phone screen.
-  if (!kind || pathname !== "/dashboard") return null;
+  if (!kind) return null;
   const later = () => {
     try {
       localStorage.setItem(KEY, String(Date.now() + 14 * 86_400_000));
