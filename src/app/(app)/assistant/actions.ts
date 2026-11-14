@@ -18,7 +18,7 @@ const historySchema = z
 export type AskResult = { ok: true; answer: string; sources: Source[]; confirmations: Confirmation[]; navigate: string | null } | { ok: false; error: string };
 
 /** One assistant turn. The conversation lives in the browser; nothing is stored except usage metadata. */
-export async function askAssistantAction(history: unknown): Promise<AskResult> {
+export async function askAssistantAction(history: unknown, options?: { fromMenu?: boolean }): Promise<AskResult> {
   const user = await getCurrentUser();
   const parsed = historySchema.safeParse(history);
   if (!parsed.success) return { ok: false, error: "A kérdés üres vagy túl hosszú." };
@@ -28,7 +28,7 @@ export async function askAssistantAction(history: unknown): Promise<AskResult> {
 
   try {
     // Only the last 10 turns: enough context, bounded cost.
-    const result = await askAssistant(user, parsed.data.slice(-10), new Date());
+    const result = await askAssistant(user, parsed.data.slice(-10), new Date(), { fromMenu: options?.fromMenu === true });
     await logAiUsage(user, {
       status: "success",
       operation: "assistant",

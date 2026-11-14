@@ -557,9 +557,24 @@ dialog[open]::backdrop {
     box-shadow: 0 0 0 8px rgb(61 111 242 / 0);
   }
 }
+/* The menu's voice bar while Flavio writes down and works: a slow wave. */
+.voice-wave {
+  height: 22px;
+  animation: voice-wave 1.1s ease-in-out infinite;
+}
+@keyframes voice-wave {
+  0%,
+  100% {
+    transform: scaleY(0.18);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .flavio-cta,
-  .flavio-cta-mic::after {
+  .flavio-cta-mic::after,
+  .voice-wave {
     animation: none;
   }
 }

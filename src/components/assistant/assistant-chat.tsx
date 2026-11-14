@@ -13,7 +13,7 @@ import type { Source, SourceType } from "@/lib/assistant/tools";
 import { cn } from "@/lib/cn";
 import { actionFailed } from "@/lib/action-failed";
 import { useVoiceCommand } from "./use-voice-command";
-import { VOICE_EVENT } from "./voice-event";
+import { OPEN_ASSISTANT_EVENT, VOICE_ANSWER_EVENT, VOICE_ASK_EVENT, VOICE_EVENT, type VoiceAnswer, type VoiceAsk } from "./voice-event";
 
 type Message = { role: "user"; content: string } | { role: "assistant"; content: string; sources: Source[]; confirmations: Confirmation[] };
 
@@ -175,27 +175,59 @@ export function AssistantChat({ aiEnabled, compact = false, listenForVoice = fal
     return () => window.removeEventListener(VOICE_EVENT, go);
   }, [listenForVoice, aiEnabled, startVoice]);
 
+  // What the menu's "Mondd Flaviónak" heard on a computer: answered here, with the panel closed.
+  const askRef = useRef<(q: string, fromMenu: boolean) => void>(() => {});
+  useEffect(() => {
+    if (!listenForVoice) return;
+    const onAsk = (e: Event) => askRef.current((e as CustomEvent<VoiceAsk>).detail.text, true);
+    window.addEventListener(VOICE_ASK_EVENT, onAsk);
+    return () => window.removeEventListener(VOICE_ASK_EVENT, onAsk);
+  }, [listenForVoice]);
+
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, pending]);
 
-  function ask(question: string) {
+  useEffect(() => {
+    askRef.current = (q, fromMenu) => ask(q, fromMenu);
+  });
+
+  function reply(r: VoiceAnswer) {
+    window.dispatchEvent(new CustomEvent<VoiceAnswer>(VOICE_ANSWER_EVENT, { detail: r }));
+  }
+
+  function ask(question: string, fromMenu = false) {
     const q = question.trim();
-    if (!q || pending) return;
+    if (!q || pending) {
+      if (fromMenu) reply({ ok: false, error: q ? "Még az előző kérésen dolgozom. Egy pillanat." : "Nem értettem. Próbáld újra." });
+      return;
+    }
     const next: Message[] = [...messages, { role: "user", content: q }];
     setMessages(next);
     setInput("");
     setError(null);
     start(async () => {
-      const r = await askAssistantAction(next.map((m) => ({ role: m.role, content: m.content }))).catch(actionFailed);
+      const r = await askAssistantAction(
+        next.map((m) => ({ role: m.role, content: m.content })),
+        { fromMenu },
+      ).catch(actionFailed);
       if (r.ok) {
         setMessages([...next, { role: "assistant", content: r.answer, sources: r.sources, confirmations: r.confirmations }]);
-        if (r.navigate) router.push(r.navigate);
-      }
-      else {
+        if (!fromMenu) {
+          if (r.navigate) router.push(r.navigate);
+          return;
+        }
+        // Spoken into the menu: go to the page that shows the result. A step to approve, or an
+        // answer without one page to show (a list of follow-ups, how-to steps), opens the panel.
+        const target = r.confirmations.length ? null : (r.navigate ?? (r.sources.length === 1 ? r.sources[0].href : null));
+        if (target) router.push(target);
+        else window.dispatchEvent(new Event(OPEN_ASSISTANT_EVENT));
+        reply({ ok: true, answer: r.answer, href: target });
+      } else {
         setError(r.error);
         setMessages(messages);
         setInput(q);
+        if (fromMenu) reply({ ok: false, error: r.error });
       }
     });
   }

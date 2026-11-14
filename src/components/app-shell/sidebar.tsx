@@ -9,6 +9,7 @@ import { VOICE_EVENT } from "@/components/assistant/voice-event";
 import { openSearch } from "./command-palette";
 import { FeedbackButton } from "./feedback-button";
 import { Logo } from "./logo";
+import { VoiceDock } from "@/components/assistant/voice-dock";
 import { useChatUnread } from "@/components/chat/use-chat-unread";
 import { navItems, teamNavItems, type NavItem } from "./nav-items";
 
@@ -183,7 +184,7 @@ export function Sidebar({ account, team, plan }: { account: ReactNode; team?: Re
         <Logo />
       </div>
       <div className="flex flex-col gap-4">
-        <VoiceButton />
+        <VoiceDock />
         <SearchButton />
         <NavLinks />
         {team}

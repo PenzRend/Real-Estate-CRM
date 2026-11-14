@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AssistantChat } from "./assistant-chat";
-import { VOICE_EVENT } from "./voice-event";
+import { OPEN_ASSISTANT_EVENT, VOICE_EVENT } from "./voice-event";
 
 /**
  * The assistant one tap away on every screen: a round button in the bottom-right
@@ -20,9 +20,14 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
 
   // "Mondd Flaviónak": open the panel; the chat inside starts listening.
   useEffect(() => {
+    // Also when the menu's button on a computer has an answer to read or a step to approve.
     const show = () => setOpen(true);
     window.addEventListener(VOICE_EVENT, show);
-    return () => window.removeEventListener(VOICE_EVENT, show);
+    window.addEventListener(OPEN_ASSISTANT_EVENT, show);
+    return () => {
+      window.removeEventListener(VOICE_EVENT, show);
+      window.removeEventListener(OPEN_ASSISTANT_EVENT, show);
+    };
   }, []);
 
   // On a phone the panel covers the screen: the page behind it must not scroll.

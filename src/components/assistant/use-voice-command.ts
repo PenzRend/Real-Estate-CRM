@@ -22,8 +22,11 @@ function pickMimeType() {
 export function useVoiceCommand(onText: (text: string) => void) {
   const [state, setState] = useState<"idle" | "listening" | "transcribing">("idle");
   const [level, setLevel] = useState(0);
+  /** The last few seconds of loudness, oldest first: for a moving audio bar. */
+  const [levels, setLevels] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  const cancelled = useRef(false);
   const onTextRef = useRef(onText);
   useEffect(() => {
     onTextRef.current = onText;
@@ -50,6 +53,8 @@ export function useVoiceCommand(onText: (text: string) => void) {
   async function start() {
     if (state !== "idle") return;
     setError(null);
+    setLevels([]);
+    cancelled.current = false;
     const mimeType = pickMimeType();
     if (mimeType === null || !navigator.mediaDevices?.getUserMedia) {
       setError("Ez a böngésző nem támogatja a hangfelvételt.");
@@ -79,7 +84,9 @@ export function useVoiceCommand(onText: (text: string) => void) {
       let sum = 0;
       for (const v of samples) sum += ((v - 128) / 128) ** 2;
       const rms = Math.sqrt(sum / samples.length);
-      setLevel(Math.min(1, rms * 8));
+      const l = Math.min(1, rms * 8);
+      setLevel(l);
+      setLevels((prev) => [...prev.slice(-31), l]);
       const now = Date.now();
       if (rms > LOUD) {
         heard = true;
@@ -95,6 +102,10 @@ export function useVoiceCommand(onText: (text: string) => void) {
       void audio.close();
       setLevel(0);
       stopRef.current = null;
+      if (cancelled.current) {
+        setState("idle");
+        return;
+      }
       if (!heard) {
         setState("idle");
         setError("Nem hallottam semmit. Koppints a mikrofonra, és mondd, mit csináljak.");
@@ -110,5 +121,18 @@ export function useVoiceCommand(onText: (text: string) => void) {
     setState("listening");
   }
 
-  return { state, level, error, start, stop: () => stopRef.current?.(), clearError: () => setError(null) };
+  return {
+    state,
+    level,
+    levels,
+    error,
+    start,
+    stop: () => stopRef.current?.(),
+    /** Stops without sending what was said. */
+    cancel: () => {
+      cancelled.current = true;
+      stopRef.current?.();
+    },
+    clearError: () => setError(null),
+  };
 }

@@ -108,7 +108,7 @@ export const actionSchemas = {
   open_page: z.object({
     href: z
       .string()
-      .regex(/^\/(dashboard|clients|properties|deals|tasks|calendar|inbox|messages|documents|contracts|office|settings|assistant)(\/[\w\-/?=&.]*)?$/, "an in-app path such as /clients/<id>")
+      .regex(/^\/(dashboard|summary|clients|properties|deals|tasks|calendar|inbox|messages|documents|contracts|office|settings|assistant)(\/[\w\-/?=&.]*)?$/, "an in-app path such as /clients/<id>")
       .describe("A page from a tool result (its href) or a screen: /clients, /deals, /tasks, /calendar, /contracts, /documents, /inbox/automation…"),
   }),
 } as const;

@@ -213,15 +213,20 @@ async function runWithOpenAiCompatible(
   throw new AiError("too many steps", "A kérdés túl összetett volt. Próbáld konkrétabban.");
 }
 
+/** Added to a request spoken into the menu's button, which closes once the work is done: the agent expects to land on the result. */
+const FROM_MENU =
+  "\n\n(Kimondva a menü „Mondd Flaviónak” gombjával. After doing or answering it, call open_page with the screen that shows the result: the client, listing or deal you created, changed or found; /tasks after a task; /calendar after a viewing; /clients?followUp=today, /deals or another list for a question about several records; /summary for how the day or week went. Skip open_page only if no screen fits. When you open a page, keep the answer to one short sentence.)";
+
 /** Answers a question or carries out a request with the CRM tools; returns the answer, the records it cites, and any step waiting for confirmation. */
-export async function askAssistant(user: CurrentUser, history: ChatTurn[], now: Date): Promise<AssistantAnswer> {
+export async function askAssistant(user: CurrentUser, history: ChatTurn[], now: Date, { fromMenu = false } = {}): Promise<AssistantAnswer> {
   const config = llmConfig();
   if (!config) throw new AiError("No AI provider configured", "Az AI most nem érhető el. Próbáld újra később, vagy jelezd nekünk a Visszajelzés gombbal.");
   const sources = new SourceRegistry();
   const outcome: ActionOutcome = { navigate: null, confirmations: [], changed: false, done: [] };
   const ctx: Ctx = { user, now, sources, outcome };
   // The context goes first as a user turn so the system prompt stays identical (and cacheable).
-  const turns: ChatTurn[] = [{ role: "user", content: contextMessage(user, now) }, { role: "assistant", content: "Rendben." }, ...history];
+  const asked = fromMenu ? history.map((t, i) => (i === history.length - 1 ? { ...t, content: t.content + FROM_MENU } : t)) : history;
+  const turns: ChatTurn[] = [{ role: "user", content: contextMessage(user, now) }, { role: "assistant", content: "Rendben." }, ...asked];
   let result: { answer: string; model: string; inputTokens: number; outputTokens: number };
   try {
     result =
