@@ -148,8 +148,8 @@ export function ClientBoard({ clients, total, limit, now }: { clients: ClientLis
                 data-jump={s}
                 onClick={() => jumpTo(s)}
                 className={cn(
-                  "flex w-full min-w-28 flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface",
-                  inView.has(s) && "bg-surface",
+                  "flex w-full min-w-28 flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-opacity duration-300 hover:opacity-100",
+                  !inView.has(s) && "opacity-55",
                 )}
               >
                 <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted">
@@ -157,7 +157,7 @@ export function ClientBoard({ clients, total, limit, now }: { clients: ClientLis
                   {clientStatusLabels[s]}
                 </span>
                 <span className="text-xl leading-none font-medium tracking-[-0.02em] text-ink tabular-nums">{counts[s]}</span>
-                <span className="h-1 w-full overflow-hidden rounded-full bg-surface-strong" aria-hidden>
+                <span className="h-0.5 w-full overflow-hidden rounded-full bg-surface" aria-hidden>
                   <span className={cn("block h-full rounded-full transition-[width] duration-500", STAGE[s].dot)} style={{ width: `${(counts[s] / most) * 100}%` }} />
                 </span>
               </button>
@@ -232,14 +232,14 @@ export function ClientBoard({ clients, total, limit, now }: { clients: ClientLis
                   if (id) moveTo(id, status);
                 }}
                 className={cn(
-                  "flex w-[80vw] shrink-0 snap-start flex-col rounded-3xl bg-surface p-2 ring-2 ring-transparent transition-[background-color,box-shadow] duration-200 sm:min-h-[26rem] sm:w-[17.5rem]",
-                  over === status && "bg-accent-soft/60 ring-accent/40",
+                  "flex w-[80vw] shrink-0 snap-start flex-col rounded-3xl border border-border bg-surface/40 p-2 transition-[background-color,border-color] duration-200 sm:min-h-44 sm:w-[17.5rem]",
+                  over === status && "border-accent/50 bg-accent-soft/40",
                 )}
               >
                 <header className="flex items-center gap-2 px-2.5 pt-1.5 pb-2.5">
                   <span className={cn("size-2 rounded-full", STAGE[status].dot)} aria-hidden />
                   <h3 className="text-sm font-medium text-ink">{clientStatusLabels[status]}</h3>
-                  <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted tabular-nums">{cards.length}</span>
+                  <span className="ml-auto text-xs text-muted tabular-nums">{cards.length}</span>
                 </header>
                 <ul className="flex flex-1 flex-col gap-2">
                   {cards.map((c) => {
@@ -259,7 +259,7 @@ export function ClientBoard({ clients, total, limit, now }: { clients: ClientLis
                           setOver(null);
                         }}
                         className={cn(
-                          "rounded-2xl border border-border/70 bg-background p-3 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[box-shadow,transform,opacity] duration-200 hover:-translate-y-px hover:shadow-[0_6px_16px_-6px_rgb(0_0_0/0.12)] sm:cursor-grab sm:active:cursor-grabbing",
+                          "rounded-2xl border border-border bg-background p-3 transition-[box-shadow,transform,opacity] duration-200 hover:-translate-y-px hover:shadow-[0_6px_16px_-6px_rgb(0_0_0/0.12)] sm:cursor-grab sm:active:cursor-grabbing",
                           dragging === c.id && "rotate-1 opacity-40",
                         )}
                       >

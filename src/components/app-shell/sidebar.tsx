@@ -179,7 +179,7 @@ function SearchButton({ onNavigate }: { onNavigate?: () => void }) {
 export function Sidebar({ account, team, plan }: { account: ReactNode; team?: ReactNode; plan?: ReactNode }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-border px-4 py-6 lg:flex">
-      <div className="px-2">
+      <div className="flex justify-center px-2">
         <Logo />
       </div>
       <div className="flex flex-col gap-4">
