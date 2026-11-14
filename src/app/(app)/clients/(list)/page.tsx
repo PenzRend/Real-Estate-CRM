@@ -1,6 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
-import { ClientBoard } from "@/components/crm/client-board";
+import { redirect } from "next/navigation";
 import { ClientsTable, type ClientFilters } from "@/components/crm/clients-list";
 import { ListSuspense } from "@/components/ui/list-suspense";
 import { getCurrentUser } from "@/lib/auth";
@@ -8,9 +8,6 @@ import { countArchivedClients, LIST_LIMIT, listClients, type ClientListFilters }
 import { parseHungarianNumber } from "@/lib/validation/client";
 
 export const metadata: Metadata = { title: "Ügyfelek" };
-
-/** The board shows more cards than the list shows rows: every column at once. */
-const BOARD_LIMIT = 400;
 
 const FOLLOW_UPS = ["overdue", "today", "week", "none"] as const;
 
@@ -47,12 +44,9 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
   const filters = readFilters(params);
   const user = await getCurrentUser();
   const now = new Date();
-  const board = params.view === "board";
-  const { clients, total } = await listClients(
-    user,
-    { ...toQuery(filters), assignedTo: filters.mine === "1" ? user.id : undefined, limit: board ? BOARD_LIMIT : undefined },
-    now,
-  );
+  // The board had a "?view=board" address on this page for a short while.
+  if (params.view === "board") redirect("/clients/pipeline");
+  const { clients, total } = await listClients(user, { ...toQuery(filters), assignedTo: filters.mine === "1" ? user.id : undefined }, now);
   const filtered = Object.values(filters).some(Boolean);
   const archivedCount = total === 0 && !filtered ? await countArchivedClients(user) : 0;
 
@@ -65,17 +59,10 @@ async function ClientsContent({ searchParams }: Pick<PageProps<"/clients">, "sea
       )}
       {total > 0 && (
         <p className="text-sm text-muted" aria-live="polite">
-          {total > (board ? BOARD_LIMIT : LIST_LIMIT)
-            ? `${total} ügyfélből a legutóbb módosított ${board ? BOARD_LIMIT : LIST_LIMIT} látható. Szűkítsd a keresést.`
-            : `${total} ügyfél`}
-          {board && total > 0 && <span className="max-sm:hidden"> · Húzd a kártyát egy másik oszlopba a státusz módosításához.</span>}
+          {total > LIST_LIMIT ? `${total} ügyfélből az első ${LIST_LIMIT} látható. Szűkítsd a keresést.` : `${total} ügyfél`}
         </p>
       )}
-      {board && clients.length > 0 ? (
-        <ClientBoard clients={clients} now={now.toISOString()} />
-      ) : (
-        <ClientsTable clients={clients} filtered={filtered} now={now} archivedCount={archivedCount} />
-      )}
+      <ClientsTable clients={clients} filtered={filtered} now={now} archivedCount={archivedCount} />
     </div>
   );
 }

@@ -19,7 +19,15 @@ export type NavItem = {
 export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Áttekintés", icon: LayoutGrid },
   { href: "/summary", label: "Összefoglaló", icon: TrendingUp },
-  { href: "/clients", label: "Ügyfelek", icon: Users },
+  {
+    href: "/clients",
+    label: "Ügyfelek",
+    icon: Users,
+    children: [
+      { href: "/clients", label: "Ügyféllista", exact: true },
+      { href: "/clients/pipeline", label: "Értékesítési tölcsér" },
+    ],
+  },
   { href: "/properties", label: "Ingatlanok", icon: Building2 },
   { href: "/deals", label: "Ügyletek", icon: Handshake },
   { href: "/tasks", label: "Feladatok", icon: CheckSquare },

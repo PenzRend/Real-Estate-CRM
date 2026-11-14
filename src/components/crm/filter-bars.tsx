@@ -8,7 +8,7 @@ import { PropertyFilterBar, type PropertyFilters } from "./properties-list";
 // the filters from the URL themselves, so they stay on screen while the list
 // below reloads. Keyed by the URL, so "clear filters" empties the fields too.
 
-const CLIENT_KEYS = ["q", "status", "type", "followUp", "budget", "location", "archived", "mine", "view"] as const;
+const CLIENT_KEYS = ["q", "status", "type", "followUp", "budget", "location", "archived", "mine"] as const;
 const PROPERTY_KEYS = ["q", "type", "status", "listing", "minPrice", "maxPrice", "minRooms", "minArea", "maxArea", "balcony", "garden", "parking", "archived"] as const;
 
 function read<K extends string>(params: URLSearchParams, keys: readonly K[]) {
@@ -21,17 +21,17 @@ function read<K extends string>(params: URLSearchParams, keys: readonly K[]) {
 }
 
 /** Stand-ins while the URL is read: the same bars, empty, so the page below doesn't move. */
-export function ClientFiltersPlaceholder() {
-  return <ClientFilterBar filters={{}} />;
+export function ClientFiltersPlaceholder({ action }: { action?: string }) {
+  return <ClientFilterBar filters={{}} action={action} />;
 }
 
 export function PropertyFiltersPlaceholder() {
   return <PropertyFilterBar filters={{}} />;
 }
 
-export function ClientFiltersFromUrl() {
+export function ClientFiltersFromUrl({ action }: { action?: string }) {
   const params = useSearchParams();
-  return <ClientFilterBar key={params.toString()} filters={read(params, CLIENT_KEYS) as ClientFilters} />;
+  return <ClientFilterBar key={params.toString()} filters={read(params, CLIENT_KEYS) as ClientFilters} action={action} />;
 }
 
 export function PropertyFiltersFromUrl() {

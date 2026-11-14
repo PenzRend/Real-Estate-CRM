@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSignature, FolderOpen, Wand2, type LucideIcon } from "lucide-react";
+import { FileSignature, FolderOpen, SquareKanban, Users, Wand2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
@@ -14,7 +14,11 @@ import { cn } from "@/lib/cn";
 
 type Section = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
-const groups: Record<"dokumentumok", Section[]> = {
+const groups: Record<"dokumentumok" | "ugyfelek", Section[]> = {
+  ugyfelek: [
+    { href: "/clients", label: "Ügyféllista", icon: Users, exact: true },
+    { href: "/clients/pipeline", label: "Értékesítési tölcsér", icon: SquareKanban },
+  ],
   dokumentumok: [
     { href: "/documents", label: "Fájlok", icon: FolderOpen, exact: true },
     { href: "/contracts", label: "Szerződések", icon: FileSignature },

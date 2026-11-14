@@ -21,8 +21,6 @@ export type ClientFilters = {
   location?: string;
   archived?: string;
   mine?: string;
-  /** "board": the Tábla view, kept when filtering. */
-  view?: string;
 };
 
 function budget(c: ClientListItem) {
@@ -32,12 +30,12 @@ function budget(c: ClientListItem) {
 }
 
 /** GET form so filters live in the URL and survive reloads and sharing; it navigates in place, so only the list reloads. */
-export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
+export function ClientFilterBar({ filters, action = "/clients" }: { filters: ClientFilters; /** "/clients/pipeline": the board, whose columns are the statuses, so no status filter and no archived ones. */ action?: string }) {
+  const board = action !== "/clients";
   const advanced = Boolean(filters.followUp || filters.budget || filters.location || filters.archived || filters.mine);
   const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
-    <Form action="/clients" scroll={false} className="flex flex-col gap-2" role="search">
-      {filters.view === "board" && <input type="hidden" name="view" value="board" />}
+    <Form action={action} scroll={false} className="flex flex-col gap-2" role="search">
       {/* On a phone two rows (search, then the two filters side by side), so the list starts high. */}
       <div className="grid grid-cols-2 gap-2 sm:flex">
         <div className="col-span-2 flex gap-2 sm:flex-1">
@@ -49,17 +47,19 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
             <Search />
           </Button>
         </div>
-        <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
-          <option value="">Minden státusz</option>
-          {Object.entries(clientStatusLabels)
-            .filter(([v]) => v !== "archived")
-            .map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-        </Select>
-        <Select name="type" defaultValue={filters.type ?? ""} aria-label="Ügyféltípus" className="sm:w-40">
+        {!board && (
+          <Select name="status" defaultValue={filters.status ?? ""} aria-label="Státusz" className="sm:w-44">
+            <option value="">Minden státusz</option>
+            {Object.entries(clientStatusLabels)
+              .filter(([v]) => v !== "archived")
+              .map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+          </Select>
+        )}
+        <Select name="type" defaultValue={filters.type ?? ""} aria-label="Ügyféltípus" className={cn("sm:w-40", board && "col-span-2")}>
           <option value="">Minden típus</option>
           {Object.entries(clientTypeLabels).map(([v, l]) => (
             <option key={v} value={v}>
@@ -77,7 +77,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
           <SlidersHorizontal className="size-3.5" />
           További szűrők
           {any && (
-            <Link href={filters.view === "board" ? "/clients?view=board" : "/clients"} className="ml-3 text-ink underline-offset-4 hover:underline">
+            <Link href={action} className="ml-3 text-ink underline-offset-4 hover:underline">
               Szűrők törlése
             </Link>
           )}
@@ -98,10 +98,12 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
             aria-label="Költségkeret millió forintban"
           />
           <Input name="location" defaultValue={filters.location} placeholder="Helyszín, pl. XI. kerület" aria-label="Preferált helyszín" />
-          <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
+          {!board && (
+            <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
             <input type="checkbox" name="archived" value="1" defaultChecked={filters.archived === "1"} className="size-4 accent-[var(--primary)]" />
             Csak archiváltak
           </label>
+          )}
           <label className="flex h-11 items-center gap-2 rounded-xl border border-border-strong px-3.5 text-sm text-ink">
             <input type="checkbox" name="mine" value="1" defaultChecked={filters.mine === "1"} className="size-4 accent-[var(--primary)]" />
             Csak az enyéim
