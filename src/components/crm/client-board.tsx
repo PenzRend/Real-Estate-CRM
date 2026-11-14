@@ -2,7 +2,7 @@
 
 import { ArrowRightLeft, Phone } from "lucide-react";
 import Link from "next/link";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { setClientStatusAction } from "@/app/(app)/clients/actions";
 import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/cn";
@@ -61,10 +61,19 @@ export function ClientBoard({ clients, now }: { clients: ClientListItem[]; now: 
   }
 
   const nowMs = new Date(now).getTime();
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // On a phone one column fits the screen: open on the first one with cards, not on an empty "Új érdeklődő".
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || window.matchMedia("(min-width: 640px)").matches) return;
+    const first = el.querySelector<HTMLElement>("section:has(li[draggable])");
+    if (first) el.scrollLeft += first.getBoundingClientRect().left - el.getBoundingClientRect().left - 16;
+  }, []);
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:px-0">
-      <div className="flex w-max snap-x snap-mandatory gap-3 sm:snap-none">
+    <div ref={scroller} className="-mx-4 scroll-px-4 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:px-0">
+      <div className="flex w-max snap-x snap-mandatory items-start gap-3 sm:snap-none sm:items-stretch">
         {BOARD_STATUSES.map((status) => {
           const cards = shown.filter((c) => c.status === status);
           const closed = status === "converted" || status === "lost";
