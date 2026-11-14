@@ -149,6 +149,7 @@ runs Flavio; `$CRON_SECRET` from the same environment file):
 ```
 */2 * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" "https://flavio.hu/api/cron?job=mail"  >/dev/null
 0 7 * * *    curl -fsS -H "Authorization: Bearer $CRON_SECRET" "https://flavio.hu/api/cron?job=daily" >/dev/null
+0 18 * * *   curl -fsS -H "Authorization: Bearer $CRON_SECRET" "https://flavio.hu/api/cron?job=evening" >/dev/null
 ```
 
 `mail` checks every connected mailbox and sends phone notifications about new

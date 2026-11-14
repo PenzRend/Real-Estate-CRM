@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, CheckSquare, FolderOpen, Handshake, Inbox, LayoutGrid, MessagesSquare, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CheckSquare, FolderOpen, Handshake, Inbox, LayoutGrid, MessagesSquare, TrendingUp, Users, type LucideIcon } from "lucide-react";
 
 // Few doors, so a new agent finds their way on day one. An item with
 // sub-pages opens them as a branch below itself while you are in it
@@ -18,6 +18,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Áttekintés", icon: LayoutGrid },
+  { href: "/summary", label: "Összefoglaló", icon: TrendingUp },
   { href: "/clients", label: "Ügyfelek", icon: Users },
   { href: "/properties", label: "Ingatlanok", icon: Building2 },
   { href: "/deals", label: "Ügyletek", icon: Handshake },

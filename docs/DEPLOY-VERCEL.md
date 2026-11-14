@@ -100,17 +100,19 @@ registration (see [OUTLOOK_SETUP.md](OUTLOOK_SETUP.md)).
 ## 6. Scheduled jobs (cron-job.org)
 
 1. **Sign up** at https://cron-job.org (free).
-2. **Create two cronjobs**. For each, under **Advanced → Headers**, add
+2. **Create three cronjobs**. For each, under **Advanced → Headers**, add
    `Authorization` with the value `Bearer <CRON_SECRET>`.
 
 | Title | URL | Schedule |
 |---|---|---|
 | Flavio – levelek | `<APP_URL>/api/cron?job=mail` | every 2 minutes |
 | Flavio – reggel | `<APP_URL>/api/cron?job=daily` | every day at 7:00, time zone Europe/Budapest |
+| Flavio – este | `<APP_URL>/api/cron?job=evening` | every day at 18:00, time zone Europe/Budapest |
 
 `mail` checks the mailboxes, sends the automatic emails and the "Hogy
 sikerült?" prompts. `daily` sends the morning summary, the viewing reminders
-and the reports. Each run's result shows in cron-job.org's history; a `401`
+and the reports, plus last week's summary on Mondays and last month's on the
+1st. `evening` sends each agent the day's summary. Each run's result shows in cron-job.org's history; a `401`
 means the header doesn't match `CRON_SECRET`.
 
 The 2-minute job also keeps the free Supabase project from pausing for
@@ -125,7 +127,7 @@ inactivity.
    `supabase/checks/workspace-isolation.sql`. The last line must be
    `RESULT: 0 failures`. Nothing is saved; it always rolls back.
 4. Connect Gmail on the Levelek page.
-5. In cron-job.org, both jobs show a successful run.
+5. In cron-job.org, all three jobs show a successful run.
 
 ## Inviting pilot agents
 

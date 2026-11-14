@@ -11,12 +11,14 @@ import { weekLine } from "@/lib/team/week-text";
 import { pushToUser } from "@/lib/push/server";
 import { morningMessage, todaysViewings } from "@/lib/viewings/day";
 import { asBackgroundJob } from "@/lib/supabase/db";
+import { getSummary } from "@/lib/summary/data";
+import { summaryLine, type PeriodKind } from "@/lib/summary/period";
 import { jobUser } from "./job-user";
 
 // The background jobs behind /api/cron. Each runs for every workspace with the
 // admin client, acting as each agent in turn (their mailboxes, their data).
 
-export const CRON_JOBS = ["mail", "daily"] as const;
+export const CRON_JOBS = ["mail", "daily", "evening"] as const;
 export type CronJob = (typeof CRON_JOBS)[number];
 
 type JobResult = Record<string, number | string>;
@@ -182,7 +184,7 @@ async function announceNewLeads(admin: SupabaseClient): Promise<number> {
 
 export async function runCronJob(admin: SupabaseClient, job: CronJob, now: Date): Promise<JobResult> {
   const started = Date.now();
-  const result = job === "mail" ? await mailJob(admin) : await dailyJob(admin, now);
+  const result = job === "mail" ? await mailJob(admin) : job === "evening" ? await summariesJob(admin, now, "day") : await dailyJob(admin, now);
   return { job, ...result, ms: Date.now() - started };
 }
 
@@ -232,7 +234,50 @@ async function dailyJob(admin: SupabaseClient, now: Date): Promise<JobResult> {
     ...(await officeWeekJob(admin, now)),
     ...(await noContactJob(admin, now)),
     ...(await morningBriefJob(admin, now)),
+    ...(await summariesJob(admin, now, "week")),
+    ...(await summariesJob(admin, now, "month")),
   };
+}
+
+const SUMMARY_TITLES: Record<PeriodKind, string> = { day: "A mai napod", week: "A múlt heted", month: "Az előző hónapod" };
+
+/**
+ * Personal summaries to every agent with notifications on: the day's in the
+ * evening (the "evening" job, around 18:00), last week's on Monday morning,
+ * last month's on the 1st. A period with nothing in it sends nothing.
+ */
+async function summariesJob(admin: SupabaseClient, now: Date, kind: PeriodKind): Promise<JobResult> {
+  const local = new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric", timeZone: "Europe/Budapest" }).formatToParts(now);
+  const weekday = local.find((p) => p.type === "weekday")?.value;
+  const day = Number(local.find((p) => p.type === "day")?.value);
+  if (kind === "week" && weekday !== "Mon") return { weekSummaries: "not Monday" };
+  if (kind === "month" && day !== 1) return { monthSummaries: "not the 1st" };
+  const offset = kind === "day" ? 0 : -1;
+  const { data: devices } = await admin.from("push_subscriptions").select("user_id").limit(10_000);
+  const users = [...new Set((devices ?? []).map((d) => d.user_id as string))];
+  if (!users.length) return { [`${kind}Summaries`]: 0 };
+  const { data: members } = await admin.from("organization_members").select("organization_id, user_id").in("user_id", users).limit(10_000);
+  let sent = 0;
+  for (const m of members ?? []) {
+    const user = await jobUser(admin, m.user_id, m.organization_id);
+    if (!user) continue;
+    await asBackgroundJob(admin, async () => {
+      const s = await getSummary(user, kind, now, { offset });
+      const busy = Object.values(s.now).some((v) => v > 0);
+      const tomorrow = s.coming ? s.coming.viewings.length : 0;
+      if (!busy && !tomorrow) return;
+      const parts = [summaryLine(s.now)];
+      if (kind === "day" && tomorrow) parts.push(`Holnap: ${tomorrow} megtekintés`);
+      if (s.cold.length) parts.push(`${s.cold.length} ügyfelet rég kerestél`);
+      sent += await pushToUser(user.id, {
+        title: SUMMARY_TITLES[kind],
+        body: parts.join(" · "),
+        url: `/summary?view=${kind}${offset ? `&offset=${offset}` : ""}`,
+        tag: `summary-${kind}-${s.period.from}`,
+      });
+    }).catch((e) => console.error("summary push failed", e instanceof Error ? e.message : e));
+  }
+  return { [`${kind}Summaries`]: sent };
 }
 
 type ViewingRow = {
