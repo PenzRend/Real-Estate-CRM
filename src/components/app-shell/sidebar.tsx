@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Menu, Mic, Search, X } from "lucide-react";
+import { Loader2, Menu, Mic, Search, Sparkles, X } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
@@ -139,13 +139,21 @@ function VoiceButton({ onNavigate, compact = false }: { onNavigate?: () => void;
       }}
       title="Mondd el, mi történt vagy mit tegyen – például: „beszéltem Kiss Annával, 3 szobást keres”"
       aria-label="Mondd Flaviónak"
-      className={cn(
-        "flex items-center justify-center gap-2 rounded-full bg-primary text-sm font-medium text-white transition-colors hover:bg-primary-hover",
-        compact ? "h-9 px-3.5" : "h-11",
-      )}
+      className={cn("flavio-cta group flex items-center rounded-full text-sm font-medium text-white", compact ? "h-9 gap-1.5 pl-1 pr-3.5" : "h-12 gap-2.5 pl-1.5 pr-4")}
     >
-      <Mic className="size-4" />
-      {compact ? "Flavio" : "Mondd Flaviónak"}
+      <span className={cn("flavio-cta-mic relative grid shrink-0 place-items-center rounded-full bg-accent", compact ? "size-7" : "size-9")}>
+        <Mic className="size-4 transition-transform group-hover:scale-110" />
+      </span>
+      {compact ? (
+        "Flavio"
+      ) : (
+        <span className="flex min-w-0 flex-col items-start leading-tight">
+          <span className="flex items-center gap-1">
+            Mondd Flaviónak <Sparkles className="size-3.5 text-[#9db8ff]" />
+          </span>
+          <span className="truncate text-[11px] font-normal text-white/60">Hívás, ügyfél, teendő – bármi</span>
+        </span>
+      )}
     </button>
   );
 }

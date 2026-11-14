@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Milyen adatokat kezel a Flavio és az importáló böngészőbővítmény, mire használja, és kinek adja át.",
 };
 
-const UPDATED = "2026. október 27.";
+const UPDATED = "2026. november 14.";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -65,6 +65,7 @@ export default function PrivacyPage() {
             <li>Ügyfelek: név, elérhetőség, keresési igények, jegyzetek, megtekintések és visszajelzések, teendők.</li>
             <li>Ingatlanok: a hirdetés adatai, fotók és videólinkek, tulajdonosi adatok, ha az ingatlanos felviszi őket.</li>
             <li>Diktált jegyzetek: a hangfelvételből szöveg lesz; a hangfelvételt nem tároljuk.</li>
+            <li>Okmányfotók az ügyfél-azonosításhoz: csak beolvassuk, nem tároljuk (lásd lent).</li>
             <li>E-mailek és naptár, ha az ingatlanos összekapcsolja a Google- vagy Microsoft-fiókját, vagy más postafiókot, illetve naptárlinket ad meg (lásd lent).</li>
           </ul>
         </Section>
@@ -123,6 +124,12 @@ export default function PrivacyPage() {
             csak az iroda munkatársai érhetik el, és a törvény szerinti ideig – az üzleti kapcsolat megszűnésétől számított 8 évig – megőrzi; addig az ügyfél
             adatai véglegesen nem törölhetők.
           </p>
+          <p>
+            Az adatok kitöltéséhez az ingatlanos lefotózhatja vagy feltöltheti az ügyfél személyazonosító igazolványát, útlevelét vagy lakcímkártyáját. A fotót
+            a Flavio csak a beolvasás idejére küldi el az AI-szolgáltatónak (Groq), amely kiolvassa belőle az űrlap mezőit, és a kérést nem tárolja; a fotót mi
+            sem mentjük el. A személyi azonosítót (személyi számot) nem olvassuk ki. Ehhez a funkcióhoz tartalék AI-szolgáltatót nem használunk. A kitöltött
+            adatokat az ingatlanos az okmánnyal összeveti, mielőtt elmenti őket.
+          </p>
         </Section>
 
         <Section title="Az importáló böngészőbővítmény">
@@ -147,8 +154,8 @@ export default function PrivacyPage() {
             <li>A tárhelyszolgáltató, ahol a Flavio fut.</li>
             <li>
               AI-szolgáltatók: a Groq (diktálás szövegre írása és az AI-funkciók), tartaléknak pedig a Google Gemini, ha a Groq épp nem érhető el. Az ingatlanos
-              által indított AI-funkciókhoz – kitöltés, összefoglaló, válaszvázlat, diktálás – megkapják az ehhez szükséges szöveget vagy hangfelvételt. A Groq a
-              kéréseket nem tárolja (nulla adatmegőrzés), a hangfelvételt mi sem mentjük el. Mindkét szolgáltató amerikai cég, ezért az adat az EU-n kívül is
+              által indított AI-funkciókhoz – kitöltés, összefoglaló, válaszvázlat, diktálás, okmányfotó beolvasása – megkapják az ehhez szükséges szöveget, hangfelvételt vagy fotót (okmányfotót csak a Groq). A Groq a
+              kéréseket nem tárolja (nulla adatmegőrzés), a hangfelvételt és az okmányfotót mi sem mentjük el. Mindkét szolgáltató amerikai cég, ezért az adat az EU-n kívül is
               feldolgozásra kerülhet, az uniós adatvédelmi szabályok szerinti garanciákkal. Az eredményt az ingatlanos ellenőrzi, mielőtt bármi mentődne vagy elmenne.
             </li>
             <li>Google és Microsoft: csak összekapcsolt fiók esetén, a fenti célokra.</li>

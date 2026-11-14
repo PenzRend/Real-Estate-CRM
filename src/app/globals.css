@@ -511,3 +511,55 @@ dialog[open]::backdrop {
     opacity: 0;
   }
 }
+
+/* "Mondd Flaviónak": the one AI button. A slow blue light runs round its
+   edge and the mic breathes, so it reads as the place to start. */
+@property --cta-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.flavio-cta {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(135deg, #262a33, var(--primary) 60%) padding-box,
+    conic-gradient(from var(--cta-angle), transparent 0 50%, #9db8ff 72%, var(--accent) 84%, transparent 100%) border-box;
+  box-shadow: 0 8px 20px -10px rgb(61 111 242 / 0.6);
+  animation: cta-spin 5s linear infinite;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.flavio-cta:hover {
+  box-shadow: 0 10px 26px -8px rgb(61 111 242 / 0.8);
+  transform: translateY(-1px);
+}
+.flavio-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+.flavio-cta-mic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgb(61 111 242 / 0.55);
+  animation: cta-breathe 2.6s ease-out infinite;
+}
+@keyframes cta-spin {
+  to {
+    --cta-angle: 360deg;
+  }
+}
+@keyframes cta-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgb(61 111 242 / 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 8px rgb(61 111 242 / 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flavio-cta,
+  .flavio-cta-mic::after {
+    animation: none;
+  }
+}
