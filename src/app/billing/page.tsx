@@ -37,7 +37,7 @@ async function BillingContent({ searchParams }: { searchParams: PageProps<"/bill
         return access ? `Lemondtad; ${formatDate(billing.currentPeriodEnd)}-ig még használhatod.` : "Az előfizetés véget ért. Az adataid megvannak: előfizetéssel folytathatod.";
       default:
         return canPay
-          ? "A Flavio használatához válassz előfizetést, vagy ha kaptál meghívókódot, váltsd be lent: azzal 30 napig ingyenes."
+          ? "A Flavio használatához válassz előfizetést, vagy ha kaptál meghívókódot, váltsd be fent: azzal 30 napig ingyenes."
           : "A munkaterületnek még nincs előfizetése. A tulajdonos vagy egy admin intézheti, meghívókóddal vagy előfizetéssel.";
     }
   })();
@@ -48,6 +48,8 @@ async function BillingContent({ searchParams }: { searchParams: PageProps<"/bill
         <p className="text-sm text-muted">{user.organization.name}</p>
         <h1 className="mt-1 text-[28px] leading-tight sm:text-[34px]">Előfizetés</h1>
       </div>
+
+      {billing.status === "none" && canPay && <RedeemCodeForm />}
 
       {paid && (
         <p role="status" className="rounded-2xl bg-success-soft p-4 text-sm text-success">
@@ -65,9 +67,7 @@ async function BillingContent({ searchParams }: { searchParams: PageProps<"/bill
         )}
       </section>
 
-      {!access && <FeatureShowcase />}
-
-      {billing.status === "none" && canPay && <RedeemCodeForm />}
+      {!access && !plan && <FeatureShowcase />}
 
       {plan && (
         <section className="flex flex-col gap-5 rounded-2xl border border-border p-5">
@@ -78,6 +78,7 @@ async function BillingContent({ searchParams }: { searchParams: PageProps<"/bill
               fejenként napi {formatNumber(plan.aiDailyPerSeat)} kérésig{plan.aiMonthlyPerSeat !== null && ` (havonta ${formatNumber(plan.aiMonthlyPerSeat)})`}.
             </p>
           </div>
+          {!access && <FeatureShowcase />}
           {canPay ? (
             <BillingForms
               priceMonth={plan.priceMonth}

@@ -43,7 +43,7 @@ export function FeatureShowcase() {
       className="flex flex-col gap-5"
     >
       {/* Every screen in the same cell of a fixed-height box: a tall one fades out at the bottom, and nothing below jumps. */}
-      <div className="relative grid h-[22rem] items-start overflow-hidden rounded-[2rem] bg-surface px-4 pt-6 sm:h-[25rem] sm:px-10 sm:pt-8">
+      <div className="relative grid h-[22rem] items-start overflow-hidden rounded-2xl bg-surface px-4 pt-6 sm:h-[25rem] sm:px-10 sm:pt-8">
         {SLIDES.map(({ title, Mock }, i) => (
           <div
             key={title}
