@@ -73,6 +73,8 @@ export type ClientListFilters = {
   assignedTo?: string;
   /** Match each word by its stem, so inflected names ("Katáról", "Péternek") still find the client. */
   stemmedNames?: boolean;
+  /** How many rows at most; the list shows LIST_LIMIT, the board more. */
+  limit?: number;
 };
 
 export const LIST_LIMIT = 100;
@@ -148,7 +150,7 @@ export async function listClients(user: CurrentUser, f: ClientListFilters, now =
     ? query.order("next_follow_up_at", { ascending: true })
     : query.order("updated_at", { ascending: false });
 
-  const { data, count, error } = await query.limit(LIST_LIMIT);
+  const { data, count, error } = await query.limit(f.limit ?? LIST_LIMIT);
   if (error) throw new Error(`Failed to list clients: ${error.message}`);
   return { clients: (data as ClientListRow[]).map(toListItem), total: count ?? 0 };
 }

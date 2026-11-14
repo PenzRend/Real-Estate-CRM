@@ -21,6 +21,8 @@ export type ClientFilters = {
   location?: string;
   archived?: string;
   mine?: string;
+  /** "board": the Tábla view, kept when filtering. */
+  view?: string;
 };
 
 function budget(c: ClientListItem) {
@@ -35,6 +37,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
   const any = advanced || Boolean(filters.q || filters.status || filters.type);
   return (
     <Form action="/clients" scroll={false} className="flex flex-col gap-2" role="search">
+      {filters.view === "board" && <input type="hidden" name="view" value="board" />}
       {/* On a phone two rows (search, then the two filters side by side), so the list starts high. */}
       <div className="grid grid-cols-2 gap-2 sm:flex">
         <div className="col-span-2 flex gap-2 sm:flex-1">
@@ -74,7 +77,7 @@ export function ClientFilterBar({ filters }: { filters: ClientFilters }) {
           <SlidersHorizontal className="size-3.5" />
           További szűrők
           {any && (
-            <Link href="/clients" className="ml-3 text-ink underline-offset-4 hover:underline">
+            <Link href={filters.view === "board" ? "/clients?view=board" : "/clients"} className="ml-3 text-ink underline-offset-4 hover:underline">
               Szűrők törlése
             </Link>
           )}

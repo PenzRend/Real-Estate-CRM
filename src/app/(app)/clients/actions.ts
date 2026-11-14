@@ -176,3 +176,27 @@ export async function quickEditClientAction(id: string, input: unknown): Promise
   refresh();
   return { ok: true };
 }
+
+const boardStatus = z.enum(["new_lead", "contacted", "qualified", "active", "negotiation", "converted", "lost"]);
+
+/** A card moved to another column on the Tábla view. */
+export async function setClientStatusAction(id: string, status: unknown): Promise<QuickEditResult> {
+  const user = await getCurrentUser();
+  const parsed = boardStatus.safeParse(status);
+  if (!parsed.success) return { ok: false, error: "Ismeretlen státusz." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("clients")
+    .update({ status: parsed.data })
+    .eq("id", id)
+    .eq("organization_id", user.organization.id)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("setClientStatusAction failed", error.code);
+    return { ok: false, error: SAVE_FAILED };
+  }
+  if (!data) return { ok: false, error: "Ez az ügyfél nem található, vagy nincs jogosultságod módosítani." };
+  refresh();
+  return { ok: true };
+}
