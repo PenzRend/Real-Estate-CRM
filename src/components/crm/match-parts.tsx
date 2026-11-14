@@ -43,6 +43,29 @@ export function MatchChecks({ checks }: { checks: MatchCheck[] }) {
   );
 }
 
+/** The same checks as rows with the full sentence: the client's wish against what the listing has. */
+export function MatchCheckList({ checks }: { checks: Pick<MatchCheck, "key" | "label" | "status" | "detail">[] }) {
+  return (
+    <ul className="flex flex-col gap-1.5" aria-label="Igény és ingatlan">
+      {checks.map((c) => {
+        const s = statusStyle[c.status];
+        const Icon = s.icon;
+        return (
+          <li key={c.key} className="flex items-start gap-2 text-xs">
+            <span className={cn("mt-px grid size-4 shrink-0 place-items-center rounded-full", s.className)}>
+              <Icon className="size-2.5" strokeWidth={3} aria-hidden />
+              <span className="sr-only">{s.sr}</span>
+            </span>
+            <span className="min-w-0">
+              <span className="font-medium text-ink">{c.label}:</span> <span className="text-text">{c.detail}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /**
  * "Ajánlom" opens a drafted offer (email with the listing's share link) to
  * send, open in Gmail, copy or keep as a task; either way the pair is no

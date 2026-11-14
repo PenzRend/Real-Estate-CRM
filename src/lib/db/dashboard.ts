@@ -3,7 +3,9 @@ import type { CurrentUser } from "@/lib/auth";
 import { startOfZonedDay } from "@/lib/i18n/timezone";
 import { matchSummary } from "@/lib/matching/match";
 import { createClient } from "@/lib/supabase/server";
-import { matchSuggestions } from "./matches";
+import { coverThumbs } from "./media";
+import { matchSuggestions, type Suggestion } from "./matches";
+import { formatArea, formatNumber, formatPrice } from "@/lib/i18n/format";
 import type { DashboardData, Ref, TaskItem } from "@/lib/types/view-models";
 
 const OPEN_TASK = ["todo", "in_progress"];
@@ -136,13 +138,61 @@ export async function getDashboardData(user: CurrentUser, now: Date): Promise<Da
       nextFollowUpAt: c.next_follow_up_at,
       updatedAt: c.updated_at,
     })),
-    suggestions: (await matchSuggestions(user, now)).map(({ client, property, match }) => ({
+    suggestions: await suggestionItems(user, await matchSuggestions(user, now)),
+  };
+}
+
+/** The listing's facts an agent weighs at a glance, as short phrases. */
+function listingFacts(p: { price: number | null; currency: "HUF" | "EUR"; listing_type: string; area_sqm: number | null; room_count: number | null; bedroom_count: number | null; bathroom_count?: number | null; floor?: string | null; condition?: string | null; building_type?: string | null; has_balcony: boolean | null; has_garden: boolean | null; has_parking: boolean | null }) {
+  const out: string[] = [];
+  if (p.price != null) out.push(`${formatPrice(p.price, p.currency)}${p.listing_type === "rent" ? " / hó" : ""}`);
+  if (p.area_sqm != null) out.push(formatArea(p.area_sqm));
+  if (p.room_count != null) out.push(`${formatNumber(p.room_count)} szoba`);
+  if (p.bedroom_count != null) out.push(`${p.bedroom_count} hálószoba`);
+  if (p.bathroom_count != null) out.push(`${p.bathroom_count} fürdő`);
+  if (p.floor) out.push(/^\d+$/.test(p.floor.trim()) ? `${p.floor.trim()}. emelet` : p.floor);
+  if (p.condition) out.push(p.condition);
+  if (p.building_type) out.push(p.building_type);
+  if (p.has_balcony) out.push("erkély");
+  if (p.has_garden) out.push("kert");
+  if (p.has_parking) out.push("parkolás");
+  return out;
+}
+
+/** Dashboard suggestions with what "Részletek" opens: the checks, the client's other wishes, the listing's facts and cover. */
+async function suggestionItems(user: CurrentUser, suggestions: Suggestion[]) {
+  const ids = [...new Set(suggestions.map((s) => s.property.id))];
+  const clientIds = [...new Set(suggestions.map((s) => s.client.id))];
+  const supabase = await createClient();
+  const [extra, phones, photos] = await Promise.all([
+    ids.length
+      ? supabase.from("properties").select("id, address, floor, condition, building_type, bathroom_count, description").eq("organization_id", user.organization.id).in("id", ids)
+      : Promise.resolve({ data: [] as never[] }),
+    clientIds.length ? supabase.from("clients").select("id, phone").eq("organization_id", user.organization.id).in("id", clientIds) : Promise.resolve({ data: [] as never[] }),
+    coverThumbs(user, ids).catch(() => ({}) as Record<string, string>),
+  ]);
+  const byId = new Map((extra.data ?? []).map((r) => [r.id as string, r]));
+  const phoneOf = new Map((phones.data ?? []).map((r) => [r.id as string, (r.phone as string | null) ?? null]));
+  return suggestions.map(({ client, property, match }) => {
+    const more = byId.get(property.id);
+    const description = (more?.description as string | null)?.replace(/\s+/g, " ").trim() || null;
+    const address = (more?.address as string | null)?.trim() || [property.city, property.district].filter(Boolean).join(", ") || null;
+    return {
       id: `${property.id}:${client.id}`,
       title: `Ajánld ${client.full_name} részére: ${property.title}`,
       reason: `Új ingatlan, ami illik a keresési igényeihez. ${matchSummary(match)}`,
       client: { id: client.id, name: client.full_name },
       property: { id: property.id, name: property.title },
       category: match.category,
-    })),
-  };
+      details: {
+        checks: match.checks.map(({ key, label, status, detail }) => ({ key, label, status, detail })),
+        wishes: client.other_requirements?.trim() || null,
+        facts: listingFacts({ ...property, bathroom_count: num(more?.bathroom_count), floor: more?.floor as string | null, condition: more?.condition as string | null, building_type: more?.building_type as string | null }),
+        address,
+        description: description && description.length > 280 ? `${description.slice(0, 280).replace(/\s\S*$/, "")}…` : description,
+        photo: (photos as Record<string, string>)[property.id] ?? null,
+        phone: phoneOf.get(client.id) ?? null,
+      },
+    };
+  });
 }

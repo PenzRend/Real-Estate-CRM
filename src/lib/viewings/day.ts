@@ -17,8 +17,38 @@ export function todaysViewings<T extends DayViewing>(viewings: T[], now: Date): 
   return viewings.filter((v) => v.status === "scheduled" && budapestDay(new Date(v.startsAt)) === today).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
-/** Google Maps directions to one place (opens the app on a phone). */
-export const directionsTo = (place: string) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place)}&travelmode=driving`;
+export type MapsApp = "apple" | "google" | "waze";
+export type LatLng = { lat: number; lng: number };
+
+/** The address as a map search reads it: notes in brackets ("(teszt)", "(kapukód 12)") left out. */
+export const mapQuery = (place: string) => place.replace(/\s*\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+
+/** The places of the day still ahead, in order. */
+export const stopsAhead = (viewings: DayViewing[], now: Date) =>
+  viewings.filter((v) => new Date(v.startsAt).getTime() + v.durationMinutes * 60_000 > now.getTime()).map(placeOf).filter(Boolean);
+
+/**
+ * Directions in the chosen app, from where the agent is now when the phone
+ * told us (otherwise the app's own location). Google takes the whole day as
+ * waypoints (up to 9); Apple Maps and Waze go to the first stop.
+ */
+export function navigationUrl(app: MapsApp, stops: string[], origin: LatLng | null): string {
+  const places = stops.map(mapQuery).filter(Boolean);
+  const from = origin ? `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}` : null;
+  if (app === "apple") {
+    const q = new URLSearchParams({ daddr: places[0] ?? "", dirflg: "d" });
+    if (from) q.set("saddr", from);
+    return `https://maps.apple.com/?${q}`;
+  }
+  if (app === "waze") return `https://waze.com/ul?q=${encodeURIComponent(places[0] ?? "")}&navigate=yes`;
+  const destination = places[places.length - 1] ?? "";
+  const waypoints = places.slice(0, -1).slice(0, 9);
+  return (
+    `https://www.google.com/maps/dir/?api=1${from ? `&origin=${from}` : ""}&destination=${encodeURIComponent(destination)}` +
+    (waypoints.length ? `&waypoints=${waypoints.map(encodeURIComponent).join("%7C")}` : "") +
+    "&travelmode=driving"
+  );
+}
 
 /** The whole day as one route: the stops still ahead, in order (Google allows up to 9 waypoints). */
 export function dayRoute(viewings: DayViewing[], now: Date): string | null {

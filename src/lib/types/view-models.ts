@@ -65,6 +65,16 @@ export type SuggestionItem = {
   client: Ref | null;
   property?: Ref | null;
   category?: "strong" | "good" | "possible";
+  /** For "Részletek": each requirement checked against the listing, and what else to weigh. */
+  details?: {
+    checks: { key: string; label: string; status: "met" | "close" | "miss" | "unknown"; detail: string }[];
+    wishes: string | null;
+    facts: string[];
+    address: string | null;
+    description: string | null;
+    photo: string | null;
+    phone: string | null;
+  };
 };
 
 export type DashboardData = {

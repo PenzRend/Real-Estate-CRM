@@ -1,8 +1,9 @@
-import { Clock, MessageSquare, Navigation, Phone, Route } from "lucide-react";
+import { Clock, MessageSquare, Phone } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { dayRoute, directionsTo, hhmm, lateText, placeOf, smsLink, todaysViewings, type DayViewing } from "@/lib/viewings/day";
+import { hhmm, lateText, placeOf, smsLink, stopsAhead, todaysViewings, type DayViewing } from "@/lib/viewings/day";
+import { NavigateMenu } from "./navigate-menu";
 
 const action = "inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-ink hover:bg-surface";
 
@@ -14,20 +15,10 @@ const action = "inline-flex h-8 items-center gap-1.5 rounded-full border border-
 export function TodayRoute({ viewings, now, agent }: { viewings: (DayViewing & { client: { id: string } })[]; now: Date; agent: string | null }) {
   const today = todaysViewings(viewings, now);
   if (!today.length) return null;
-  const route = dayRoute(today, now);
+  const route = stopsAhead(today, now);
   return (
     <Card>
-      <CardHeader
-        title="Mai útvonal"
-        count={today.length}
-        action={
-          route ? (
-            <a href={route} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink hover:text-accent">
-              <Route className="size-4" /> Teljes útvonal
-            </a>
-          ) : undefined
-        }
-      />
+      <CardHeader title="Mai útvonal" count={today.length} action={route.length > 1 ? <NavigateMenu stops={route} variant="route" /> : undefined} />
       <ol className="divide-y divide-border">
         {today.map((v) => {
           const end = new Date(v.startsAt).getTime() + v.durationMinutes * 60_000;
@@ -48,11 +39,7 @@ export function TodayRoute({ viewings, now, agent }: { viewings: (DayViewing & {
               </div>
               {!past && (
                 <div className="flex flex-wrap gap-1.5 pl-[3.6rem]">
-                  {place && (
-                    <a href={directionsTo(place)} target="_blank" rel="noopener noreferrer" className={action}>
-                      <Navigation className="size-3.5" /> Navigáció
-                    </a>
-                  )}
+                  {place && <NavigateMenu stops={[place]} />}
                   {v.client.phone && (
                     <>
                       <a href={`tel:${v.client.phone.replace(/[^\d+]/g, "")}`} className={action}>

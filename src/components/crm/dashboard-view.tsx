@@ -1,4 +1,4 @@
-import { CalendarCheck, Lightbulb } from "lucide-react";
+import { CalendarCheck, ChevronDown, Lightbulb, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { formatLongDate } from "@/lib/i18n/format";
 import type { DashboardData } from "@/lib/types/view-models";
 import { ActivityRow, TaskRow } from "./items";
-import { MatchActions, MatchCategoryBadge } from "./match-parts";
+import { MatchActions, MatchCategoryBadge, MatchCheckList } from "./match-parts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -46,6 +46,7 @@ function Suggestions({ items }: { items: DashboardData["suggestions"] }) {
               <span className="font-medium text-text">Miért? </span>
               {s.reason}
             </p>
+            {s.details && s.client && s.property && <SuggestionDetails details={s.details} client={s.client} property={s.property} />}
             {s.client && s.property && UUID.test(s.client.id) && UUID.test(s.property.id) && (
               <div className="mt-3">
                 <MatchActions propertyId={s.property.id} clientId={s.client.id} />
@@ -55,6 +56,75 @@ function Suggestions({ items }: { items: DashboardData["suggestions"] }) {
         ))}
       </ul>
     </Card>
+  );
+}
+
+/**
+ * "Részletek": opens under a suggestion to judge the fit before offering –
+ * each wish against the listing, the client's other wishes in their words,
+ * and the listing's facts, cover photo and description.
+ */
+function SuggestionDetails({
+  details: d,
+  client,
+  property,
+}: {
+  details: NonNullable<DashboardData["suggestions"][number]["details"]>;
+  client: { id: string; name: string };
+  property: { id: string; name: string };
+}) {
+  return (
+    <details className="group mt-2">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-accent select-none hover:underline [&::-webkit-details-marker]:hidden">
+        <span className="group-open:hidden">Részletek: tényleg illik?</span>
+        <span className="hidden group-open:inline">Részletek elrejtése</span>
+        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3 grid grid-cols-1 gap-4 rounded-2xl bg-surface/70 p-4 sm:grid-cols-2">
+        <section className="flex flex-col gap-2">
+          <h4 className="text-[11px] font-medium tracking-wide text-subtle uppercase">Igény ↔ ingatlan</h4>
+          {d.checks.length ? <MatchCheckList checks={d.checks} /> : <p className="text-xs text-muted">Az ügyfélnek nincs rögzített igénye.</p>}
+          {d.wishes && (
+            <p className="text-xs leading-relaxed text-text">
+              <span className="font-medium text-ink">További kérései: </span>
+              {d.wishes}
+            </p>
+          )}
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <Link href={`/clients/${client.id}`} className="font-medium text-ink hover:underline">
+              {client.name} adatlapja →
+            </Link>
+            {d.phone && (
+              <a href={`tel:${d.phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1 text-muted hover:text-ink">
+                <Phone className="size-3" /> {d.phone}
+              </a>
+            )}
+          </div>
+        </section>
+        <section className="flex flex-col gap-2">
+          <h4 className="text-[11px] font-medium tracking-wide text-subtle uppercase">Az ingatlan</h4>
+          <div className="flex gap-3">
+            {d.photo && (
+              // Signed storage link: a plain img, no optimiser round trip.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.photo} alt="" className="size-16 shrink-0 rounded-xl object-cover" loading="lazy" />
+            )}
+            <div className="flex min-w-0 flex-col gap-1">
+              {d.address && (
+                <p className="flex items-start gap-1 text-xs text-text">
+                  <MapPin className="mt-px size-3 shrink-0 text-muted" /> {d.address}
+                </p>
+              )}
+              {d.facts.length > 0 && <p className="text-xs text-text">{d.facts.join(" · ")}</p>}
+            </div>
+          </div>
+          {d.description && <p className="text-xs leading-relaxed text-muted">{d.description}</p>}
+          <Link href={`/properties/${property.id}`} className="mt-1 text-xs font-medium text-ink hover:underline">
+            Az ingatlan adatlapja →
+          </Link>
+        </section>
+      </div>
+    </details>
   );
 }
 
