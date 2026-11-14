@@ -557,8 +557,11 @@ dialog[open]::backdrop {
     box-shadow: 0 0 0 8px rgb(61 111 242 / 0);
   }
 }
-/* The payment page's slideshow: the current dot fills while its screen is shown. */
+/* The payment page's slideshow: the current bar fills while its screen is shown,
+   and its end turns the page. Kept with reduced motion: a slow linear fill, and
+   the screens then swap without sliding. */
 .showcase-progress {
+  width: 0;
   animation: showcase-fill linear forwards;
 }
 @keyframes showcase-fill {
@@ -587,8 +590,7 @@ dialog[open]::backdrop {
 @media (prefers-reduced-motion: reduce) {
   .flavio-cta,
   .flavio-cta-mic::after,
-  .voice-wave,
-  .showcase-progress {
+  .voice-wave {
     animation: none;
   }
 }

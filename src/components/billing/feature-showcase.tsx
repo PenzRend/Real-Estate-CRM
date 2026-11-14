@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useEffect, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { AssistantMock, CaptureMock, MailMock, MatchMock, PipelineMock, RouteMock } from "@/components/landing/mockups";
 import { cn } from "@/lib/cn";
 
@@ -17,20 +17,16 @@ const SLIDES: { title: string; text: string; Mock: ComponentType<{ className?: s
 const EVERY_MS = 6000;
 
 /**
- * The payment page's look at what Flavio does: one screen at a time, changing
- * by itself (it stops while the pointer or the keyboard is on it, and for
- * anyone who prefers less motion).
+ * The payment page's look at what Flavio does: one screen at a time. The
+ * current bar fills over six seconds and its end turns the page, so a pause
+ * (the pointer or the keyboard on it, or the button) freezes the bar where it
+ * is and it carries on from there. With less motion preferred the screens
+ * swap without sliding.
  */
 export function FeatureShowcase() {
   const [at, setAt] = useState(0);
   const [held, setHeld] = useState(false);
   const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (held || paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setTimeout(() => setAt((i) => (i + 1) % SLIDES.length), EVERY_MS);
-    return () => clearTimeout(t);
-  }, [at, held, paused]);
 
   return (
     <section
@@ -49,7 +45,7 @@ export function FeatureShowcase() {
             key={title}
             aria-hidden={i !== at}
             className={cn(
-              "[grid-area:1/1] transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none",
+              "[grid-area:1/1] transition-[opacity,transform] duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:transition-opacity",
               i === at ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0",
             )}
           >
@@ -81,13 +77,9 @@ export function FeatureShowcase() {
             >
               <span
                 key={i === at ? `on-${at}` : "off"}
-                className={cn(
-                  "absolute inset-y-0 left-0 rounded-full bg-ink",
-                  i < at && "w-full",
-                  i === at && (held || paused ? "w-full" : "showcase-progress w-full"),
-                  i > at && "w-0",
-                )}
-                style={i === at && !(held || paused) ? { animationDuration: `${EVERY_MS}ms` } : undefined}
+                className={cn("absolute inset-y-0 left-0 rounded-full bg-ink", i < at && "w-full", i === at && "showcase-progress", i > at && "w-0")}
+                style={i === at ? { animationDuration: `${EVERY_MS}ms`, animationPlayState: held || paused ? "paused" : "running" } : undefined}
+                onAnimationEnd={i === at ? () => setAt((n) => (n + 1) % SLIDES.length) : undefined}
               />
             </button>
           ))}
