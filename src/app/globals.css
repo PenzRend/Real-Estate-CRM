@@ -563,3 +563,27 @@ dialog[open]::backdrop {
     animation: none;
   }
 }
+
+/* Printing a contract: only the copy of the paper under <body> is printed. */
+#contract-print {
+  display: none;
+}
+@media print {
+  body.print-contract > :not(#contract-print) {
+    display: none !important;
+  }
+  body.print-contract #contract-print {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    font-size: 12pt;
+    color: #000;
+  }
+  body.print-contract #contract-print mark {
+    background: none;
+    color: inherit;
+  }
+}
+@page {
+  margin: 2cm;
+}

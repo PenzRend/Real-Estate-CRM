@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, CircleAlert, Download, FileCheck2, Loader2, PencilLine, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleAlert, Download, FileCheck2, Loader2, PencilLine, Printer, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { aiReviewContractAction, approveContractAction, deleteContractAction, previewContractAction, saveContractAction } from "@/app/(app)/(dokumentumok)/contracts/actions";
@@ -16,6 +16,33 @@ import type { DraftView } from "@/lib/contracts/data";
 import type { FieldGroup } from "@/lib/contracts/kinds";
 
 const GROUPS: FieldGroup[] = ["Felek", "Ingatlan", "Pénzügyek", "Iroda", "Egyéb"];
+
+const PAPER = cn(
+  "contract-paper min-h-[40rem] flex-1 px-8 py-8 font-serif text-[14.5px] leading-relaxed text-text sm:px-12",
+  "[&_em]:text-muted [&_h1]:mb-1 [&_h1]:text-center [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-ink [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink",
+  "[&_mark]:rounded [&_mark]:bg-warning-soft [&_mark]:px-1 [&_mark]:font-sans [&_mark]:text-[12px] [&_mark]:font-medium [&_mark]:text-warning",
+);
+
+/**
+ * Prints the contract alone: a copy of the paper goes straight under <body>,
+ * and the print styles (globals.css, .print-contract) hide everything else.
+ */
+function printContract(html: string) {
+  document.getElementById("contract-print")?.remove();
+  const sheet = document.createElement("article");
+  sheet.id = "contract-print";
+  sheet.className = PAPER;
+  sheet.innerHTML = html;
+  document.body.append(sheet);
+  document.body.classList.add("print-contract");
+  const done = () => {
+    document.body.classList.remove("print-contract");
+    sheet.remove();
+    window.removeEventListener("afterprint", done);
+  };
+  window.addEventListener("afterprint", done);
+  window.print();
+}
 
 /** Review a contract draft: fill the gaps, read and edit the text, let the AI look it over, approve into a Word file. */
 export function ContractReview({ draft, documentUrl }: { draft: DraftView; documentUrl: string | null }) {
@@ -69,7 +96,7 @@ export function ContractReview({ draft, documentUrl }: { draft: DraftView; docum
       else toast({ message: "Tervezet elmentve." });
     });
 
-  const approve = () =>
+  const approve = (then?: () => void) =>
     save(() =>
       startApprove(async () => {
         const r = await approveContractAction(draft.id).catch(actionFailed);
@@ -77,7 +104,8 @@ export function ContractReview({ draft, documentUrl }: { draft: DraftView; docum
           toast({ message: r.error });
           return;
         }
-        toast({ message: "Jóváhagyva – a Word-fájl a Dokumentumok → Szerződések mappában van." });
+        if (then) then();
+        else toast({ message: "Jóváhagyva – a Word-fájl a Dokumentumok → Szerződések mappában van." });
       }),
     );
 
@@ -196,11 +224,7 @@ export function ContractReview({ draft, documentUrl }: { draft: DraftView; docum
           />
         ) : (
           <article
-            className={cn(
-              "contract-paper min-h-[40rem] flex-1 px-8 py-8 font-serif text-[14.5px] leading-relaxed text-text sm:px-12",
-              "[&_em]:text-muted [&_h1]:mb-1 [&_h1]:text-center [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-ink [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink",
-              "[&_mark]:rounded [&_mark]:bg-warning-soft [&_mark]:px-1 [&_mark]:font-sans [&_mark]:text-[12px] [&_mark]:font-medium [&_mark]:text-warning",
-            )}
+            className={PAPER}
             // Built from escaped text on the server (contracts/render.ts).
             dangerouslySetInnerHTML={{ __html: html }}
           />
@@ -235,7 +259,21 @@ export function ContractReview({ draft, documentUrl }: { draft: DraftView; docum
           <Button variant="secondary" onClick={() => save()} disabled={saving || !dirty}>
             {saving ? <Loader2 className="animate-spin" /> : <Save />} Mentés
           </Button>
-          <Button onClick={approve} disabled={approving || saving || missing.length > 0 || errors.length > 0} title={missing.length ? "Előbb töltsd ki a hiányzó adatokat" : undefined}>
+          {draft.status === "approved" && !dirty ? (
+            <Button variant="secondary" onClick={() => printContract(html)}>
+              <Printer /> Nyomtatás
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => approve(() => setTimeout(() => printContract(html), 50))}
+              disabled={approving || saving || missing.length > 0 || errors.length > 0}
+              title={missing.length ? "Előbb töltsd ki a hiányzó adatokat" : undefined}
+            >
+              <Printer /> Jóváhagyás és nyomtatás
+            </Button>
+          )}
+          <Button onClick={() => approve()} disabled={approving || saving || missing.length > 0 || errors.length > 0} title={missing.length ? "Előbb töltsd ki a hiányzó adatokat" : undefined}>
             {approving ? <Loader2 className="animate-spin" /> : <FileCheck2 />} Jóváhagyás és Word
           </Button>
         </div>
