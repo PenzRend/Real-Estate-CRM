@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Mail, Plus, RefreshCw, Star, Unplug } from "lucide-react";
+import { ChevronDown, Loader2, Mail, Plus, RefreshCw, Star, Unplug } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -38,11 +38,31 @@ function statusLine(m: MailboxRow) {
   return m.lastSyncedAt ? `Utolsó szinkronizálás: ${formatDateTime(m.lastSyncedAt)}` : "Még nem volt szinkronizálás.";
 }
 
-/** Connected mailboxes: status, default sender, manual sync of all, and a background sync when the inbox is opened with stale data. */
+/**
+ * Connected mailboxes in one line above the emails: a menu with each one's
+ * status, default sender, disconnect and adding another; the last sync and a
+ * refresh. A mailbox that needs reconnecting shows a strip of its own. Opening
+ * the inbox with stale data syncs in the background.
+ */
 export function MailboxBar({ mailboxes, providers }: { mailboxes: MailboxRow[]; providers: MailProvider[] }) {
   const [syncing, start] = useTransition();
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const autoSynced = useRef(false);
+  const menu = useRef<HTMLDetailsElement>(null);
+
+  // The mailbox menu closes on a click elsewhere or Esc, like any menu.
+  useEffect(() => {
+    const close = (e: Event) => {
+      const d = menu.current;
+      if (d?.open && (e instanceof KeyboardEvent ? e.key === "Escape" : !d.contains(e.target as Node))) d.open = false;
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, []);
   const router = useRouter();
 
   function runSync() {
@@ -72,83 +92,106 @@ export function MailboxBar({ mailboxes, providers }: { mailboxes: MailboxRow[]; 
     runSync();
   });
 
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-4">
-      <ul className="flex flex-col divide-y divide-border">
-        {mailboxes.map((m) => (
-          <li key={m.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-muted">
-                <Mail className="size-4" />
-              </span>
-              <div className="min-w-0 text-sm">
-                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-medium text-ink">
-                  <span className="break-all">{m.email}</span>
-                  <span className="font-normal text-muted">· {mailboxLabel(m.provider, m.email)}</span>
-                  {m.isPrimary && mailboxes.length > 1 && <Badge tone="accent">Alapértelmezett küldő</Badge>}
-                </p>
-                <p className={m.status === "active" ? "text-xs text-muted" : "text-xs text-danger"}>{statusLine(m)}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 sm:shrink-0">
-              {m.status === "revoked" && (
-                <a href={reconnectHref(m)} className={buttonClasses("primary", "sm")}>
-                  Újracsatlakozás
-                </a>
-              )}
-              {!m.isPrimary && m.status !== "revoked" && (
-                <form action={setPrimaryMailboxAction.bind(null, m.id)}>
-                  <Button type="submit" variant="ghost" size="sm" title="Az új levelek és ajánlatok innen mennek">
-                    <Star /> Alapértelmezett
-                  </Button>
-                </form>
-              )}
-              <ConfirmAction
-                action={disconnectMailAction.bind(null, m.id)}
-                size="sm"
-                trigger={
-                  <>
-                    <Unplug /> Leválasztás
-                  </>
-                }
-                title={`${m.email} leválasztása`}
-                description={`A Flavio hozzáférése megszűnik${disconnectNote[m.provider]}, és a postafiók még fel nem dolgozott importált levelei törlődnek. A már rögzített beszélgetések megmaradnak.`}
-                confirmLabel="Leválasztás"
-                tone="danger"
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+  const broken = mailboxes.filter((m) => m.status !== "active");
+  const lastSync = mailboxes
+    .filter((m) => m.status === "active" && m.lastSyncedAt)
+    .map((m) => m.lastSyncedAt!)
+    .sort()
+    .at(-1);
 
-      <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs">
-          {message && (
-            <p role="status" className={message.tone === "ok" ? "text-success" : "text-danger"}>
-              {message.text}
-            </p>
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Only a mailbox that needs something takes room on the page. */}
+      {broken.map((m) => (
+        <div key={m.id} role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <span className="min-w-0">
+            <span className="font-medium break-all">{m.email}</span>: {statusLine(m)}
+          </span>
+          {m.status === "revoked" ? (
+            <a href={reconnectHref(m)} className={buttonClasses("primary", "sm")}>
+              Újracsatlakozás
+            </a>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={sync} disabled={syncing}>
+              Újra próbálom
+            </Button>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={sync} disabled={syncing}>
-            {syncing ? <Loader2 className="animate-spin" /> : <RefreshCw />} {syncing ? "Szinkronizálás…" : "Szinkronizálás"}
-          </Button>
-          <details className="relative">
-            <summary className={buttonClasses("secondary", "sm", "cursor-pointer list-none [&::-webkit-details-marker]:hidden")}>
-              <Plus /> Postafiók hozzáadása
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 flex w-64 flex-col rounded-2xl border border-border bg-background p-1.5 shadow-float">
-              {providers.map((p) => (
-                <a key={p} href={connectPaths[p]} className="rounded-xl px-3 py-2 text-sm text-ink hover:bg-surface">
-                  {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail / Google Workspace"}
-                </a>
+      ))}
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <details ref={menu} className="relative">
+          <summary className={buttonClasses("secondary", "sm", "cursor-pointer list-none [&::-webkit-details-marker]:hidden")}>
+            <Mail /> <span className="max-w-[14rem] truncate">{mailboxes.length === 1 ? mailboxes[0].email : `${mailboxes.length} postafiók`}</span>
+            <ChevronDown className="opacity-60" />
+          </summary>
+          <div className="absolute left-0 z-20 mt-2 flex w-[min(26rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-background p-1.5 shadow-float">
+            <ul className="flex flex-col divide-y divide-border">
+              {mailboxes.map((m) => (
+                <li key={m.id} className="flex flex-col gap-2 px-2.5 py-3">
+                  <div className="min-w-0 text-sm">
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-medium text-ink">
+                      <span className="break-all">{m.email}</span>
+                      <span className="font-normal text-muted">· {mailboxLabel(m.provider, m.email)}</span>
+                      {m.isPrimary && mailboxes.length > 1 && <Badge tone="accent">Alapértelmezett küldő</Badge>}
+                    </p>
+                    <p className={m.status === "active" ? "text-xs text-muted" : "text-xs text-danger"}>{statusLine(m)}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {m.status === "revoked" && (
+                      <a href={reconnectHref(m)} className={buttonClasses("primary", "xs")}>
+                        Újracsatlakozás
+                      </a>
+                    )}
+                    {!m.isPrimary && m.status !== "revoked" && (
+                      <form action={setPrimaryMailboxAction.bind(null, m.id)}>
+                        <Button type="submit" variant="ghost" size="xs" title="Az új levelek és ajánlatok innen mennek">
+                          <Star /> Alapértelmezett
+                        </Button>
+                      </form>
+                    )}
+                    <ConfirmAction
+                      action={disconnectMailAction.bind(null, m.id)}
+                      size="xs"
+                      trigger={
+                        <>
+                          <Unplug /> Leválasztás
+                        </>
+                      }
+                      title={`${m.email} leválasztása`}
+                      description={`A Flavio hozzáférése megszűnik${disconnectNote[m.provider]}, és a postafiók még fel nem dolgozott importált levelei törlődnek. A már rögzített beszélgetések megmaradnak.`}
+                      confirmLabel="Leválasztás"
+                      tone="danger"
+                    />
+                  </div>
+                </li>
               ))}
-              <Link href="/inbox/connect" className="rounded-xl px-3 py-2 text-sm text-ink hover:bg-surface">
-                Céges, iCloud vagy más postafiók
-              </Link>
-            </div>
-          </details>
-        </div>
+            </ul>
+            <p className="flex items-center gap-1.5 border-t border-border px-2.5 pt-2.5 pb-1 text-xs font-medium text-muted">
+              <Plus className="size-3.5" /> Postafiók hozzáadása
+            </p>
+            {providers.map((p) => (
+              <a key={p} href={connectPaths[p]} className="rounded-xl px-2.5 py-2 text-sm text-ink hover:bg-surface">
+                {p === "outlook" ? "Outlook / Microsoft 365" : "Gmail / Google Workspace"}
+              </a>
+            ))}
+            <Link href="/inbox/connect" className="rounded-xl px-2.5 py-2 text-sm text-ink hover:bg-surface">
+              Céges, iCloud vagy más postafiók
+            </Link>
+          </div>
+        </details>
+
+        <span className="min-w-0 text-xs" aria-live="polite">
+          {message ? (
+            <span className={message.tone === "ok" ? "text-success" : "text-danger"}>{message.text}</span>
+          ) : (
+            lastSync && <span className="text-muted">Frissítve: {formatDateTime(lastSync)}</span>
+          )}
+        </span>
+
+        <Button variant="ghost" size="sm" onClick={sync} disabled={syncing} className="ml-auto">
+          {syncing ? <Loader2 className="animate-spin" /> : <RefreshCw />} {syncing ? "Frissítés…" : "Frissítés"}
+        </Button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Menu, Mic, Search, Sparkles, X } from "lucide-react";
+import { CalendarDays, LayoutGrid, Loader2, Menu, Mic, Search, Sparkles, Users, X } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
@@ -198,6 +198,101 @@ export function Sidebar({ account, team, plan }: { account: ReactNode; team?: Re
   );
 }
 
+/**
+ * Pages with their own bar at the bottom (a form's save bar, a contract's
+ * approve bar, a chat's message box): there the phone's bottom bar would
+ * cover it, so it steps aside.
+ */
+const ownBottomBar = (path: string) =>
+  /\/(new|edit)$/.test(path) ||
+  path.startsWith("/interactions/") ||
+  /^\/contracts\/(?!templates)[^/]+$/.test(path) ||
+  /^\/documents\/templates\/[^/]+$/.test(path) ||
+  /^\/(clients|properties)\/import/.test(path) ||
+  path === "/messages" ||
+  path === "/assistant";
+
+const TABS = [
+  { href: "/dashboard", label: "Áttekintés", icon: LayoutGrid },
+  { href: "/clients", label: "Ügyfelek", icon: Users },
+  { href: "/calendar", label: "Naptár", icon: CalendarDays },
+] as const;
+
+/**
+ * The phone's bottom bar: the screens an agent opens all day, "Mondd
+ * Flaviónak" in the middle (the only assistant button on a phone), and the
+ * full menu.
+ */
+function BottomBar({ onMenu }: { onMenu: () => void }) {
+  const pathname = usePathname() ?? "";
+  const hidden = ownBottomBar(pathname);
+  // The page and the toasts keep clear of the bar while it is on screen (below the computer layout).
+  useEffect(() => {
+    const html = document.documentElement;
+    const narrow = window.matchMedia("(max-width: 1023.98px)");
+    const apply = () => {
+      if (!hidden && narrow.matches) html.style.setProperty("--bottom-bar", "calc(4rem + env(safe-area-inset-bottom))");
+      else html.style.removeProperty("--bottom-bar");
+    };
+    apply();
+    narrow.addEventListener("change", apply);
+    return () => {
+      narrow.removeEventListener("change", apply);
+      html.style.removeProperty("--bottom-bar");
+    };
+  }, [hidden]);
+  if (hidden) return null;
+  const tab = (t: (typeof TABS)[number]) => {
+    const on = pathname === t.href || pathname.startsWith(`${t.href}/`);
+    return (
+      <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined} className={cn("flex flex-1 flex-col items-center gap-0.5 pt-2 pb-1.5 text-[10px]", on ? "font-medium text-ink" : "text-muted")}>
+        <t.icon className="size-5" strokeWidth={on ? 2 : 1.75} />
+        {t.label}
+      </Link>
+    );
+  };
+  return (
+    <nav
+      aria-label="Gyors navigáció"
+      className="fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-border bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+    >
+      {tab(TABS[0])}
+      {tab(TABS[1])}
+      <div className="flex flex-1 justify-center">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(VOICE_EVENT))}
+          aria-label="Mondd Flaviónak"
+          className="flavio-cta -mt-5 mb-1 grid size-14 place-items-center rounded-full text-white"
+        >
+          <span className="flavio-cta-mic relative grid size-10 place-items-center rounded-full bg-accent">
+            <Mic className="size-5" />
+          </span>
+        </button>
+      </div>
+      {tab(TABS[2])}
+      <button type="button" onClick={onMenu} className="flex flex-1 flex-col items-center gap-0.5 pt-2 pb-1.5 text-[10px] text-muted">
+        <Menu className="size-5" strokeWidth={1.75} />
+        Menü
+      </button>
+    </nav>
+  );
+}
+
+/** Where the bottom bar steps aside, the menu and the assistant are up in the header. */
+function HeaderFallbacks({ open, onMenu }: { open: boolean; onMenu: () => void }) {
+  const pathname = usePathname() ?? "";
+  if (!ownBottomBar(pathname)) return null;
+  return (
+    <>
+      <VoiceButton compact />
+      <button type="button" onClick={onMenu} className="grid size-9 place-items-center rounded-full border border-border text-ink" aria-label="Menü megnyitása" aria-expanded={open}>
+        <Menu className="size-4" />
+      </button>
+    </>
+  );
+}
+
 export function MobileNav({ account, team, plan }: { account: ReactNode; team?: ReactNode; plan?: ReactNode }) {
   const [open, setOpen] = useState(false);
 
@@ -212,31 +307,25 @@ export function MobileNav({ account, team, plan }: { account: ReactNode; team?: 
     <>
       {/* Sticky on the outer element: inside a wrapper only as tall as itself it would scroll away. */}
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
-        {/* The menu button sits on the left, where the menu slides in from. */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="grid size-9 place-items-center rounded-full border border-border text-ink"
-            aria-label="Menü megnyitása"
-            aria-expanded={open}
-          >
-            <Menu className="size-4" />
-          </button>
-          <Logo />
-        </div>
+        <Logo />
         <div className="flex items-center gap-2">
           <button type="button" onClick={openSearch} className="grid size-9 place-items-center rounded-full border border-border text-ink" aria-label="Keresés">
             <Search className="size-4" />
           </button>
-          <VoiceButton compact />
+          <Suspense fallback={null}>
+            <HeaderFallbacks open={open} onMenu={() => setOpen(true)} />
+          </Suspense>
         </div>
       </div>
+      {/* The address is request data: read behind Suspense, so the rest of the page stays prerendered. */}
+      <Suspense fallback={null}>
+        <BottomBar onMenu={() => setOpen(true)} />
+      </Suspense>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menü">
           <button type="button" className="drawer-backdrop absolute inset-0 bg-ink/20" aria-label="Menü bezárása" onClick={() => setOpen(false)} />
           {/* Scrolls on its own: an expanded section must not push the bottom out of reach. */}
-          <div className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 overflow-y-auto overscroll-contain bg-background px-4 py-5 shadow-float">
+          <div className="drawer-panel absolute inset-y-0 right-0 flex w-72 max-w-[85vw] flex-col gap-8 overflow-y-auto overscroll-contain bg-background px-4 py-5 shadow-float">
             <div className="flex items-center justify-between px-2">
               <Logo />
               <button

@@ -42,7 +42,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav account={account} team={team} plan={plan} />
         {/* Bottom padding keeps the last buttons clear of the assistant bubble; a page that needs the room (the calendar) marks itself data-wide. */}
-        <main className="mx-auto w-full max-w-6xl flex-1 has-[[data-wide]]:max-w-[1600px] px-4 pt-8 pb-24 sm:px-8 sm:pt-10 sm:pb-24">
+        <main className="mx-auto w-full max-w-6xl flex-1 has-[[data-wide]]:max-w-[1600px] px-4 pt-8 pb-[calc(var(--bottom-bar,0px)+6rem)] sm:px-8 sm:pt-10">
           <SetupNotice />
           {children}
         </main>

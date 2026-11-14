@@ -70,7 +70,7 @@ export function Toaster() {
     () => toasts,
   );
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[70] flex flex-col items-center gap-2 px-4 sm:bottom-8">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--bottom-bar,0px)+1.5rem)] z-[70] flex flex-col items-center gap-2 px-4 sm:bottom-8">
       {list.map((t) => (
         <ToastItem key={t.id} t={t} />
       ))}

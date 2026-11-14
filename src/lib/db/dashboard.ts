@@ -196,3 +196,20 @@ async function suggestionItems(user: CurrentUser, suggestions: Suggestion[]) {
     };
   });
 }
+
+/** The latest calls, meetings and notes in the workspace, for Összefoglaló. */
+export async function recentActivity(user: CurrentUser, limit = 8): Promise<DashboardData["activity"]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("id, interaction_type, occurred_at, summary, client:clients(id, full_name)")
+    .eq("organization_id", user.organization.id)
+    .order("occurred_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`Failed to load activity: ${error.message}`);
+  const one = <T,>(v: T | T[] | null) => (Array.isArray(v) ? (v[0] ?? null) : v);
+  return (data ?? []).map((a) => {
+    const c = one(a.client as { id: string; full_name: string } | { id: string; full_name: string }[] | null);
+    return { id: a.id, type: a.interaction_type, occurredAt: a.occurred_at, summary: a.summary ?? "", client: c ? { id: c.id, name: c.full_name } : null };
+  });
+}

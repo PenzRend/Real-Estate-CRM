@@ -297,7 +297,7 @@ dialog[open]::backdrop {
     translate 360ms var(--ease-out-soft),
     filter 360ms var(--ease-out-soft);
   @starting-style {
-    translate: -100% 0;
+    translate: 100% 0;
     filter: blur(6px);
   }
 }

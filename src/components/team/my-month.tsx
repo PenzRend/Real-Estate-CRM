@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { ArrowLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatPrice } from "@/lib/i18n/format";
@@ -38,5 +40,26 @@ export function MyMonth({ me }: { me: AgentMonth }) {
       </ul>
       {!me.target && <p className="border-t border-border px-5 py-3 text-xs text-muted">Havi célt a tulajdonos vagy egy admin állíthat be az Iroda oldalon.</p>}
     </Card>
+  );
+}
+
+/** The dashboard's short version: the month in one line, the rest on Összefoglaló. */
+export function MonthLine({ me }: { me: AgentMonth }) {
+  const part = (value: number, target: number | null | undefined, label: string, money = false) =>
+    `${money ? formatPrice(value) : value}${target != null ? ` / ${money ? formatPrice(target) : target}` : ""} ${label}`;
+  return (
+    <Link href="/summary?view=month" className="group flex items-center gap-3 rounded-3xl border border-border px-5 py-4 transition-colors hover:bg-surface">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-ink">A hónapom</span>
+        <span className="mt-0.5 block text-xs text-muted tabular-nums">
+          {[
+            part(me.commission, me.target?.commission, "jutalék", true),
+            part(me.dealsWon, me.target?.deals, "lezárt"),
+            part(me.viewings, me.target?.viewings, "megtekintés"),
+          ].join(" · ")}
+        </span>
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+    </Link>
   );
 }

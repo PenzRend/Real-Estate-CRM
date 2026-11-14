@@ -8,7 +8,7 @@ import { EmptyState, PageHeader } from "@/components/ui/page";
 import { cn } from "@/lib/cn";
 import { formatLongDate } from "@/lib/i18n/format";
 import type { DashboardData } from "@/lib/types/view-models";
-import { ActivityRow, TaskRow } from "./items";
+import { TaskRow } from "./items";
 import { MatchActions, MatchCategoryBadge, MatchCheckList } from "./match-parts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -164,7 +164,7 @@ export function DashboardView({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow={<Eyebrow>{formatLongDate(now)}</Eyebrow>} title={title} description="Egy pillantás a napodra: fent a számok, alatta, amivel most érdemes foglalkozni." />
+      <PageHeader eyebrow={<Eyebrow>{formatLongDate(now)}</Eyebrow>} title={title} />
 
       {welcome}
 
@@ -201,17 +201,6 @@ export function DashboardView({
           {deals}
 
           {data.suggestions.length > 0 && <Suggestions items={data.suggestions} />}
-
-          {data.activity.length > 0 && (
-            <Card>
-              <CardHeader title="Legutóbbi tevékenység" />
-              <ul className="divide-y divide-border">
-                {data.activity.map((a) => (
-                  <ActivityRow key={a.id} item={a} />
-                ))}
-              </ul>
-            </Card>
-          )}
         </div>
       </div>
     </div>

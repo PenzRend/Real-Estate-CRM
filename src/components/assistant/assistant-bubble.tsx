@@ -51,9 +51,6 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
   // Its own page has the chat already. On Üzenetek the round button would cover the send button, so only the voice button opens it there.
   if (pathname === "/assistant") return null;
   const hideButton = pathname === "/messages";
-  // On a phone it would sit on a form's save bar or the capture page's buttons;
-  // there the header's "Mondd Flaviónak" button still opens it.
-  const hideOnPhone = /\/(new|edit)$/.test(pathname) || pathname.startsWith("/interactions/");
 
   return (
     <>
@@ -99,11 +96,10 @@ export function AssistantBubble({ aiEnabled }: { aiEnabled: boolean }) {
         aria-expanded={open}
         aria-label={open ? "AI-asszisztens bezárása" : "AI-asszisztens"}
         title="AI-asszisztens"
+        // On a phone and a tablet the bottom bar's microphone is the way in.
         className={cn(
-          "fixed right-5 bottom-5 z-40 grid size-14 place-items-center rounded-full bg-primary text-white shadow-float transition-transform hover:scale-105 hover:bg-primary-hover sm:right-6 sm:bottom-6",
-          open && "hidden sm:grid",
-          hideButton && "hidden sm:hidden",
-          hideOnPhone && !open && "hidden sm:grid",
+          "fixed right-6 bottom-6 z-40 hidden size-14 place-items-center rounded-full bg-primary text-white shadow-float transition-transform hover:scale-105 hover:bg-primary-hover lg:grid",
+          hideButton && "lg:hidden",
         )}
       >
         {open ? <X className="size-5" /> : <Sparkles className="size-5" />}

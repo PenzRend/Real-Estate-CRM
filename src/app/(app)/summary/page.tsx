@@ -2,11 +2,13 @@ import { CalendarClock, ChevronLeft, ChevronRight, Snowflake, TriangleAlert } fr
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ActivityRow } from "@/components/crm/items";
 import { Card, CardHeader, Panel } from "@/components/ui/card";
 import { ListSuspense, PageTransition } from "@/components/ui/list-suspense";
 import { PageHeader } from "@/components/ui/page";
 import { ViewTabs, ViewTabsPlaceholder } from "@/components/ui/view-tabs";
 import { getCurrentUser } from "@/lib/auth";
+import { recentActivity } from "@/lib/db/dashboard";
 import { cn } from "@/lib/cn";
 import { formatDate, formatPrice } from "@/lib/i18n/format";
 import { getSummary, type SummaryScope } from "@/lib/summary/data";
@@ -43,7 +45,7 @@ async function Content({ searchParams }: Pick<PageProps<"/summary">, "searchPara
   const user = await getCurrentUser();
   const canSeeOffice = user.organization.role !== "member";
   const scope: SummaryScope = canSeeOffice && params.scope === "office" ? "office" : "me";
-  const s = await getSummary(user, kind, new Date(), { offset, scope });
+  const [s, activity] = await Promise.all([getSummary(user, kind, new Date(), { offset, scope }), recentActivity(user).catch(() => [])]);
   const href = (o: number) => `/summary?view=${kind}${o ? `&offset=${o}` : ""}${scope === "office" ? "&scope=office" : ""}`;
   const office = scope === "office";
 
@@ -165,6 +167,17 @@ async function Content({ searchParams }: Pick<PageProps<"/summary">, "searchPara
           )}
         </Card>
       </div>
+
+      {activity.length > 0 && (
+        <Card>
+          <CardHeader title="Legutóbbi tevékenység" />
+          <ul className="divide-y divide-border">
+            {activity.map((a) => (
+              <ActivityRow key={a.id} item={a} />
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

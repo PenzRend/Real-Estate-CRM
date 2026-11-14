@@ -30,14 +30,14 @@ const nextAt = new Intl.DateTimeFormat("hu-HU", { weekday: "short", hour: "2-dig
 function Tile({ href, icon: Icon, label, value, note, tone }: { href: string; icon: LucideIcon; label: string; value: string; note: string; tone: Tone }) {
   const t = toneClasses[tone];
   return (
-    <Link href={href} className={cn("group flex flex-col gap-3 rounded-2xl border p-4 transition-colors hover:border-border-strong sm:p-5", t.tile)}>
+    <Link href={href} className={cn("group flex flex-col gap-1.5 rounded-2xl border p-3 transition-colors hover:border-border-strong sm:gap-3 sm:p-5", t.tile)}>
       <span className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted">{label}</span>
-        <span className={cn("grid size-8 place-items-center rounded-xl", t.icon)}>
-          <Icon className="size-4" />
+        <span className={cn("grid size-6 place-items-center rounded-lg sm:size-8 sm:rounded-xl", t.icon)}>
+          <Icon className="size-3.5 sm:size-4" />
         </span>
       </span>
-      <span className="text-3xl font-medium tracking-tight text-ink tabular-nums">{value}</span>
+      <span className="text-2xl font-medium tracking-tight text-ink tabular-nums sm:text-3xl">{value}</span>
       <span className={cn("truncate text-xs font-medium", t.note)}>{note}</span>
     </Link>
   );
@@ -47,7 +47,7 @@ function Tile({ href, icon: Icon, label, value, note, tone }: { href: string; ic
 export function TodayStrip({ c }: { c: TodayCounts }) {
   const tasks = c.overdue + c.dueToday;
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
       <Tile
         href="/tasks"
         icon={CheckSquare}

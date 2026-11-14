@@ -17,7 +17,7 @@ import { PageSuspense } from "@/components/ui/page-suspense";
 import { InstallBanner } from "@/components/app-shell/install-banner";
 import { DealsPulse } from "@/components/deals/deals-pulse";
 import { dealSummary } from "@/lib/deals/data";
-import { MyMonth } from "@/components/team/my-month";
+import { MonthLine } from "@/components/team/my-month";
 import { utcToZonedLocal } from "@/lib/i18n/timezone";
 import { officeStats } from "@/lib/team/office-data";
 import { TodayStrip } from "@/components/dashboard/today-strip";
@@ -98,11 +98,15 @@ async function DashboardContent({ searchParams }: Pick<PageProps<"/dashboard">, 
           {drafts.length > 0 && <ContractsWaiting drafts={drafts} />}
           {emailsWaiting > 0 && <OutboxWaiting count={emailsWaiting} />}
           {week && <WeekCard summary={week} />}
-          {me && <MyMonth me={me} />}
+          {me && <MonthLine me={me} />}
           {(deals.openCount > 0 || deals.upcoming.length > 0) && <DealsPulse summary={deals} today={now.toISOString().slice(0, 10)} />}
         </>
       }
-      viewings={viewings.length > 0 && <ViewingsCard viewings={viewings} now={now.toISOString()} empty="" openFeedbackFor={feedbackFor} />}
+      // Today's own viewings are in "Mai útvonal"; here only the ones still waiting for "Hogy sikerült?".
+      viewings={(() => {
+        const done = viewings.filter((v) => awaitingFeedback(v, now));
+        return done.length > 0 && <ViewingsCard title="Hogy sikerült?" viewings={done} now={now.toISOString()} empty="" openFeedbackFor={feedbackFor} />;
+      })()}
     />
   );
 }
