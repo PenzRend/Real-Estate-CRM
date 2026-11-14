@@ -441,3 +441,35 @@ export function configStatus() {
     ] as { name: string; ok: boolean; what: string; optional?: boolean }[],
   };
 }
+
+/** The business's own expenses, newest first. Empty before the expenses migration. */
+export async function listExpenses(): Promise<import("@/lib/finance").Expense[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data, error } = await admin.from("expenses").select("id, spent_on, category, description, amount_huf, monthly, ends_on").order("spent_on", { ascending: false }).limit(1000);
+  if (error) {
+    console.error("listExpenses failed", error.code ?? error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    spentOn: r.spent_on,
+    category: r.category,
+    description: r.description,
+    amount: Number(r.amount_huf),
+    monthly: r.monthly,
+    endsOn: r.ends_on,
+  }));
+}
+
+/** Every payment's amount and date, for the totals (the Előfizetések list shows the latest 300 in full). */
+export async function listIncome(): Promise<import("@/lib/finance").Income[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data, error } = await admin.from("payments").select("amount_huf, paid_at").order("paid_at", { ascending: false }).limit(10000);
+  if (error) {
+    console.error("listIncome failed", error.code ?? error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({ amount: Number(r.amount_huf), paidAt: r.paid_at }));
+}

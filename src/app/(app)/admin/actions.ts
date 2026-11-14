@@ -130,3 +130,49 @@ export async function markInvoicedAction(paymentId: string, invoiceNumber: strin
   refresh();
   return { ok: true };
 }
+
+const expenseSchema = z.object({
+  spentOn: z.iso.date("Adj meg egy dátumot."),
+  category: z.enum(["hosting", "database", "ai", "email", "domain", "payment_fees", "accounting", "marketing", "tools", "other"]),
+  description: z.string().trim().min(1, "Írd le, mire ment.").max(200),
+  amount: z.number().min(0, "Az összeg nem lehet negatív.").max(1_000_000_000),
+  monthly: z.boolean(),
+});
+
+/** A cost of the business, one-off or monthly, for the Pénzügyek page. */
+export async function addExpenseAction(input: z.input<typeof expenseSchema>): Promise<Result> {
+  const admin = await adminClient();
+  if (!admin) return { ok: false, error: "Ehhez nincs jogosultságod." };
+  const parsed = expenseSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const d = parsed.data;
+  const { error } = await admin.from("expenses").insert({ spent_on: d.spentOn, category: d.category, description: d.description, amount_huf: d.amount, monthly: d.monthly });
+  if (error) return { ok: false, error: "A mentés nem sikerült." };
+  refresh();
+  return { ok: true };
+}
+
+/** A monthly cost stops counting after this month (cancelled hosting, a tool given up). */
+export async function stopExpenseAction(id: string): Promise<Result> {
+  const admin = await adminClient();
+  if (!admin) return { ok: false, error: "Ehhez nincs jogosultságod." };
+  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Ismeretlen kiadás." };
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest" }).format(new Date());
+  const { data } = await admin.from("expenses").select("spent_on").eq("id", id).maybeSingle();
+  if (!data) return { ok: false, error: "Ismeretlen kiadás." };
+  const { error } = await admin.from("expenses").update({ ends_on: data.spent_on > today ? data.spent_on : today }).eq("id", id);
+  if (error) return { ok: false, error: "A mentés nem sikerült." };
+  refresh();
+  return { ok: true };
+}
+
+/** Removes an expense entered by mistake. */
+export async function deleteExpenseAction(id: string): Promise<Result> {
+  const admin = await adminClient();
+  if (!admin) return { ok: false, error: "Ehhez nincs jogosultságod." };
+  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Ismeretlen kiadás." };
+  const { error } = await admin.from("expenses").delete().eq("id", id);
+  if (error) return { ok: false, error: "A törlés nem sikerült." };
+  refresh();
+  return { ok: true };
+}

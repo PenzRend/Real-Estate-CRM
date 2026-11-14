@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { SignupCodes } from "@/components/admin/admin-panels";
 import { PaymentsList, PlanEditor, WorkspaceAccessList } from "@/components/admin/billing-admin";
 import { AiTab, Card, FeedbackTab, OverviewTab, SystemTab } from "@/components/admin/dashboard";
+import { FinanceTab } from "@/components/admin/finance-tab";
 import { UsersTable, WorkspacesTable } from "@/components/admin/tables";
 import { PageHeader } from "@/components/ui/page";
 import { PageSuspense } from "@/components/ui/page-suspense";
@@ -15,7 +16,9 @@ import {
   getOverview,
   getSystemStatus,
   isPlatformAdmin,
+  listExpenses,
   listFeedback,
+  listIncome,
   listPayments,
   listSignupCodes,
   listUsers,
@@ -33,6 +36,7 @@ const TABS = [
   { value: "attekintes", label: "Áttekintés" },
   { value: "felhasznalok", label: "Felhasználók" },
   { value: "munkateruletek", label: "Munkaterületek" },
+  { value: "penzugyek", label: "Pénzügyek" },
   { value: "elofizetesek", label: "Előfizetések" },
   { value: "ai", label: "AI" },
   { value: "rendszer", label: "Rendszer" },
@@ -52,6 +56,27 @@ async function Tab({ tab }: { tab: string }) {
     case "ai": {
       const [rows, workspaces] = await Promise.all([getAiBreakdown(), listWorkspaceUsage()]);
       return <AiTab rows={rows} config={configStatus()} workspaces={workspaces} defaultLimit={defaultLimit} defaultDaily={defaultDaily} />;
+    }
+    case "penzugyek": {
+      const [income, expenses, workspaces, users, plan] = await Promise.all([listIncome(), listExpenses(), listWorkspaceBilling(), listUsers(), getPlan()]);
+      const now = new Date();
+      const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest" }).format(now);
+      const monthAgo = now.getTime() - 30 * 86_400_000;
+      return (
+        <FinanceTab
+          income={income}
+          expenses={expenses}
+          workspaces={workspaces}
+          price={plan ? { month: plan.priceMonth, year: plan.priceYear } : null}
+          today={today}
+          users={{
+            total: users.length,
+            confirmed: users.filter((u) => u.confirmed).length,
+            active30: users.filter((u) => u.lastSeenAt && Date.parse(u.lastSeenAt) > monthAgo).length,
+            newThisMonth: users.filter((u) => u.createdAt.slice(0, 7) === today.slice(0, 7)).length,
+          }}
+        />
+      );
     }
     case "elofizetesek": {
       const [plan, rows, payments, workspaces] = await Promise.all([getPlan(), listWorkspaceBilling(), listPayments(), listWorkspaceUsage()]);
@@ -115,7 +140,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Pilot admin" description="A pilot egésze: felhasználók, munkaterületek, AI-használat, rendszerállapot és meghívókódok." />
+      <PageHeader title="Pilot admin" description="A pilot egésze: felhasználók, munkaterületek, pénzügyek, AI-használat, rendszerállapot és meghívókódok." />
       {key !== "ok" && (
         <p role="alert" className="rounded-2xl bg-danger-soft p-4 text-sm text-danger">
           {key === "missing"

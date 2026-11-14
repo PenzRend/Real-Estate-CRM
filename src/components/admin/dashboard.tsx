@@ -51,7 +51,7 @@ export function Card({ title, description, children, className }: { title?: stri
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: "warning" | "danger" }) {
+export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: "warning" | "danger" }) {
   return (
     <div className="flex flex-col gap-1 rounded-2xl border border-border p-4">
       <p className="text-xs text-muted">{label}</p>
