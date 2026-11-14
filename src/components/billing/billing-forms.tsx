@@ -1,9 +1,10 @@
 "use client";
 
-import { CreditCard } from "lucide-react";
+import { CreditCard, Ticket } from "lucide-react";
 import { useActionState, useState } from "react";
-import { checkoutAction, portalAction, type BillingActionState } from "@/app/billing/actions";
+import { checkoutAction, portalAction, redeemCodeAction, type BillingActionState, type RedeemState } from "@/app/billing/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/form";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/i18n/format";
 
@@ -49,5 +50,42 @@ export function BillingForms({ priceMonth, priceYear, seats, subscribed, hasCust
         </form>
       )}
     </div>
+  );
+}
+
+/** "Van meghívókódod?": the code gives 30 free days without a card. */
+export function RedeemCodeForm() {
+  const [state, redeem, redeeming] = useActionState<RedeemState, FormData>(redeemCodeAction, {});
+  return (
+    <form action={redeem} className="flex flex-col gap-3 rounded-2xl border border-border p-5">
+      <div>
+        <h2 className="flex items-center gap-2 text-lg">
+          <Ticket className="size-4 text-accent" /> Van meghívókódod?
+        </h2>
+        <p className="mt-1 text-sm text-muted">Írd be, és 30 napig ingyenesen használhatod a Flaviót, kártya nélkül.</p>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          name="code"
+          required
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={20}
+          placeholder="ABCD-1234"
+          aria-label="Meghívókód"
+          defaultValue={state.code}
+          className="font-mono uppercase sm:flex-1"
+        />
+        <Button type="submit" variant="secondary" className="h-11" disabled={redeeming}>
+          {redeeming ? "Beváltás…" : "Kód beváltása"}
+        </Button>
+      </div>
+      {state.error && (
+        <p role="alert" className="text-sm text-danger">
+          {state.error}
+        </p>
+      )}
+    </form>
   );
 }

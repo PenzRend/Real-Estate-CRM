@@ -1,10 +1,13 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { appOrigin } from "@/lib/origin";
 import { authErrorMessage as translate, newPassword } from "@/lib/password";
 import { safePath } from "@/lib/safe-path";
+import { decryptToken, encryptToken, isMailCryptoConfigured } from "@/lib/mail/crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -87,9 +90,67 @@ export async function signUp(_: AuthFormState, formData: FormData): Promise<Auth
   // Email confirmation disabled in Supabase → already signed in.
   if (data.session) redirect(next);
 
-  return {
-    message: `Küldtünk egy megerősítő levelet a(z) ${parsed.data.email} címre. Kattints a benne lévő linkre a fiókod aktiválásához.`,
-  };
+  // This browser may correct a mistyped address before it is confirmed (see changeSignupEmail).
+  if (data.user && isMailCryptoConfigured()) {
+    (await cookies()).set(PENDING_COOKIE, encryptToken(JSON.stringify({ id: data.user.id, exp: Date.now() + PENDING_MS })), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: PENDING_MS / 1000,
+    });
+  }
+  return { message: sentTo(parsed.data.email), values: { email: parsed.data.email } };
+}
+
+const sentTo = (address: string) => `Küldtünk egy megerősítő levelet a(z) ${address} címre. Kattints a benne lévő linkre a fiókod aktiválásához.`;
+
+/** The account just made in this browser, so its address can be corrected while it waits for confirmation. */
+const PENDING_COOKIE = "flavio_pending_signup";
+const PENDING_MS = 24 * 3600_000;
+
+/**
+ * "Rossz címet adtál meg?": moves the account just created in this browser,
+ * not yet confirmed, to the right address and sends the confirmation there.
+ * The account, its workspace and any invite code stay; nobody starts again.
+ * Uses the service key, the one place a visitor's request does: the sealed
+ * cookie proves the account was made here, and only an unconfirmed one moves.
+ */
+export async function changeSignupEmail(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const fresh = email.safeParse(formData.get("email"));
+  const values = { email: String(formData.get("email") ?? "") };
+  if (!fresh.success) return { error: fresh.error.issues[0].message, values };
+
+  const jar = await cookies();
+  let pending: { id: string; exp: number } | null = null;
+  try {
+    pending = JSON.parse(decryptToken(jar.get(PENDING_COOKIE)?.value ?? "")) as { id: string; exp: number };
+  } catch {
+    pending = null;
+  }
+  const admin = createAdminClient();
+  const startAgain = "Ezt a regisztrációt innen már nem lehet javítani. Regisztrálj újra a helyes címmel.";
+  if (!pending || pending.exp < Date.now() || !admin) return { error: startAgain, values };
+
+  const { data: found } = await admin.auth.admin.getUserById(pending.id);
+  if (!found.user || found.user.email_confirmed_at) return { error: startAgain, values };
+  if (found.user.email === fresh.data) return { message: sentTo(fresh.data), values };
+
+  const { error } = await admin.auth.admin.updateUserById(pending.id, { email: fresh.data });
+  if (error) {
+    const taken = /already|exists|registered/i.test(error.message);
+    return { error: taken ? "Ezzel a címmel már van fiók. Jelentkezz be, vagy kérj új jelszót." : translate(error), values };
+  }
+  await admin.from("profiles").update({ email: fresh.data }).eq("id", pending.id);
+
+  const supabase = await createClient();
+  const { error: resendError } = await supabase.auth.resend({
+    type: "signup",
+    email: fresh.data,
+    options: { emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(safePath(formData.get("next"), "/dashboard"))}` },
+  });
+  if (resendError) return { error: translate(resendError), values };
+  return { message: sentTo(fresh.data), values };
 }
 
 export async function requestPasswordReset(_: AuthFormState, formData: FormData): Promise<AuthFormState> {

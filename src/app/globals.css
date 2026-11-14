@@ -557,6 +557,19 @@ dialog[open]::backdrop {
     box-shadow: 0 0 0 8px rgb(61 111 242 / 0);
   }
 }
+/* The payment page's slideshow: the current dot fills while its screen is shown. */
+.showcase-progress {
+  animation: showcase-fill linear forwards;
+}
+@keyframes showcase-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 /* The menu's voice bar while Flavio writes down and works: a slow wave. */
 .voice-wave {
   height: 22px;
@@ -574,7 +587,8 @@ dialog[open]::backdrop {
 @media (prefers-reduced-motion: reduce) {
   .flavio-cta,
   .flavio-cta-mic::after,
-  .voice-wave {
+  .voice-wave,
+  .showcase-progress {
     animation: none;
   }
 }

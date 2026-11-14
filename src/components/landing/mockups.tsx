@@ -1,7 +1,7 @@
-// Static product illustrations for the landing page. They mirror the real
-// screens (capture review, assistant, matching) and are labelled "Példa".
+// Static product illustrations for the landing page and the payment page.
+// They mirror the real screens and are labelled "Példa".
 
-import { Check, CircleDashed, Mic, Sparkles, X } from "lucide-react";
+import { CalendarClock, Check, CircleDashed, Mail, Mic, Navigation, Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
@@ -136,6 +136,97 @@ export function MatchMock({ className }: { className?: string }) {
       <div className="mt-4 flex justify-end">
         <span className="rounded-full bg-primary px-3.5 py-1.5 text-[12px] font-medium text-white">Ajánlom</span>
       </div>
+    </Frame>
+  );
+}
+
+export function PipelineMock({ className }: { className?: string }) {
+  const columns: { name: string; dot: string; cards: [string, string, string][] }[] = [
+    { name: "Megkeresve", dot: "bg-subtle", cards: [["NB", "Nagy Bence", "50–60 M Ft"]] },
+    { name: "Aktív", dot: "bg-success", cards: [["KA", "Kovács Anna", "60–70 M Ft"], ["SP", "Szabó Péter", "max. 90 M Ft"]] },
+    { name: "Tárgyalás", dot: "bg-warning", cards: [["TL", "Tóth Lili", "75 M Ft"]] },
+  ];
+  return (
+    <Frame title="Értékesítési tölcsér" className={className}>
+      <div className="grid grid-cols-3 gap-2">
+        {columns.map((c) => (
+          <div key={c.name} className="rounded-2xl border border-border bg-surface/40 p-1.5">
+            <p className="flex items-center gap-1.5 px-1.5 pt-0.5 pb-2 text-[11px] font-medium text-ink">
+              <span className={cn("size-1.5 rounded-full", c.dot)} />
+              {c.name}
+            </p>
+            <div className="grid gap-1.5">
+              {c.cards.map(([ini, name, budget]) => (
+                <div key={name} className={cn("rounded-xl border border-border bg-background p-2", name === "Szabó Péter" && "rotate-2 shadow-float")}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-strong text-[8px] font-semibold text-ink">{ini}</span>
+                    <span className="truncate text-[11px] font-medium text-ink">{name}</span>
+                  </div>
+                  <span className="mt-1.5 inline-block rounded-full bg-surface px-1.5 py-0.5 text-[9px] text-ink">{budget}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-[11px] text-muted">Húzd a kártyát a következő szakaszba</p>
+    </Frame>
+  );
+}
+
+export function MailMock({ className }: { className?: string }) {
+  return (
+    <Frame title="Levelek · válaszvázlat" className={className}>
+      <div className="flex items-start gap-3 rounded-2xl border border-border p-3.5">
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-strong text-ink">
+          <Mail className="size-4" />
+        </span>
+        <div className="min-w-0 text-[13px]">
+          <p className="font-medium text-ink">Horváth Márta · ingatlan.com</p>
+          <p className="mt-0.5 text-muted">„Érdekelne a Fehérvári úti lakás, megnézhetném a héten?”</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2 text-[12px] font-medium text-accent">
+        <Sparkles className="size-3.5" /> Válaszvázlat, a naptárad alapján
+      </div>
+      <div className="mt-2 rounded-2xl bg-surface p-3.5 text-[13px] leading-relaxed text-text">
+        Kedves Márta! Köszönöm az érdeklődést. Csütörtökön 17:00-kor vagy pénteken 10:00-kor tudom megmutatni a lakást. Melyik lenne jó?
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <span className="rounded-full border border-border-strong px-3.5 py-1.5 text-[12px] font-medium text-ink">Szerkesztés</span>
+        <span className="rounded-full bg-primary px-3.5 py-1.5 text-[12px] font-medium text-white">Küldés</span>
+      </div>
+    </Frame>
+  );
+}
+
+export function RouteMock({ className }: { className?: string }) {
+  const stops: [string, string, string][] = [
+    ["10:00", "Kovács Anna", "XI. ker., Bartók Béla út"],
+    ["13:30", "Szabó Péter", "XII. ker., Németvölgyi út"],
+    ["17:00", "Tóth Lili", "II. ker., Pasaréti út"],
+  ];
+  return (
+    <Frame title="Mai útvonal" className={className}>
+      <ol className="grid gap-2">
+        {stops.map(([time, name, place], i) => (
+          <li key={time} className={cn("flex items-center gap-3 rounded-2xl border border-border p-3", i === 0 && "opacity-55")}>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-ink tabular-nums">
+              <CalendarClock className="size-3" /> {time}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-medium text-ink">{name}</span>
+              <span className="block truncate text-[11px] text-muted">{place}</span>
+            </span>
+            {i > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-ink">
+                <Navigation className="size-3" /> Navigáció
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 text-center text-[11px] text-muted">Apple Térkép, Google Térkép vagy Waze – onnan, ahol vagy</p>
     </Frame>
   );
 }
