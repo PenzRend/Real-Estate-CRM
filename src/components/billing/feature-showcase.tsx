@@ -67,20 +67,17 @@ export function FeatureShowcase() {
       <div className="flex items-center gap-3">
         <div className="flex flex-1 gap-1.5">
           {SLIDES.map(({ title }, i) => (
-            <button
-              key={title}
-              type="button"
-              onClick={() => setAt(i)}
-              aria-label={`${i + 1}. ${title}`}
-              aria-current={i === at}
-              className="group relative h-1.5 flex-1 overflow-hidden rounded-full bg-surface-strong"
-            >
-              <span
-                key={i === at ? `on-${at}` : "off"}
-                className={cn("absolute inset-y-0 left-0 rounded-full bg-ink", i < at && "w-full", i === at && "showcase-progress", i > at && "w-0")}
-                style={i === at ? { animationDuration: `${EVERY_MS}ms`, animationPlayState: held || paused ? "paused" : "running" } : undefined}
-                onAnimationEnd={i === at ? () => setAt((n) => (n + 1) % SLIDES.length) : undefined}
-              />
+            <button key={title} type="button" onClick={() => setAt(i)} aria-label={`${i + 1}. ${title}`} aria-current={i === at} className="flex h-5 flex-1 items-center">
+              <span className="relative h-[3px] w-full overflow-hidden rounded-full bg-surface-strong">
+                {i <= at && (
+                  <span
+                    key={i === at ? `on-${at}` : "done"}
+                    className={cn("absolute inset-0 rounded-full bg-ink", i === at && "showcase-progress")}
+                    style={i === at ? { animationDuration: `${EVERY_MS}ms`, animationPlayState: held || paused ? "paused" : "running" } : undefined}
+                    onAnimationEnd={i === at ? () => setAt((n) => (n + 1) % SLIDES.length) : undefined}
+                  />
+                )}
+              </span>
             </button>
           ))}
         </div>

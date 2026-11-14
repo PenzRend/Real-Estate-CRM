@@ -561,15 +561,18 @@ dialog[open]::backdrop {
    and its end turns the page. Kept with reduced motion: a slow linear fill, and
    the screens then swap without sliding. */
 .showcase-progress {
-  width: 0;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
   animation: showcase-fill linear forwards;
 }
 @keyframes showcase-fill {
   from {
-    width: 0;
+    transform: scaleX(0);
   }
   to {
-    width: 100%;
+    transform: scaleX(1);
   }
 }
 
