@@ -45,7 +45,7 @@ const TABS = [
 ];
 
 /** One tab's content; each loads only what it shows. */
-async function Tab({ tab }: { tab: string }) {
+async function Tab({ tab, period }: { tab: string; period: string }) {
   const defaultLimit = defaultMonthlyLimit();
   const defaultDaily = defaultDailyLimit();
   switch (tab) {
@@ -59,22 +59,16 @@ async function Tab({ tab }: { tab: string }) {
     }
     case "penzugyek": {
       const [income, expenses, workspaces, users, plan] = await Promise.all([listIncome(), listExpenses(), listWorkspaceBilling(), listUsers(), getPlan()]);
-      const now = new Date();
-      const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest" }).format(now);
-      const monthAgo = now.getTime() - 30 * 86_400_000;
+      const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest" }).format(new Date());
       return (
         <FinanceTab
           income={income}
           expenses={expenses}
           workspaces={workspaces}
+          users={users.map((u) => ({ createdAt: u.createdAt, lastSeenAt: u.lastSeenAt, confirmed: u.confirmed }))}
           price={plan ? { month: plan.priceMonth, year: plan.priceYear } : null}
           today={today}
-          users={{
-            total: users.length,
-            confirmed: users.filter((u) => u.confirmed).length,
-            active30: users.filter((u) => u.lastSeenAt && Date.parse(u.lastSeenAt) > monthAgo).length,
-            newThisMonth: users.filter((u) => u.createdAt.slice(0, 7) === today.slice(0, 7)).length,
-          }}
+          period={period}
         />
       );
     }
@@ -151,8 +145,8 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
       <Suspense fallback={<ViewTabsPlaceholder label="Admin nézetek" items={TABS} />}>
         <ViewTabs param="tab" label="Admin nézetek" items={TABS} />
       </Suspense>
-      <Suspense key={tab} fallback={<p className="text-sm text-muted">Betöltés…</p>}>
-        <Tab tab={tab} />
+      <Suspense key={`${tab}-${String(params.idoszak ?? "")}`} fallback={<p className="text-sm text-muted">Betöltés…</p>}>
+        <Tab tab={tab} period={typeof params.idoszak === "string" ? params.idoszak : "30"} />
       </Suspense>
     </div>
   );

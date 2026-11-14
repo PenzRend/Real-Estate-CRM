@@ -93,3 +93,104 @@ export function monthlyRecurring(workspaces: PayingWorkspace[], price: { month: 
       .reduce((s, w) => s + (w.seats ?? 1) * (w.interval === "year" ? price.year / 12 : price.month), 0),
   );
 }
+
+// --- Periods, Shopify style: a range, the same length before it, and a point per day or month. ---
+
+export const PERIODS = [
+  { key: "7", label: "Elmúlt 7 nap", days: 7 },
+  { key: "30", label: "Elmúlt 30 nap", days: 30 },
+  { key: "90", label: "Elmúlt 90 nap", days: 90 },
+  { key: "ev", label: "Idén", days: 0 },
+  { key: "12h", label: "Elmúlt 12 hónap", days: 0 },
+] as const;
+export type PeriodKey = (typeof PERIODS)[number]["key"];
+
+export type Range = {
+  key: PeriodKey;
+  label: string;
+  /** First day, "YYYY-MM-DD". */
+  from: string;
+  /** The day after the last one. */
+  to: string;
+  prevFrom: string;
+  prevTo: string;
+  bucket: "day" | "month";
+};
+
+const DAY = 86_400_000;
+const utcDay = (d: string) => Date.parse(`${d}T00:00:00Z`);
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+export const addDays = (d: string, n: number) => isoDay(utcDay(d) + n * DAY);
+const firstOfMonth = (d: string, n = 0) => {
+  const x = new Date(utcDay(d));
+  return isoDay(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + n, 1));
+};
+const daysInMonth = (d: string) => (utcDay(firstOfMonth(d, 1)) - utcDay(firstOfMonth(d))) / DAY;
+
+/** The chosen range ending today, and the one of the same length before it. */
+export function rangeOf(key: string, today: string): Range {
+  const p = PERIODS.find((x) => x.key === key) ?? PERIODS[1];
+  const to = addDays(today, 1);
+  if (p.key === "ev") {
+    const from = `${today.slice(0, 4)}-01-01`;
+    const prevFrom = `${Number(today.slice(0, 4)) - 1}-01-01`;
+    // Last year up to the same day, so the two compare like for like.
+    const prevTo = addDays(prevFrom, (utcDay(to) - utcDay(from)) / DAY);
+    return { key: p.key, label: p.label, from, to, prevFrom, prevTo, bucket: "month" };
+  }
+  if (p.key === "12h") {
+    const from = firstOfMonth(today, -11);
+    return { key: p.key, label: p.label, from, to, prevFrom: firstOfMonth(today, -23), prevTo: from, bucket: "month" };
+  }
+  const from = addDays(to, -p.days);
+  return { key: p.key, label: p.label, from, to, prevFrom: addDays(from, -p.days), prevTo: from, bucket: "day" };
+}
+
+/** A payment's day in Budapest ("YYYY-MM-DD"). */
+export const budapestDay = (iso: string) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest" }).format(new Date(iso));
+
+/** What an expense costs on one day: a one-off on its day, a monthly one spread over its month's days. */
+export function expenseOn(e: Expense, day: string): number {
+  if (!e.monthly) return e.spentOn === day ? e.amount : 0;
+  return expenseIn(e, day.slice(0, 7)) / daysInMonth(day);
+}
+
+/** The points of a range: one per day, or one per month for the long ranges. */
+export function bucketsOf(from: string, to: string, bucket: "day" | "month"): { start: string; end: string }[] {
+  const out: { start: string; end: string }[] = [];
+  for (let d = from; d < to; ) {
+    const next = bucket === "day" ? addDays(d, 1) : firstOfMonth(d, 1) < to ? firstOfMonth(d, 1) : to;
+    out.push({ start: d, end: next });
+    d = next;
+  }
+  return out;
+}
+
+export type Point = { start: string; income: number; expenses: number; payments: number; newUsers: number };
+
+/** Income, expenses, payments and new users per point between two days. */
+export function seriesOf(
+  from: string,
+  to: string,
+  bucket: "day" | "month",
+  data: { income: { amount: number; day: string }[]; expenses: Expense[]; userDays: string[] },
+): Point[] {
+  return bucketsOf(from, to, bucket).map(({ start, end }) => {
+    const paid = data.income.filter((p) => p.day >= start && p.day < end);
+    let expenses = 0;
+    for (let d = start; d < end; d = addDays(d, 1)) for (const e of data.expenses) expenses += expenseOn(e, d);
+    return {
+      start,
+      income: paid.reduce((s, p) => s + p.amount, 0),
+      expenses: Math.round(expenses),
+      payments: paid.length,
+      newUsers: data.userDays.filter((d) => d >= start && d < end).length,
+    };
+  });
+}
+
+/** The change against the period before, in percent; null when there was nothing to compare with. */
+export function percentChange(now: number, before: number): number | null {
+  if (before === 0) return now === 0 ? 0 : null;
+  return Math.round(((now - before) / Math.abs(before)) * 100);
+}

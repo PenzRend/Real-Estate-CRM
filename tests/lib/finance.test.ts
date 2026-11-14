@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byMonth, categoriesThisYear, expenseIn, lastMonths, monthlyRecurring, runningMonthly, type Expense } from "@/lib/finance";
+import { bucketsOf, byMonth, categoriesThisYear, expenseIn, expenseOn, lastMonths, monthlyRecurring, percentChange, rangeOf, runningMonthly, seriesOf, type Expense } from "@/lib/finance";
 
 const e = (over: Partial<Expense>): Expense => ({ id: "x", spentOn: "2026-09-10", category: "hosting", description: "Vercel", amount: 8000, monthly: false, endsOn: null, ...over });
 
@@ -58,5 +58,51 @@ describe("monthlyRecurring", () => {
         price,
       ),
     ).toBe(2 * 9900 + 8250);
+  });
+});
+
+
+describe("rangeOf", () => {
+  it("takes the last 30 days and the 30 before", () => {
+    expect(rangeOf("30", "2026-11-15")).toMatchObject({ from: "2026-10-17", to: "2026-11-16", prevFrom: "2026-09-17", prevTo: "2026-10-17", bucket: "day" });
+  });
+  it("compares this year with last year up to the same day", () => {
+    expect(rangeOf("ev", "2026-11-15")).toMatchObject({ from: "2026-01-01", to: "2026-11-16", prevFrom: "2025-01-01", prevTo: "2025-11-16", bucket: "month" });
+  });
+  it("takes 12 whole months for the 12-month view", () => {
+    expect(rangeOf("12h", "2026-11-15")).toMatchObject({ from: "2025-12-01", prevFrom: "2024-12-01", prevTo: "2025-12-01" });
+  });
+  it("falls back to 30 days for an unknown key", () => {
+    expect(rangeOf("x", "2026-11-15").key).toBe("30");
+  });
+});
+
+describe("expenseOn and seriesOf", () => {
+  const monthly = e({ monthly: true, amount: 3000, spentOn: "2026-11-01" });
+  it("spreads a monthly cost over its month's days", () => {
+    expect(expenseOn(monthly, "2026-11-10")).toBe(100);
+    expect(expenseOn(monthly, "2026-10-31")).toBe(0);
+  });
+  it("buckets by month, cut at the end of the range", () => {
+    expect(bucketsOf("2026-10-01", "2026-11-16", "month")).toEqual([
+      { start: "2026-10-01", end: "2026-11-01" },
+      { start: "2026-11-01", end: "2026-11-16" },
+    ]);
+  });
+  it("adds income, payments, expenses and new users per point", () => {
+    const s = seriesOf("2026-11-01", "2026-11-03", "day", { income: [{ amount: 9900, day: "2026-11-02" }], expenses: [monthly], userDays: ["2026-11-01", "2026-11-01"] });
+    expect(s).toEqual([
+      { start: "2026-11-01", income: 0, expenses: 100, payments: 0, newUsers: 2 },
+      { start: "2026-11-02", income: 9900, expenses: 100, payments: 1, newUsers: 0 },
+    ]);
+  });
+});
+
+describe("percentChange", () => {
+  it("says how much it moved, and nothing when there was nothing before", () => {
+    expect(percentChange(150, 100)).toBe(50);
+    expect(percentChange(50, 100)).toBe(-50);
+    expect(percentChange(10, 0)).toBeNull();
+    expect(percentChange(0, 0)).toBe(0);
   });
 });
