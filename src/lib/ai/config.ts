@@ -23,6 +23,7 @@ export function llmConfig(): LlmConfig | null {
  * A second OpenAI-compatible provider, used when the main one is out of quota
  * or down. AI_FALLBACK_MODEL may list several models, comma-separated, tried in
  * order: a "latest" alias can be overloaded for hours while its siblings answer.
+ * Prod: AI_FALLBACK_MODEL=gemini-3.5-flash,gemini-flash-lite-latest
  */
 export function llmFallbackConfigs(): Extract<LlmConfig, { provider: "openai-compatible" }>[] {
   const { AI_FALLBACK_BASE_URL, AI_FALLBACK_API_KEY, AI_FALLBACK_MODEL } = process.env;
