@@ -163,7 +163,8 @@ async function runWithOpenAiCompatible(
         // Low reasoning effort: a chat answer on a phone can't wait a minute.
         return { messages: messagesFor(messages, m), tools, tool_choice: toolChoice, ...(/gpt-oss/i.test(m) ? { reasoning_effort: "low" } : {}) };
       },
-      undefined,
+      // Someone is waiting (often by voice): a backup that answers now beats a long wait for the main one's minute budget.
+      5,
       // A provider that hangs gives way to the fallback after 35 s instead of 90.
       35_000,
     );

@@ -10,6 +10,8 @@ const SILENCE_MS = 1500;
 const NOTHING_SAID_MS = 8000;
 const MAX_MS = 60_000;
 const LOUD = 0.035;
+/** Loud ticks (100 ms each) before it counts as speech, so a click or a breath does not. */
+const SPOKEN_TICKS = 4;
 
 function pickMimeType() {
   if (typeof MediaRecorder === "undefined") return null;
@@ -76,6 +78,7 @@ export function useVoiceCommand(onText: (text: string) => void) {
     const samples = new Uint8Array(analyser.fftSize);
     const began = Date.now();
     let heard = false;
+    let loudTicks = 0;
     let lastLoud = began;
 
     // Stop when the agent has spoken and gone quiet, or never spoke, or talked a long time.
@@ -89,7 +92,8 @@ export function useVoiceCommand(onText: (text: string) => void) {
       setLevels((prev) => [...prev.slice(-31), l]);
       const now = Date.now();
       if (rms > LOUD) {
-        heard = true;
+        loudTicks++;
+        if (loudTicks >= SPOKEN_TICKS) heard = true;
         lastLoud = now;
       }
       if ((heard && now - lastLoud > SILENCE_MS) || (!heard && now - began > NOTHING_SAID_MS) || now - began > MAX_MS) stop();

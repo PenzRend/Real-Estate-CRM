@@ -1,6 +1,7 @@
 import "server-only";
 import { transcriptionConfig } from "./config";
 import { AiError, fetchOrAiError, readJson } from "./extract";
+import { looksMadeUp, spokenText, type Segment } from "./silence";
 
 export const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // provider limit for one upload
 
@@ -13,7 +14,9 @@ export async function transcribe(audio: File): Promise<{ text: string; model: st
   form.append("file", audio, audio.name || "memo.webm");
   form.append("model", config.model);
   form.append("language", "hu");
-  form.append("response_format", "json");
+  // verbose_json carries each segment's "probably not speech" score; temperature 0 makes up less.
+  form.append("response_format", "verbose_json");
+  form.append("temperature", "0");
 
   const res = await fetchOrAiError(`${config.baseUrl}/audio/transcriptions`, {
     method: "POST",
@@ -23,8 +26,8 @@ export async function transcribe(audio: File): Promise<{ text: string; model: st
   });
   if (res.status === 429) throw new AiError("Transcription rate limit", "A hangfelismerés most túlterhelt. Próbáld újra egy perc múlva.");
   if (!res.ok) throw new AiError(`Transcription error ${res.status}`, "A hangfelvétel feldolgozása nem sikerült.");
-  const body = (await readJson(res)) as { text?: string };
-  const text = body.text?.trim() ?? "";
-  if (!text) throw new AiError("Empty transcription", "Nem hallottunk beszédet a felvételen.");
+  const body = (await readJson(res)) as { text?: string; segments?: Segment[] };
+  const text = spokenText(body);
+  if (!text || looksMadeUp(text)) throw new AiError("Empty transcription", "Nem hallottunk beszédet a felvételen.");
   return { text, model: config.model };
 }

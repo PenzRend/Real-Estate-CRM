@@ -19,11 +19,19 @@ export function llmConfig(): LlmConfig | null {
   return null;
 }
 
-/** A second OpenAI-compatible provider, used when the main one is out of quota or down. */
-export function llmFallbackConfig(): Extract<LlmConfig, { provider: "openai-compatible" }> | null {
+/**
+ * A second OpenAI-compatible provider, used when the main one is out of quota
+ * or down. AI_FALLBACK_MODEL may list several models, comma-separated, tried in
+ * order: a "latest" alias can be overloaded for hours while its siblings answer.
+ */
+export function llmFallbackConfigs(): Extract<LlmConfig, { provider: "openai-compatible" }>[] {
   const { AI_FALLBACK_BASE_URL, AI_FALLBACK_API_KEY, AI_FALLBACK_MODEL } = process.env;
-  if (!AI_FALLBACK_BASE_URL || !AI_FALLBACK_API_KEY || !AI_FALLBACK_MODEL) return null;
-  return { provider: "openai-compatible", baseUrl: AI_FALLBACK_BASE_URL.replace(/\/$/, ""), apiKey: AI_FALLBACK_API_KEY, model: AI_FALLBACK_MODEL };
+  if (!AI_FALLBACK_BASE_URL || !AI_FALLBACK_API_KEY || !AI_FALLBACK_MODEL) return [];
+  const baseUrl = AI_FALLBACK_BASE_URL.replace(/\/$/, "");
+  return AI_FALLBACK_MODEL.split(",")
+    .map((m) => m.trim())
+    .filter(Boolean)
+    .map((model) => ({ provider: "openai-compatible" as const, baseUrl, apiKey: AI_FALLBACK_API_KEY, model }));
 }
 
 export function transcriptionConfig(): TranscriptionConfig | null {

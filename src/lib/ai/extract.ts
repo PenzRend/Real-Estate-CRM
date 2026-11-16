@@ -4,7 +4,7 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { CAPTURE_SYSTEM_PROMPT, captureUserPrompt, type CaptureHint } from "./capture-prompt";
 import { captureExtractionSchema, cleanExtraction, type CaptureExtraction } from "./capture-schema";
-import { llmConfig, llmFallbackConfig, type LlmConfig } from "./config";
+import { llmConfig, llmFallbackConfigs, type LlmConfig } from "./config";
 
 export class AiError extends Error {
   constructor(
@@ -101,14 +101,17 @@ type OpenAiCompatibleConfig = Extract<LlmConfig, { provider: "openai-compatible"
 // 413: the request is over the main provider's per-minute token budget (Groq's free tier), which a long document can be.
 export const shouldFallBack = (status: number) => status === 413 || status === 429 || status === 498 || status >= 500;
 
+/** How long a backup model that isn't the last one may take before the next one is tried. */
+const BACKUP_WAIT_MS = 20_000;
+
 /**
  * POST to /chat/completions. `body` gets the model's name, as provider-specific
  * fields depend on it. When the main provider is out of quota or unreachable
- * and a fallback provider is configured, the same request goes there instead,
- * so a free tier's daily limit doesn't stop the agents' work.
+ * and backup models are configured, the same request goes to them in order,
+ * so a free tier's daily limit, or one overloaded model, doesn't stop the agents' work.
  */
-export async function postChat(config: OpenAiCompatibleConfig, body: (model: string) => object, maxWaitSeconds?: number, timeoutMs?: number) {
-  const send = (c: OpenAiCompatibleConfig) =>
+export async function postChat(config: OpenAiCompatibleConfig, body: (model: string) => object, maxWaitSeconds?: number, timeoutMs = 90_000) {
+  const send = (c: OpenAiCompatibleConfig, timeout: number) =>
     postWithRetry(
       `${c.baseUrl}/chat/completions`,
       {
@@ -117,26 +120,41 @@ export async function postChat(config: OpenAiCompatibleConfig, body: (model: str
         body: JSON.stringify({ model: c.model, ...body(c.model) }),
       },
       maxWaitSeconds,
-      timeoutMs,
+      timeout,
     );
-  const fallback = llmFallbackConfig();
-  if (!fallback) return send(config);
+  const backups = llmFallbackConfigs();
+  if (!backups.length) return send(config, timeoutMs);
   try {
-    const res = await send(config);
+    const res = await send(config, timeoutMs);
     if (!shouldFallBack(res.status)) return res;
-    console.warn(`ai ${res.status} from ${config.model}, using ${fallback.model}`);
+    console.warn(`ai ${res.status} from ${config.model}, using ${backups[0].model}`);
     await res.body?.cancel();
   } catch (error) {
     if (!(error instanceof AiError)) throw error;
-    console.warn(`ai ${config.model} unreachable, using ${fallback.model}`);
+    console.warn(`ai ${config.model} unreachable, using ${backups[0].model}`);
   }
-  const res = await send(fallback);
-  // "High demand" (503) on the fallback is usually over in a moment: one more try.
-  if (res.status < 500) return res;
-  console.warn(`ai ${res.status} from ${fallback.model}, retrying once`);
-  await res.body?.cancel();
-  await new Promise((r) => setTimeout(r, 1500));
-  return send(fallback);
+  for (const [i, backup] of backups.entries()) {
+    const last = i === backups.length - 1;
+    try {
+      const res = await send(backup, last ? timeoutMs : Math.min(timeoutMs, BACKUP_WAIT_MS));
+      if (!shouldFallBack(res.status)) return res;
+      if (!last) {
+        console.warn(`ai ${res.status} from ${backup.model}, trying ${backups[i + 1].model}`);
+        await res.body?.cancel();
+        continue;
+      }
+      // "High demand" (503) on the last backup is usually over in a moment: one more try.
+      if (res.status < 500) return res;
+      console.warn(`ai ${res.status} from ${backup.model}, retrying once`);
+      await res.body?.cancel();
+      await new Promise((r) => setTimeout(r, 1500));
+      return send(backup, timeoutMs);
+    } catch (error) {
+      if (!(error instanceof AiError) || last) throw error;
+      console.warn(`ai ${backup.model} unreachable, trying ${backups[i + 1].model}`);
+    }
+  }
+  throw new AiError("no backup answered", "Az AI-szolgáltatás most nem érhető el. Próbáld újra egy perc múlva.");
 }
 
 export async function callChatCompletions(

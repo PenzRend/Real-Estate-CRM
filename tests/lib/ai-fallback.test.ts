@@ -47,6 +47,17 @@ describe("postChat", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("tries the backup models in order, skipping one that is overloaded or hangs", async () => {
+    vi.stubEnv("AI_FALLBACK_MODEL", "gemini-flash-latest, gemini-3.5-flash ,gemini-flash-lite-latest");
+    fetchMock
+      .mockResolvedValueOnce(new Response("too large", { status: 413 }))
+      .mockResolvedValueOnce(new Response("high demand", { status: 503 }))
+      .mockRejectedValueOnce(Object.assign(new Error("timed out"), { name: "TimeoutError" }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    expect((await postChat(primary, () => ({}))).status).toBe(200);
+    expect(sentTo().map((c) => c.body.model)).toEqual(["openai/gpt-oss-120b", "gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest"]);
+  });
+
   it("without a backup configured, returns the 429 as is", async () => {
     vi.stubEnv("AI_FALLBACK_MODEL", "");
     fetchMock.mockResolvedValueOnce(new Response("limit", { status: 429 }));
