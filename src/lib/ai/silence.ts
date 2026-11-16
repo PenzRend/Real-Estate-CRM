@@ -29,6 +29,8 @@ const PARTS = ["felirat", "amara.org", "iratkozz fel", "feliratkozás"];
 /** A transcript that is almost surely invented: all capitals, or a typical credit or sign-off line. */
 export function looksMadeUp(text: string): boolean {
   const letters = text.match(/\p{L}/gu) ?? [];
+  // A lone "A" or "Ö": noise, not a command or a note.
+  if (letters.length < 3) return true;
   if (letters.length >= 6) {
     const upper = letters.filter((c) => c !== c.toLowerCase()).length;
     if (upper / letters.length > 0.85) return true;
@@ -41,4 +43,12 @@ export function looksMadeUp(text: string): boolean {
     .trim();
   if (WHOLE.has(plain)) return true;
   return plain.split(" ").length <= 12 && PARTS.some((p) => plain.includes(p));
+}
+
+const words = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+
+/** Whisper repeating the hint it was given (it does on silence): most of the words come from it, in a row. */
+export function echoesHint(text: string, hint: string): boolean {
+  const said = words(text).join(" ");
+  return said.length >= 8 && words(hint).join(" ").includes(said);
 }

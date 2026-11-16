@@ -102,7 +102,7 @@ type OpenAiCompatibleConfig = Extract<LlmConfig, { provider: "openai-compatible"
 export const shouldFallBack = (status: number) => status === 413 || status === 429 || status === 498 || status >= 500;
 
 /** How long a backup model that isn't the last one may take before the next one is tried. */
-const BACKUP_WAIT_MS = 20_000;
+const BACKUP_WAIT_MS = 10_000;
 
 /**
  * POST to /chat/completions. `body` gets the model's name, as provider-specific

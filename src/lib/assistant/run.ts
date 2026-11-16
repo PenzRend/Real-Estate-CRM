@@ -163,10 +163,10 @@ async function runWithOpenAiCompatible(
         // Low reasoning effort: a chat answer on a phone can't wait a minute.
         return { messages: messagesFor(messages, m), tools, tool_choice: toolChoice, ...(/gpt-oss/i.test(m) ? { reasoning_effort: "low" } : {}) };
       },
-      // Someone is waiting (often by voice): a backup that answers now beats a long wait for the main one's minute budget.
-      5,
-      // A provider that hangs gives way to the fallback after 35 s instead of 90.
-      35_000,
+      // Someone is waiting (often by voice): a backup that answers now beats any wait for the main one's minute budget.
+      0,
+      // A model that hangs gives way to the next after 15 s; a normal answer takes 1–3 s.
+      15_000,
     );
     if (res.status === 429) {
       console.error("assistant 429", (await res.text()).slice(0, 300));

@@ -1,9 +1,17 @@
 import "server-only";
 import { transcriptionConfig } from "./config";
 import { AiError, fetchOrAiError, readJson } from "./extract";
-import { looksMadeUp, spokenText, type Segment } from "./silence";
+import { echoesHint, looksMadeUp, spokenText, type Segment } from "./silence";
 
 export const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // provider limit for one upload
+
+/**
+ * Whisper reads this as the text "before" the recording: it spells the trade's
+ * words right and writes normal sentences (not capitals). Kept short; on
+ * silence Whisper may repeat it, which counts as nothing said.
+ */
+export const TRANSCRIBE_HINT =
+  "Ingatlanos jegyzet. Beszéltem az ügyféllel a megtekintésről: háromszobás téglalakást keres a XI. kerületben, 65 millió forintig, erkéllyel. Holnap visszahívom, és küldök neki ajánlatot.";
 
 /** Speech to text through an OpenAI-compatible /audio/transcriptions endpoint. Audio is not stored. */
 export async function transcribe(audio: File): Promise<{ text: string; model: string }> {
@@ -14,6 +22,7 @@ export async function transcribe(audio: File): Promise<{ text: string; model: st
   form.append("file", audio, audio.name || "memo.webm");
   form.append("model", config.model);
   form.append("language", "hu");
+  form.append("prompt", TRANSCRIBE_HINT);
   // verbose_json carries each segment's "probably not speech" score; temperature 0 makes up less.
   form.append("response_format", "verbose_json");
   form.append("temperature", "0");
@@ -28,6 +37,6 @@ export async function transcribe(audio: File): Promise<{ text: string; model: st
   if (!res.ok) throw new AiError(`Transcription error ${res.status}`, "A hangfelvétel feldolgozása nem sikerült.");
   const body = (await readJson(res)) as { text?: string; segments?: Segment[] };
   const text = spokenText(body);
-  if (!text || looksMadeUp(text)) throw new AiError("Empty transcription", "Nem hallottunk beszédet a felvételen.");
+  if (!text || looksMadeUp(text) || echoesHint(text, TRANSCRIBE_HINT)) throw new AiError("Empty transcription", "Nem hallottunk beszédet a felvételen.");
   return { text, model: config.model };
 }
